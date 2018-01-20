@@ -74,7 +74,8 @@ namespace dso {
 
             p->numGoodResiduals++;
           }
-        } else {
+        }
+        else {
           toRemove[tid].push_back(activeResiduals[k]); // tid: thread id for different thread
         }
       }
@@ -146,7 +147,8 @@ namespace dso {
           boost::bind(&FullSystem::linearizeAll_Reductor, this, fixLinearization, toRemove, _1, _2, _3, _4), 0,
           activeResiduals.size(), 0);
       lastEnergyP = treadReduce.stats[0];
-    } else {
+    }
+    else {
       Vec10 stats;
       linearizeAll_Reductor(fixLinearization, toRemove, 0, activeResiduals.size(), &stats, 0);
       lastEnergyP = stats[0];
@@ -235,7 +237,8 @@ namespace dso {
         assert(fh->rightFrame != 0);
         fh->rightFrame->setState(fh->rightFrame->state_backup + step);
       }
-    } else {
+    }
+    else {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         fh->setState(fh->state_backup + pstepfac.cwiseProduct(fh->step));
@@ -301,7 +304,8 @@ namespace dso {
           fh->rightFrame->step_backup = fh->rightFrame->step;
           fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
-      } else {
+      }
+      else {
         Hcalib.step_backup.setZero();
         Hcalib.value_backup = Hcalib.value;
         for (FrameHessian *fh : frameHessians) {
@@ -315,7 +319,8 @@ namespace dso {
           fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
       }
-    } else {
+    }
+    else {
       Hcalib.value_backup = Hcalib.value;
       for (FrameHessian *fh : frameHessians) {
         fh->state_backup = fh->get_state();
@@ -392,7 +397,8 @@ namespace dso {
           {
             activeResiduals.push_back(r);
             r->resetOOB();
-          } else
+          }
+          else
             numLRes++;
         }
         numPoints++;
@@ -486,7 +492,8 @@ namespace dso {
         lastEnergyM = newEnergyM;
 
         lambda *= 0.25;
-      } else {
+      }
+      else {
         loadSateBackup();
         lastEnergy = linearizeAll(false);
         lastEnergyL = calcLEnergy();

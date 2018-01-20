@@ -173,7 +173,8 @@ namespace dso {
         }
         for (PointHessian *ph : frameHessians[f]->pointHessiansOut)
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, Vec3b(255, 255, 255));
-      } else if ((int) (freeDebugParam5 + 0.5f) == 1) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 1) {
         for (PointHessian *ph : frameHessians[f]->pointHessians) {
           if (ph == 0) continue;
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, makeRainbow3B(ph->idepth_scaled));
@@ -184,9 +185,11 @@ namespace dso {
 
         for (PointHessian *ph : frameHessians[f]->pointHessiansOut)
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, Vec3b(255, 255, 255));
-      } else if ((int) (freeDebugParam5 + 0.5f) == 2) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 2) {
 
-      } else if ((int) (freeDebugParam5 + 0.5f) == 3) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 3) {
         for (ImmaturePoint *ph : frameHessians[f]->immaturePoints) {
           if (ph == 0) continue;
           if (ph->lastTraceStatus == ImmaturePointStatus::IPS_GOOD ||
@@ -199,7 +202,8 @@ namespace dso {
             }
           }
         }
-      } else if ((int) (freeDebugParam5 + 0.5f) == 4) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 4) {
         for (ImmaturePoint *ph : frameHessians[f]->immaturePoints) {
           if (ph == 0) continue;
 
@@ -216,7 +220,8 @@ namespace dso {
           if (ph->lastTraceStatus == ImmaturePointStatus::IPS_UNINITIALIZED)
             img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, Vec3b(0, 0, 0));
         }
-      } else if ((int) (freeDebugParam5 + 0.5f) == 5) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 5) {
         for (ImmaturePoint *ph : frameHessians[f]->immaturePoints) {
           if (ph == 0) continue;
 
@@ -227,7 +232,8 @@ namespace dso {
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, Vec3b(0, d * 255, (1 - d) * 255));
         }
 
-      } else if ((int) (freeDebugParam5 + 0.5f) == 6) {
+      }
+      else if ((int) (freeDebugParam5 + 0.5f) == 6) {
         for (PointHessian *ph : frameHessians[f]->pointHessians) {
           if (ph == 0) continue;
           if (ph->my_type == 0)

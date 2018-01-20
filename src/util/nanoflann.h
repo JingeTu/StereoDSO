@@ -126,7 +126,8 @@ namespace nanoflann {
             dists[i] = dists[i - 1];
             indices[i] = indices[i - 1];
           }
-        } else break;
+        }
+        else break;
       }
       if (i < capacity) {
         dists[i] = dist;
@@ -1034,7 +1035,8 @@ namespace nanoflann {
       bbox.resize((DIM > 0 ? DIM : dim));
       if (dataset.kdtree_get_bbox(bbox)) {
         // Done! It was implemented in derived class
-      } else {
+      }
+      else {
         const size_t N = dataset.kdtree_get_point_count();
         if (!N) throw std::runtime_error("[nanoflann] computeBoundingBox() called but no data points found.");
         for (int i = 0; i < (DIM > 0 ? DIM : dim); ++i) {
@@ -1078,7 +1080,8 @@ namespace nanoflann {
             if (bbox[i].high < dataset_get(vind[k], i)) bbox[i].high = dataset_get(vind[k], i);
           }
         }
-      } else {
+      }
+      else {
         IndexType idx;
         int cutfeat;
         DistanceType cutval;
@@ -1249,7 +1252,8 @@ namespace nanoflann {
         bestChild = node->child1;
         otherChild = node->child2;
         cut_dist = distance.accum_dist(val, node->sub.divhigh, idx);
-      } else {
+      }
+      else {
         bestChild = node->child2;
         otherChild = node->child1;
         cut_dist = distance.accum_dist(val, node->sub.divlow, idx);

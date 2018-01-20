@@ -110,7 +110,8 @@ namespace dso {
       nullspacesLog = new std::ofstream();
       nullspacesLog->open("logs/nullspacesLog.txt", std::ios::trunc | std::ios::out);
       nullspacesLog->precision(10);
-    } else {
+    }
+    else {
       nullspacesLog = 0;
       variancesLog = 0;
       DiagonalLog = 0;
@@ -341,7 +342,8 @@ namespace dso {
       coarseTracker->makeK(&Hcalib);
       coarseTracker->setCTRefForFirstFrame(frameHessians);
 
-    } else {
+    }
+    else {
 
       FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
       FrameShell *sprelast = allFrameHistory[allFrameHistory.size() - 3];
@@ -867,7 +869,8 @@ namespace dso {
 
             if (u_stereo_delta > 1 && disparity < 10) {
               ph->lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER;
-            } else {
+            }
+            else {
               Vec3f pinverse_min =
                   KRi * (Ki * Vec3f(phNonKey->u_stereo, phNonKey->v_stereo, 1) / phNonKey->idepth_min_stereo - t);
               idepth_min_update = 1.0f / pinverse_min(2);
@@ -1040,7 +1043,8 @@ namespace dso {
             coarseDistanceMap->addIntoDistFinal(u, v);
             toOptimize.push_back(ph);
           }
-        } else {
+        }
+        else {
           delete ph;
           host->immaturePoints[i] = 0;
         }
@@ -1074,10 +1078,12 @@ namespace dso {
         }
         assert(newpoint->efPoint != 0);
         delete ph;
-      } else if (newpoint == (PointHessian *) ((long) (-1)) || ph->lastTraceStatus == IPS_OOB) {
+      }
+      else if (newpoint == (PointHessian *) ((long) (-1)) || ph->lastTraceStatus == IPS_OOB) {
         ph->host->immaturePoints[ph->idxInImmaturePoints] = 0;
         delete ph;
-      } else {
+      }
+      else {
         assert(newpoint == 0 || newpoint == (PointHessian *) ((long) (-1)));
       }
     }
@@ -1247,7 +1253,8 @@ namespace dso {
           ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
           host->pointHessians[i] = 0;
           flag_nores++;
-        } else if (ph->isOOB(fhsToKeepPoints, fhsToMargPoints) || host->flaggedForMarginalization) {
+        }
+        else if (ph->isOOB(fhsToKeepPoints, fhsToMargPoints) || host->flaggedForMarginalization) {
           flag_oob++;
           if (ph->isInlierNew()) {
             flag_in++;
@@ -1266,13 +1273,15 @@ namespace dso {
               flag_inin++;
               ph->efPoint->stateFlag = EFPointStatus::PS_MARGINALIZE;
               host->pointHessiansMarginalized.push_back(ph);
-            } else {
+            }
+            else {
               ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
               host->pointHessiansOut.push_back(ph);
             }
 
 
-          } else {
+          }
+          else {
             host->pointHessiansOut.push_back(ph);
             ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
 
@@ -1516,18 +1525,21 @@ namespace dso {
         coarseInitializer->T_WC_ini = SE3(q_WS, Vec3(0, 0, 0)) * T_SC0;
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
-      } else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
+      }
+      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
       {
         initializeFromInitializer(fh);
         lock.unlock();
         deliverTrackedFrame(fh, fhRight, true);
-      } else {
+      }
+      else {
         // if still initializing
         fh->shell->poseValid = false;
         delete fh;
       }
       return;
-    } else  // do front-end operation.
+    }
+    else  // do front-end operation.
     {
       // =========================== SWAP tracking reference?. =========================
       if (coarseTracker_forNewKF->refFrameID > coarseTracker->refFrameID) {
@@ -1550,7 +1562,8 @@ namespace dso {
         needToMakeKF = allFrameHistory.size() == 1 ||
                        (fh->shell->timestamp - allKeyFramesHistory.back()->timestamp) >
                        0.95f / setting_keyframesPerSecond;
-      } else {
+      }
+      else {
         Vec2 refToFh = AffLight::fromToVecExposure(coarseTracker->lastRef->ab_exposure, fh->ab_exposure,
                                                    coarseTracker->lastRef_aff_g2l, fh->shell->aff_g2l);
 
@@ -1589,12 +1602,14 @@ namespace dso {
           handleKey(k);
         }
         lastRefStopID = coarseTracker->refFrameID;
-      } else handleKey(IOWrap::waitKey(1));
+      }
+      else handleKey(IOWrap::waitKey(1));
 
 
       if (needKF) makeKeyFrame(fh, fhRight);
       else makeNonKeyFrame(fh, fhRight);
-    } else {
+    }
+    else {
       boost::unique_lock<boost::mutex> lock(trackMapSyncMutex);
       unmappedTrackedFrames.push_back(fh);
       unmappedTrackedFramesRight.push_back(fhRight);
@@ -1656,13 +1671,15 @@ namespace dso {
           delete fh;
         }
 
-      } else {
+      }
+      else {
         if (setting_realTimeMaxKF || needNewKFAfter >= frameHessians.back()->shell->id) {
           lock.unlock();
           makeKeyFrame(fh, fhRight);
           needToKetchupMapping = false;
           lock.lock();
-        } else {
+        }
+        else {
           lock.unlock();
           makeNonKeyFrame(fh, fhRight);
           lock.lock();

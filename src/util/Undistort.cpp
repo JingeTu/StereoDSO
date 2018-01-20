@@ -121,7 +121,8 @@ namespace dso {
 
       for (int i = 0; i < w * h; i++)
         vignetteMap[i] = vm16->at(i) / maxV;
-    } else if (vm8 != 0) {
+    }
+    else if (vm8 != 0) {
       if (vm8->w != w || vm8->h != h) {
         printf("PhotometricUndistorter: Invalid vignette image size! got %d x %d, expected %d x %d\n",
                vm8->w, vm8->h, w, h);
@@ -136,7 +137,8 @@ namespace dso {
 
       for (int i = 0; i < w * h; i++)
         vignetteMap[i] = vm8->at(i) / maxV;
-    } else {
+    }
+    else {
       printf("PhotometricUndistorter: Invalid vignette image\n");
       if (vm16 != 0) delete vm16;
       if (vm8 != 0) delete vm8;
@@ -199,7 +201,8 @@ namespace dso {
       }
       output->exposure_time = exposure_time;
       output->timestamp = 0;
-    } else {
+    }
+    else {
       for (int i = 0; i < wh; i++) {
         data[i] = G[image_in[i]];
       }
@@ -273,7 +276,8 @@ namespace dso {
           delete u;
           return 0;
         }
-      } else {
+      }
+      else {
         printf("found ATAN camera model, building rectifier.\n");
         u = new UndistortFOV(configFilename.c_str(), true);
         if (!u->isValid()) {
@@ -291,39 +295,44 @@ namespace dso {
         delete u;
         return 0;
       }
-    } else if (std::sscanf(l1.c_str(), "RadTan %f %f %f %f %f %f %f %f",
-                           &ic[0], &ic[1], &ic[2], &ic[3],
-                           &ic[4], &ic[5], &ic[6], &ic[7]) == 8) {
+    }
+    else if (std::sscanf(l1.c_str(), "RadTan %f %f %f %f %f %f %f %f",
+                         &ic[0], &ic[1], &ic[2], &ic[3],
+                         &ic[4], &ic[5], &ic[6], &ic[7]) == 8) {
       u = new UndistortRadTan(configFilename.c_str(), false);
       if (!u->isValid()) {
         delete u;
         return 0;
       }
-    } else if (std::sscanf(l1.c_str(), "EquiDistant %f %f %f %f %f %f %f %f",
-                           &ic[0], &ic[1], &ic[2], &ic[3],
-                           &ic[4], &ic[5], &ic[6], &ic[7]) == 8) {
+    }
+    else if (std::sscanf(l1.c_str(), "EquiDistant %f %f %f %f %f %f %f %f",
+                         &ic[0], &ic[1], &ic[2], &ic[3],
+                         &ic[4], &ic[5], &ic[6], &ic[7]) == 8) {
       u = new UndistortEquidistant(configFilename.c_str(), false);
       if (!u->isValid()) {
         delete u;
         return 0;
       }
-    } else if (std::sscanf(l1.c_str(), "FOV %f %f %f %f %f",
-                           &ic[0], &ic[1], &ic[2], &ic[3],
-                           &ic[4]) == 5) {
+    }
+    else if (std::sscanf(l1.c_str(), "FOV %f %f %f %f %f",
+                         &ic[0], &ic[1], &ic[2], &ic[3],
+                         &ic[4]) == 5) {
       u = new UndistortFOV(configFilename.c_str(), false);
       if (!u->isValid()) {
         delete u;
         return 0;
       }
-    } else if (std::sscanf(l1.c_str(), "Pinhole %f %f %f %f %f",
-                           &ic[0], &ic[1], &ic[2], &ic[3],
-                           &ic[4]) == 5) {
+    }
+    else if (std::sscanf(l1.c_str(), "Pinhole %f %f %f %f %f",
+                         &ic[0], &ic[1], &ic[2], &ic[3],
+                         &ic[4]) == 5) {
       u = new UndistortPinhole(configFilename.c_str(), false);
       if (!u->isValid()) {
         delete u;
         return 0;
       }
-    } else {
+    }
+    else {
       printf("could not read calib file! exit.");
       exit(1);
     }
@@ -424,7 +433,8 @@ namespace dso {
         delete[] noiseMapY;
       }
 
-    } else {
+    }
+    else {
       memcpy(result->image, photometricUndist->output->image, sizeof(float) * w * h);
     }
 
@@ -682,12 +692,14 @@ namespace dso {
         printf("Input resolution: %d %d\n", wOrg, hOrg);
         printf("In: %f %f %f %f %f\n",
                parsOrg[0], parsOrg[1], parsOrg[2], parsOrg[3], parsOrg[4]);
-      } else {
+      }
+      else {
         printf("Failed to read camera calibration (invalid format?)\nCalibration file: %s\n", configFileName);
         infile.close();
         return;
       }
-    } else if (nPars == 8) // KB, equi & radtan model
+    }
+    else if (nPars == 8) // KB, equi & radtan model
     {
       char buf[1000];
       snprintf(buf, 1000, "%s%%lf %%lf %%lf %%lf %%lf %%lf %%lf %%lf %%lf %%lf", prefix.c_str());
@@ -700,12 +712,14 @@ namespace dso {
         printf("In: %s%f %f %f %f %f %f %f %f\n",
                prefix.c_str(),
                parsOrg[0], parsOrg[1], parsOrg[2], parsOrg[3], parsOrg[4], parsOrg[5], parsOrg[6], parsOrg[7]);
-      } else {
+      }
+      else {
         printf("Failed to read camera calibration (invalid format?)\nCalibration file: %s\n", configFileName);
         infile.close();
         return;
       }
-    } else {
+    }
+    else {
       printf("called with invalid number of parameters.... forgot to implement me?\n");
       infile.close();
       return;
@@ -735,20 +749,24 @@ namespace dso {
     if (l3 == "crop") {
       outputCalibration[0] = -1;
       printf("Out: Rectify Crop\n");
-    } else if (l3 == "full") {
+    }
+    else if (l3 == "full") {
       outputCalibration[0] = -2;
       printf("Out: Rectify Full\n");
-    } else if (l3 == "none") {
+    }
+    else if (l3 == "none") {
       outputCalibration[0] = -3;
       printf("Out: No Rectification\n");
-    } else if (
+    }
+    else if (
         std::sscanf(l3.c_str(), "%f %f %f %f %f", &outputCalibration[0], &outputCalibration[1], &outputCalibration[2],
                     &outputCalibration[3], &outputCalibration[4]) == 5) {
       printf("Out: %f %f %f %f %f\n",
              outputCalibration[0], outputCalibration[1], outputCalibration[2], outputCalibration[3],
              outputCalibration[4]);
 
-    } else {
+    }
+    else {
       printf("Out: Failed to Read Output pars... not rectifying.\n");
       infile.close();
       return;
@@ -768,7 +786,8 @@ namespace dso {
           outputCalibration[0] = -1;  // crop instead of none, since probably resolution changed.
       }
       printf("Output resolution: %d %d\n", w, h);
-    } else {
+    }
+    else {
       printf("Out: Failed to Read Output resolution... not rectifying.\n");
       valid = false;
     }
@@ -776,7 +795,8 @@ namespace dso {
     // l5 baseline
     if (std::sscanf(l5.c_str(), "%f", &baseline) == 1) {
       printf("Baseline: %f \n", baseline);
-    } else {
+    }
+    else {
       printf("Out: Failed to Read Baseline... can not do stereo. \n");
     }
 
@@ -798,7 +818,8 @@ namespace dso {
       K(0, 2) = parsOrg[2];
       K(1, 2) = parsOrg[3];
       passthrough = true;
-    } else {
+    }
+    else {
       if (outputCalibration[2] > 1 || outputCalibration[3] > 1) {
         printf(
             "\n\n\nWARNING: given output calibration (%f %f %f %f) seems wrong. It needs to be relative to image width / height!\n\n\n",
@@ -843,7 +864,8 @@ namespace dso {
         if (ix > 0 && iy > 0 && ix < wOrg - 1 && iy < wOrg - 1) {
           remapX[x + y * w] = ix;
           remapY[x + y * w] = iy;
-        } else {
+        }
+        else {
           remapX[x + y * w] = -1;
           remapY[x + y * w] = -1;
         }
@@ -1064,7 +1086,8 @@ namespace dso {
       if (sqrt_Xsq_Ysq < 1e-6) {
         out_x[i] = fx * ix + cx;
         out_y[i] = fy * iy + cy;
-      } else {
+      }
+      else {
         out_x[i] = (r / sqrt_Xsq_Ysq) * fx * ix + cx;
         out_y[i] = (r / sqrt_Xsq_Ysq) * fy * iy + cy;
       }

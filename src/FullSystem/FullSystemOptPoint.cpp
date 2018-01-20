@@ -127,7 +127,8 @@ namespace dso {
         }
 
         lambda *= 0.5;
-      } else {
+      }
+      else {
         lambda *= 5;
       }
 
@@ -176,7 +177,8 @@ namespace dso {
         if (r->target == frameHessians.back()) {
           ph->lastResiduals[0].first = r;
           ph->lastResiduals[0].second = ResState::IN;
-        } else if (r->target == (frameHessians.size() < 2 ? 0 : frameHessians[frameHessians.size() - 2])) {
+        }
+        else if (r->target == (frameHessians.size() < 2 ? 0 : frameHessians[frameHessians.size() - 2])) {
           ph->lastResiduals[1].first = r;
           ph->lastResiduals[1].second = ResState::IN;
         }

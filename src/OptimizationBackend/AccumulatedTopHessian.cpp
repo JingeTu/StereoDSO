@@ -94,7 +94,8 @@ namespace dso {
             rtz = _mm_add_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (rJ->JabF + 1)) + i), delta_b));
             _mm_store_ps(((float *) &resApprox) + i, rtz);
           }
-        } else { //- static stereo residual
+        }
+        else { //- static stereo residual
           Mat18f dp = ef->adHTdeltaF[htIDX];
           // compute Jp*delta
           __m128 Jp_delta_x = _mm_set1_ps(rJ->Jpdc[0].dot(dc) + rJ->Jpdd[0] * dd);
@@ -142,7 +143,8 @@ namespace dso {
             rJ->JabJIdx(0, 0), rJ->JabJIdx(0, 1),
             rJ->JabJIdx(1, 0), rJ->JabJIdx(1, 1),
             JI_r[0], JI_r[1]);
-      } else { //- static stereo residual
+      }
+      else { //- static stereo residual
         acc[tid][r->hostIDX + r->hostIDX * nframes[tid]].update(
             rJ->Jpdc[0].data(), rJ->Jpdxi[0].data(),
             rJ->Jpdc[1].data(), rJ->Jpdxi[1].data(),

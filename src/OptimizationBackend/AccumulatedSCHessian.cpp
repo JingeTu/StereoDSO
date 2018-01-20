@@ -62,7 +62,8 @@ namespace dso {
 
       if (r1ht > 0) { //- temporal stereo residual
         //- do nothing
-      } else { //- static stereo residual
+      }
+      else { //- static stereo residual
         r1ht = r1->hostIDX + r1->hostIDX * nframes[tid];
       }
 
@@ -70,7 +71,8 @@ namespace dso {
         if (!r2->isActive()) continue;
         if (r2->targetIDX == -1) { //- static stereo residual
           accD[tid][r1ht + r2->hostIDX * nFrames2].update(r1->JpJdF, r2->JpJdF, p->HdiF);
-        } else {
+        }
+        else {
           accD[tid][r1ht + r2->targetIDX * nFrames2].update(r1->JpJdF, r2->JpJdF, p->HdiF);
         }
       }

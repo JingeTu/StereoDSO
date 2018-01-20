@@ -108,7 +108,8 @@ namespace dso {
           H.noalias() += Hs[i];
           b.noalias() += bs[i];
         }
-      } else {
+      }
+      else {
         H = MatXX::Zero(nframes[0] * 8 + CPARS, nframes[0] * 8 + CPARS);
         b = VecX::Zero(nframes[0] * 8 + CPARS);
         stitchDoubleInternal(&H, &b, EF, 0, nframes[0] * nframes[0], 0, -1);

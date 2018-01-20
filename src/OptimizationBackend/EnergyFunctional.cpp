@@ -188,7 +188,8 @@ namespace dso {
                               accSSE_top_A, &allPoints, this, _1, _2, _3, _4), 0, allPoints.size(), 50);
       accSSE_top_A->stitchDoubleMT(red, H, b, this, false, true);
       resInA = accSSE_top_A->nres[0];
-    } else {
+    }
+    else {
       accSSE_top_A->setZero(nFrames);
       for (EFFrame *f : frames)
         for (EFPoint *p : f->points)
@@ -207,7 +208,8 @@ namespace dso {
                               accSSE_top_L, &allPoints, this, _1, _2, _3, _4), 0, allPoints.size(), 50);
       accSSE_top_L->stitchDoubleMT(red, H, b, this, true, true);
       resInL = accSSE_top_L->nres[0];
-    } else {
+    }
+    else {
       accSSE_top_L->setZero(nFrames);
       for (EFFrame *f : frames)
         for (EFPoint *p : f->points)
@@ -224,7 +226,8 @@ namespace dso {
       red->reduce(boost::bind(&AccumulatedSCHessianSSE::addPointsInternal,
                               accSSE_bot, &allPoints, true, _1, _2, _3, _4), 0, allPoints.size(), 50);
       accSSE_bot->stitchDoubleMT(red, H, b, this, true);
-    } else {
+    }
+    else {
       accSSE_bot->setZero(nFrames);
       for (EFFrame *f : frames)
         for (EFPoint *p : f->points)
@@ -278,7 +281,8 @@ namespace dso {
         if (!r->isActive()) continue;
         if (r->targetIDX == -1) { //- static stereo residual
           b -= xAd[r->hostIDX * nFrames + r->hostIDX] * r->JpJdF;
-        } else {
+        }
+        else {
           b -= xAd[r->hostIDX * nFrames + r->targetIDX] * r->JpJdF;
         }
       }
@@ -316,7 +320,8 @@ namespace dso {
         Mat18f dp;
         if (r->targetIDX == -1) { //- static stereo residual
           dp = adHTdeltaF[r->hostIDX + nFrames * r->hostIDX];
-        } else { //- temporal stereo residual
+        }
+        else { //- temporal stereo residual
           dp = adHTdeltaF[r->hostIDX + nFrames * r->targetIDX];
         }
         RawResidualJacobian *rJ = r->J;
@@ -466,7 +471,8 @@ namespace dso {
 
     if (r->targetIDX == -1) { //- static stereo residual
       //- do nothing
-    } else { //- temporal stereo residual
+    }
+    else { //- temporal stereo residual
       connectivityMap[(((uint64_t) r->host->frameID) << 32) + ((uint64_t) r->target->frameID)][0]--;
     }
     nResiduals--;
@@ -797,7 +803,8 @@ namespace dso {
 
       for (int i = 0; i < 8 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 
-    } else { // here
+    }
+    else { // here
 
 
       HFinal_top = HL_top + HM + HA_top;
@@ -836,11 +843,13 @@ namespace dso {
         if ((setting_solverMode & SOLVER_SVD_CUT7) && (i >= Ub.size() - 7)) {
           Ub[i] = 0;
           setZero++;
-        } else Ub[i] /= S[i];
+        }
+        else Ub[i] /= S[i];
       }
       x = SVecI.asDiagonal() * svd.matrixV() * Ub;
 
-    } else { // here
+    }
+    else { // here
       VecX SVecI = (HFinal_top.diagonal() + VecX::Constant(HFinal_top.cols(), 10)).cwiseSqrt().cwiseInverse();
       MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
       x = SVecI.asDiagonal() *

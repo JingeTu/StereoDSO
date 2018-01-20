@@ -244,7 +244,8 @@ namespace dso {
       //all good
       sparsityFactor = newSparsity;
       return numGoodPoints;
-    } else {
+    }
+    else {
 //		printf(" -> re-evaluate! \n");
       // re-evaluate.
       sparsityFactor = newSparsity;

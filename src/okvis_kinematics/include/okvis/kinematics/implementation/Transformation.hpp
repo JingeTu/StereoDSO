@@ -45,7 +45,8 @@ namespace okvis {
     __inline__ double sinc(double x) {
       if (fabs(x) > 1e-6) {
         return sin(x) / x;
-      } else {
+      }
+      else {
         static const double c_2 = 1.0 / 6.0;
         static const double c_4 = 1.0 / 120.0;
         static const double c_6 = 1.0 / 5040.0;
@@ -72,7 +73,8 @@ namespace okvis {
       const Eigen::Matrix3d Phi_x2 = Phi_x * Phi_x;
       if (Phi < 1.0e-4) {
         retMat += -0.5 * Phi_x + 1.0 / 6.0 * Phi_x2;
-      } else {
+      }
+      else {
         const double Phi2 = Phi * Phi;
         const double Phi3 = Phi2 * Phi;
         retMat += -(1.0 - cos(Phi)) / (Phi2) * Phi_x + (Phi - sin(Phi)) / Phi3 * Phi_x2;

@@ -86,7 +86,8 @@ namespace dso {
 //					fh->statistics_tracesCreatedForThisFrame, fh->statistics_pointsActivatedForThisFrame);
         fh->flaggedForMarginalization = true;
         flagged++;
-      } else {
+      }
+      else {
 //			printf("May Keep frame %d, as %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
 //					fh->frameID, in, in+out,
 //					(int)fh->pointHessians.size(), (int)fh->immaturePoints.size(),

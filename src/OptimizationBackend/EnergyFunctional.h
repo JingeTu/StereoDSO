@@ -136,7 +136,7 @@ namespace dso {
     std::vector<VecX> lastNullspaces_affA;
     std::vector<VecX> lastNullspaces_affB;
 
-    IndexThreadReduce <Vec10> *red;
+    IndexThreadReduce<Vec10> *red;
 
 
     std::map<uint64_t,

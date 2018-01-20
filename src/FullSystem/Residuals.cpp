@@ -279,7 +279,8 @@ namespace dso {
     if (energyLeft > std::max<float>(host->frameEnergyTH, target->frameEnergyTH) || wJI2_sum < 2) {
       energyLeft = std::max<float>(host->frameEnergyTH, target->frameEnergyTH);
       state_NewState = ResState::OUTLIER;
-    } else {
+    }
+    else {
       state_NewState = ResState::IN;
     }
 
@@ -485,7 +486,8 @@ namespace dso {
     if (energyLeft > std::max<float>(host->frameEnergyTH, target->frameEnergyTH) || wJI2_sum < 2) {
       energyLeft = std::max<float>(host->frameEnergyTH, target->frameEnergyTH);
       state_NewState = ResState::OUTLIER;
-    } else {
+    }
+    else {
       state_NewState = ResState::IN;
     }
 
@@ -502,7 +504,8 @@ namespace dso {
       if (rT < 0) rT = 0;
       if (rT > 255)rT = 255;
       cT = Vec3b(0, 255 - rT, rT);
-    } else {
+    }
+    else {
       if (state_state == ResState::IN) cT = Vec3b(255, 0, 0);
       else if (state_state == ResState::OOB) cT = Vec3b(255, 255, 0);
       else if (state_state == ResState::OUTLIER) cT = Vec3b(0, 0, 255);
@@ -527,7 +530,8 @@ namespace dso {
       {
         efResidual->isActiveAndIsGoodNEW = true;
         efResidual->takeDataF();
-      } else {
+      }
+      else {
         efResidual->isActiveAndIsGoodNEW = false;
       }
     }

@@ -235,25 +235,30 @@ namespace dso {
               tmpColorBuffer[vertexBufferNumPoints][0] = 0;
               tmpColorBuffer[vertexBufferNumPoints][1] = 255;
               tmpColorBuffer[vertexBufferNumPoints][2] = 255;
-            } else if (originalInputSparse[i].status == 1) {
+            }
+            else if (originalInputSparse[i].status == 1) {
               tmpColorBuffer[vertexBufferNumPoints][0] = 0;
               tmpColorBuffer[vertexBufferNumPoints][1] = 255;
               tmpColorBuffer[vertexBufferNumPoints][2] = 0;
-            } else if (originalInputSparse[i].status == 2) {
+            }
+            else if (originalInputSparse[i].status == 2) {
               tmpColorBuffer[vertexBufferNumPoints][0] = 0;
               tmpColorBuffer[vertexBufferNumPoints][1] = 0;
               tmpColorBuffer[vertexBufferNumPoints][2] = 255;
-            } else if (originalInputSparse[i].status == 3) {
+            }
+            else if (originalInputSparse[i].status == 3) {
               tmpColorBuffer[vertexBufferNumPoints][0] = 255;
               tmpColorBuffer[vertexBufferNumPoints][1] = 0;
               tmpColorBuffer[vertexBufferNumPoints][2] = 0;
-            } else {
+            }
+            else {
               tmpColorBuffer[vertexBufferNumPoints][0] = 255;
               tmpColorBuffer[vertexBufferNumPoints][1] = 255;
               tmpColorBuffer[vertexBufferNumPoints][2] = 255;
             }
 
-          } else {
+          }
+          else {
             tmpColorBuffer[vertexBufferNumPoints][0] = originalInputSparse[i].color[pnt];
             tmpColorBuffer[vertexBufferNumPoints][1] = originalInputSparse[i].color[pnt];
             tmpColorBuffer[vertexBufferNumPoints][2] = originalInputSparse[i].color[pnt];
@@ -301,7 +306,8 @@ namespace dso {
 
       if (color == 0) {
         glColor3f(1, 0, 0);
-      } else
+      }
+      else
         glColor3f(color[0], color[1], color[2]);
 
       glLineWidth(lineWidth);

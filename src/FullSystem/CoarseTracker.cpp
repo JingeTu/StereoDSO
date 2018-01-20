@@ -291,7 +291,8 @@ namespace dso {
               continue;  // just skip if something is wrong.
             }
             lpc_n++;
-          } else
+          }
+          else
             idepthl[i] = -1;
 
           weightSumsl[i] = 1;
@@ -464,7 +465,8 @@ namespace dso {
         E += maxEnergy;
         numTermsInE++;
         numSaturated++;
-      } else {
+      }
+      else {
         if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual + 128, residual + 128, residual + 128));
 
         E += hw * residual * residual * (2 - hw);
@@ -658,7 +660,8 @@ namespace dso {
               continue;  // just skip if something is wrong.
             }
             lpc_n++;
-          } else
+          }
+          else
             idepthl[i] = -1;
 
           weightSumsl[i] = 1;
@@ -822,7 +825,8 @@ namespace dso {
           aff_g2l_current = aff_g2l_new;
           refToNew_current = refToNew_new;
           lambda *= 0.5;
-        } else {
+        }
+        else {
           lambda *= 4;
           if (lambda < lambdaExtrapolationLimit) lambda = lambdaExtrapolationLimit;
         }
@@ -897,7 +901,8 @@ namespace dso {
         if (*minID_pt < 0 || *maxID_pt < 0) {
           *maxID_pt = maxID;
           *minID_pt = minID;
-        } else {
+        }
+        else {
 
           // slowly adapt: change by maximum 10% of old span.
           float maxChange = 0.3 * (*maxID_pt - *minID_pt);
@@ -1086,7 +1091,8 @@ namespace dso {
             bfsNum++;
           }
         }
-      } else {
+      }
+      else {
         for (int i = 0; i < bfsNum2; i++) {
           int x = bfsList2[i][0];
           int y = bfsList2[i][1];

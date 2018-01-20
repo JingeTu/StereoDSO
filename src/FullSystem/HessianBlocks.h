@@ -266,7 +266,8 @@ namespace dso {
 
         p[6] = setting_initialAffAPrior;
         p[7] = setting_initialAffBPrior;
-      } else {
+      }
+      else {
         if (setting_affineOptModeA < 0)
           p[6] = setting_initialAffAPrior;
         else

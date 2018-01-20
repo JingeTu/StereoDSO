@@ -83,7 +83,8 @@ namespace dso {
     Vec8f dp;
     if (targetIDX == -1) { //- static stereo residual
       dp = ef->adHTdeltaF[hostIDX + ef->nFrames * hostIDX];
-    } else { //- temporal stereo residual
+    }
+    else { //- temporal stereo residual
       dp = ef->adHTdeltaF[hostIDX + ef->nFrames * targetIDX];
     }
 

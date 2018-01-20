@@ -219,7 +219,8 @@ namespace dso {
         //				idealPotential);
         currentPotential = idealPotential;
         return makeMaps(fh, map_out, density, recursionsLeft - 1, plot, thFactor);
-      } else if (recursionsLeft > 0 && quotia < 0.25) {
+      }
+      else if (recursionsLeft > 0 && quotia < 0.25) {
         // re-sample to get less points!
 
         if (idealPotential <= currentPotential)

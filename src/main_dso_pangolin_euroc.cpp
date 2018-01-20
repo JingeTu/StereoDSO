@@ -384,7 +384,8 @@ int main(int argc, char **argv) {
       idsToPlay.push_back(i);
       if (timesToPlayAt.size() == 0) {
         timesToPlayAt.push_back((double) 0);
-      } else {
+      }
+      else {
         double tsThis = reader->getTimestamp(idsToPlay[idsToPlay.size() - 1]);
         double tsPrev = reader->getTimestamp(idsToPlay[idsToPlay.size() - 2]);
         timesToPlayAt.push_back(timesToPlayAt.back() + fabs(tsThis - tsPrev) / playbackSpeed);
@@ -395,7 +396,8 @@ int main(int argc, char **argv) {
       idsToPlayRight.push_back(i);
       if (timesToPlayAtRight.size() == 0) {
         timesToPlayAtRight.push_back((double) 0);
-      } else {
+      }
+      else {
         double tsThis = reader_right->getTimestamp(idsToPlay[idsToPlay.size() - 1]);
         double tsPrev = reader_right->getTimestamp(idsToPlay[idsToPlay.size() - 2]);
         timesToPlayAtRight.push_back(timesToPlayAtRight.back() + fabs(tsThis - tsPrev) / playbackSpeed);
@@ -437,7 +439,8 @@ int main(int argc, char **argv) {
       if (preload) {
         img_left = preloadedImagesLeft[ii];
         img_right = preloadedImagesRight[ii];
-      } else {
+      }
+      else {
         img_left = reader->getImage(i);
         img_right = reader_right->getImage(i);
       }

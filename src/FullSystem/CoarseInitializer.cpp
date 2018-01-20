@@ -163,7 +163,8 @@ namespace dso {
           inc.head<6>() = -(wM.toDenseMatrix().topLeftCorner<6, 6>() *
                             (Hl.topLeftCorner<6, 6>().ldlt().solve(bl.head<6>())));
           inc.tail<2>().setZero();
-        } else
+        }
+        else
           inc = -(wM * (Hl.ldlt().solve(bl)));  //=-H^-1 * b.
 
 
@@ -217,7 +218,8 @@ namespace dso {
           lambda *= 0.5;
           fails = 0;
           if (lambda < 0.0001) lambda = 0.0001;
-        } else {
+        }
+        else {
           fails++;
           lambda *= 4;
           if (lambda > 10000) lambda = 10000;
@@ -488,7 +490,8 @@ namespace dso {
       if (!point->isGood_new) {
         EAlpha.updateSingle(
             (float) (point->energy[1])); // original is E, see issue#107, https://github.com/JakobEngel/dso/issues/107
-      } else {
+      }
+      else {
         point->energy_new[1] = (point->idepth_new - 1) * (point->idepth_new - 1);
         EAlpha.updateSingle((float) (point->energy_new[1])); // original is E
       }
@@ -504,7 +507,8 @@ namespace dso {
     if (alphaEnergy > alphaK * npts) {
       alphaOpt = 0;
       alphaEnergy = alphaK * npts;
-    } else {
+    }
+    else {
       alphaOpt = alphaW;
     }
 
@@ -685,7 +689,8 @@ namespace dso {
         point->iR = point->idepth = point->idepth_new = parent->iR;
         point->isGood = true;
         point->lastHessian = 0;
-      } else {
+      }
+      else {
         //- Kind of weighted iR. Combined parent and point itself.
         float newiR = (point->iR * point->lastHessian * 2 + parent->iR * parent->lastHessian) /
                       (point->lastHessian * 2 + parent->lastHessian);
@@ -833,7 +838,8 @@ namespace dso {
       if (lvl == 0) {
         npts = sel.makeMaps(firstFrame, statusMap, densities[lvl] * w[0] * h[0], 1, false, 2);
 
-      } else {
+      }
+      else {
         npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl] * w[0] * h[0]);
       }
 
@@ -874,7 +880,8 @@ namespace dso {
               pl[nl].outlierTH = patternNum * setting_outlierTH;
               nl++;
               assert(nl <= npts);
-            } else {
+            }
+            else {
 
               pl[nl].u = x;
               pl[nl].v = y;
@@ -1100,7 +1107,8 @@ namespace dso {
           pts[i].parentDist = expf(-ret_dist[0] * NNDistFactor);
 
           assert(ret_index[0] >= 0 && ret_index[0] < numPoints[lvl + 1]);
-        } else {
+        }
+        else {
           pts[i].parent = -1;
           pts[i].parentDist = -1;
         }

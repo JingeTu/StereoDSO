@@ -142,7 +142,8 @@ namespace dso {
       if (dist < setting_trace_slackInterval) //- setting_trace_slackInterval = 1.5
         return lastTraceStatus = ImmaturePointStatus::IPS_SKIPPED;
       assert(dist > 0);
-    } else {
+    }
+    else {
       dist = maxPixSearch;
 
       // project to arbitrary depth to get direction.
@@ -324,7 +325,8 @@ namespace dso {
         stepBack *= 0.5;
         bestU = uBak + stepBack * dx;
         bestV = vBak + stepBack * dy;
-      } else {
+      }
+      else {
         gnStepsGood++;
 
         float step = -gnstepsize * b / H;
@@ -361,7 +363,8 @@ namespace dso {
     if (dx * dx > dy * dy) {
       idepth_min_stereo = (pr[2] * (bestU - errorInPixel * dx) - pr[0]) / (Kt[0] - Kt[2] * (bestU - errorInPixel * dx));
       idepth_max_stereo = (pr[2] * (bestU + errorInPixel * dx) - pr[0]) / (Kt[0] - Kt[2] * (bestU + errorInPixel * dx));
-    } else {
+    }
+    else {
       idepth_min_stereo = (pr[2] * (bestV - errorInPixel * dy) - pr[1]) / (Kt[1] - Kt[2] * (bestV - errorInPixel * dy));
       idepth_max_stereo = (pr[2] * (bestV + errorInPixel * dy) - pr[1]) / (Kt[1] - Kt[2] * (bestV + errorInPixel * dy));
     }
@@ -756,7 +759,8 @@ namespace dso {
         return lastTraceStatus = ImmaturePointStatus::IPS_SKIPPED;
       }
       assert(dist > 0);
-    } else {
+    }
+    else {
       dist = maxPixSearch;
 
       // project to arbitrary depth to get direction.
@@ -942,7 +946,8 @@ namespace dso {
           printf("GN BACK %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
                  it, energy, H, b, stepBack,
                  uBak, vBak, bestU, bestV);
-      } else {
+      }
+      else {
         gnStepsGood++;
 
         float step = -gnstepsize * b / H;
@@ -996,7 +1001,8 @@ namespace dso {
                    (hostToFrame_Kt[0] - hostToFrame_Kt[2] * (bestU - errorInPixel * dx));
       idepth_max = (pr[2] * (bestU + errorInPixel * dx) - pr[0]) /
                    (hostToFrame_Kt[0] - hostToFrame_Kt[2] * (bestU + errorInPixel * dx));
-    } else {
+    }
+    else {
       idepth_min = (pr[2] * (bestV - errorInPixel * dy) - pr[1]) /
                    (hostToFrame_Kt[1] - hostToFrame_Kt[2] * (bestV - errorInPixel * dy));
       idepth_max = (pr[2] * (bestV + errorInPixel * dy) - pr[1]) /
@@ -1135,7 +1141,8 @@ namespace dso {
     if (energyLeft > energyTH * outlierTHSlack) {
       energyLeft = energyTH * outlierTHSlack;
       tmpRes->state_NewState = ResState::OUTLIER;
-    } else {
+    }
+    else {
       tmpRes->state_NewState = ResState::IN;
     }
 

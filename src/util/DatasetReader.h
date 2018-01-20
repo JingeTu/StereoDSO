@@ -192,7 +192,8 @@ public:
     // this is for EuRoCDataset
     if (!timestampFile.empty()) {
       loadTimestamps(datasetName, timestampFile);
-    } else
+    }
+    else
       loadTimestamps();
     printf("ImageFolderReader: got %d files in %s!\n", (int) files.size(), path.c_str());
     assert (timestamps.size() == files.size());
@@ -276,7 +277,8 @@ private:
     if (!isZipped) {
       // CHANGE FOR ZIP FILE
       return IOWrap::readImageBW_8U(files[id]);
-    } else {
+    }
+    else {
 #if HAS_ZIPLIB
       if (databuffer == 0) databuffer = new char[widthOrg * heightOrg * 6 + 10000];
       zip_file_t *fle = zip_fopen(ziparchive, files[id].c_str(), 0);
@@ -331,7 +333,8 @@ private:
       if (3 == sscanf(buf, "%d %lf %f", &id, &stamp, &exposure)) {
         timestamps.push_back(stamp);
         exposures.push_back(exposure);
-      } else if (2 == sscanf(buf, "%d %lf", &id, &stamp)) {
+      }
+      else if (2 == sscanf(buf, "%d %lf", &id, &stamp)) {
         timestamps.push_back(stamp);
         exposures.push_back(exposure);
       }
@@ -399,7 +402,8 @@ private:
         }
       }
       tr.close();
-    } else if (datasetName == "kitti") {
+    }
+    else if (datasetName == "kitti") {
       std::ifstream tr;
       std::string timesFile = path.substr(0, path.find_last_of('/')) + "/times.txt";
       tr.open(timesFile.c_str());

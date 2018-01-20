@@ -83,7 +83,7 @@ namespace dso {
 
 
     void
-    stitchDoubleMT(IndexThreadReduce <Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
+    stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                    bool MT) {
       // sum up, splitting by bock in square.
       if (MT) {
@@ -107,7 +107,8 @@ namespace dso {
           b.noalias() += bs[i];
           nres[0] += nres[i];
         }
-      } else {
+      }
+      else {
         H = MatXX::Zero(nframes[0] * 8 + CPARS, nframes[0] * 8 + CPARS);
         b = VecX::Zero(nframes[0] * 8 + CPARS);
         stitchDoubleInternal(&H, &b, EF, usePrior, 0, nframes[0] * nframes[0], 0, -1);
