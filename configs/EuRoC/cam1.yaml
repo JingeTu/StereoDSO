@@ -1,0 +1,27 @@
+%YAML:1.0
+
+T_BS: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: d
+  data: [0.0125552670891, -0.999755099723, 0.0182237714554, -0.0198435579556, 0.999598781151, 0.0130119051815, 0.0251588363115, 0.0453689425024, -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038, 0.0, 0.0, 0.0, 1.0]
+
+# frequency in hz
+camera.rate: 20
+
+# image width and height
+camera.width: 752
+camera.height: 480
+
+camera.model: "pinhole"
+camera.fu: 457.587
+camera.fv: 456.134
+camera.cu: 379.999
+camera.cv: 255.238
+
+camera.distortion: "radial-tangential"
+camera.D: !!opencv-matrix
+  rows: 1
+  cols: 4
+  dt: d
+  data: [-0.28368365,  0.07451284, -0.00010473, -3.55590700e-05]

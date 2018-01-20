@@ -1,0 +1,20 @@
+%YAML:1.0
+
+a_max: 176.0 # acceleration saturation [m/s^2]
+g_max: 7.8 # gyro saturation [rad/s]
+sigma_g_c: 12.0e-4 # gyro noise density [rad/s/sqrt(Hz)]
+sigma_a_c: 8.0e-3 # accelerometer noise density [m/s^2/sqrt(Hz)]
+sigma_bg: 0.03 # gyro bias prior [rad/s]
+sigma_ba: 0.1 # accelerometer bias prior [m/s^2]
+sigma_gw_c: 4.0e-6 # gyro drift noise density [rad/s^s/sqrt(Hz)]
+sigma_aw_c: 4.0e-5 # accelerometer drift noise density [m/s^2/sqrt(Hz)]
+tau: 3600.0 # reversion time constant, currently not in use [s]
+g: 9.81007 # Earth's acceleration due to gravity [m/s^2]
+a0: [ 0.0, 0.0, 0.0 ] # Accelerometer bias [m/s^2]
+imu_rate: 200
+# tranform Body-Sensor (IMU)
+T_BS:
+    [1.0000, 0.0000, 0.0000, 0.0000,
+     0.0000, 1.0000, 0.0000, 0.0000,
+     0.0000, 0.0000, 1.0000, 0.0000,
+     0.0000, 0.0000, 0.0000, 1.0000]
