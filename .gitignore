@@ -12,3 +12,4 @@ result.txt
 cmake-build-debug/
 *~
 .idea/
+*log*

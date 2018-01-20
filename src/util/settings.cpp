@@ -170,7 +170,7 @@ namespace dso {
 
   bool disableReconfigure = false;
   bool debugSaveImages = false;
-  bool multiThreading = true; //- original true
+  bool multiThreading = false; //- original true
   bool disableAllDisplay = false;
   bool setting_onlyLogKFPoses = true;
   bool setting_logStuff = true;

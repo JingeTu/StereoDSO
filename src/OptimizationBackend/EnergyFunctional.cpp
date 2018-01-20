@@ -248,6 +248,9 @@ namespace dso {
       h->data->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
       h->data->step.tail<2>().setZero();
 
+      h->data->rightFrame->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
+      h->data->rightFrame->step.tail<2>().setZero();
+
       for (EFFrame *t : frames)
         xAd[nFrames * h->idx + t->idx] =
             xF.segment<8>(CPARS + 8 * h->idx).transpose() * adHostF[h->idx + nFrames * t->idx]
@@ -607,7 +610,7 @@ namespace dso {
         if (p->stateFlag == EFPointStatus::PS_MARGINALIZE) {
           p->priorF *= setting_idepthFixPriorMargFac;
           for (EFResidual *r : p->residualsAll)
-            if (r->isActive())
+            if (r->isActive() && r->targetIDX != -1)
               connectivityMap[(((uint64_t) r->host->frameID) << 32) + ((uint64_t) r->target->frameID)][1]++;
           allPointsToMarg.push_back(p);
         }
@@ -867,7 +870,7 @@ namespace dso {
     lastX = x;
 
 //	printf("x.size(): %ld, %ld\n", x.rows(), x.cols());
-    //resubstituteF(x, HCalib);
+//    resubstituteF(x, HCalib);
     currentLambda = lambda;
     resubstituteF_MT(x, HCalib, multiThreading);
     currentLambda = 0;

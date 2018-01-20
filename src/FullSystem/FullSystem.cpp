@@ -63,8 +63,11 @@ namespace dso {
   int CalibHessian::instanceCounter = 0;
 
 
-  FullSystem::FullSystem() : leftToRight_SE3(SE3(Sophus::Quaterniond(0, 0, 0, 1), Vec3(-baseline, 0, 0))) {
+  FullSystem::FullSystem() : leftToRight_SE3(SE3(Sophus::Quaterniond(1, 0, 0, 0), Vec3(-baseline, 0, 0))) {
 
+//    std::cout << leftToRight_SE3.matrix3x4() << std::endl;
+//
+//    printf("baseline: %f\n", baseline);
     int retstat = 0;
     if (setting_logStuff) {
 
@@ -277,9 +280,9 @@ namespace dso {
     AffLight aff_last_2_l = AffLight(0, 0);
 
     std::vector<SE3, Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
-//    if (allFrameHistory.size() == 2) {
+    if (allFrameHistory.size() == 2) {
 
-    if (false) {
+//    if (false) {
       initializeFromInitializer(fh);
 
       lastF_2_fh_tries.push_back(SE3(Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 1>::Zero()));
@@ -341,7 +344,7 @@ namespace dso {
 
       coarseTracker->makeK(&Hcalib);
       coarseTracker->setCTRefForFirstFrame(frameHessians);
-
+      lastF = coarseTracker->lastRef;
     }
     else {
 
@@ -539,7 +542,7 @@ namespace dso {
     fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
     //- And also calculate right frame
     fhRight->shell->aff_g2l = aff_g2l;
-    fhRight->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef * leftToRight_SE3.inverse();
+    fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
 
 
     if (coarseTracker->firstCoarseRMSE < 0)
@@ -1070,12 +1073,16 @@ namespace dso {
         newpoint->host->immaturePoints[ph->idxInImmaturePoints] = 0;
         newpoint->host->pointHessians.push_back(newpoint);
         ef->insertPoint(newpoint);
+        int staticNum = 0;
         for (PointFrameResidual *r : newpoint->residuals) {
-          if (r->staticStereo) //- static stereo residual
+          if (r->staticStereo) { //- static stereo residual
             ef->insertStaticResidual(r);
+            staticNum++;
+          }
           else
             ef->insertResidual(r);
         }
+        assert(staticNum <= 1);
         assert(newpoint->efPoint != 0);
         delete ph;
       }
@@ -1261,7 +1268,10 @@ namespace dso {
             int ngoodRes = 0;
             for (PointFrameResidual *r : ph->residuals) {
               r->resetOOB();
-              r->linearize(&Hcalib);
+              if (r->staticStereo)
+                r->linearizeStatic(&Hcalib);
+              else
+                r->linearize(&Hcalib);
               r->efResidual->isLinearized = false;
               r->applyRes(true);
               if (r->efResidual->isActive()) {
@@ -1282,10 +1292,8 @@ namespace dso {
 
           }
           else {
-            host->pointHessiansOut.push_back(ph);
             ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
-
-
+            host->pointHessiansOut.push_back(ph);
             //printf("drop point in frame %d (%d goodRes, %d activeRes)\n", ph->host->idx, ph->numGoodResiduals, (int)ph->residuals.size());
           }
 
@@ -1479,7 +1487,7 @@ namespace dso {
     if (isLost) return;
     boost::unique_lock<boost::mutex> lock(trackMutex);
 
-//    printf("addActive Frame left timestamp: %lf, right timestamp: %lf\n", image->timestamp, imageRight->timestamp);
+    printf("addActive Frame left timestamp: %lf, right timestamp: %lf\n", image->timestamp, imageRight->timestamp);
 
     //- Checkout if camera intrinsics changed.
 //    printf("Hcalib: %f, %f, %f, %f\n", Hcalib.fxl(), Hcalib.fyl(), Hcalib.cxl(), Hcalib.cyl());
@@ -1522,21 +1530,31 @@ namespace dso {
         Sophus::Quaterniond q_WS = imuPropagation->initializeRollPitchFromMeasurements(imuMeasurements);
         q_WS.setIdentity();
         // T_WS * T_SC0 = T_WC0
-        coarseInitializer->T_WC_ini = SE3(q_WS, Vec3(0, 0, 0)) * T_SC0;
+        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond::Identity(), Vec3(0, 0, 0)) * T_SC0;
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
+
+        initialized = true;
+
+        fh->shell->aff_g2l = AffLight(0, 0);
+        fh->shell->T_WC = coarseInitializer->T_WC_ini;
+        fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
+        fhRight->shell->T_WC = fhRight->shell->T_WC * leftToRight_SE3.inverse();
+        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
       }
-      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
-      {
-        initializeFromInitializer(fh);
-        lock.unlock();
-        deliverTrackedFrame(fh, fhRight, true);
-      }
-      else {
-        // if still initializing
-        fh->shell->poseValid = false;
-        delete fh;
-      }
+//      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
+//      {
+//        initializeFromInitializer(fh);
+//        lock.unlock();
+//        deliverTrackedFrame(fh, fhRight, true);
+//      }
+//      else {
+//        // if still initializing
+//        fh->shell->poseValid = false;
+//        delete fh;
+//      }
       return;
     }
     else  // do front-end operation.
@@ -1554,6 +1572,8 @@ namespace dso {
           !std::isfinite((double) tres[3])) {
         printf("Initial Tracking failed: LOST!\n");
         isLost = true;
+        delete fh;
+        delete fhRight;
         return;
       }
 
@@ -1662,11 +1682,16 @@ namespace dso {
         if (needToKetchupMapping && unmappedTrackedFrames.size() > 0) {
           FrameHessian *fh = unmappedTrackedFrames.front();
           unmappedTrackedFrames.pop_front();
+          FrameHessian *fhRight = unmappedTrackedFramesRight.front();
+          unmappedTrackedFramesRight.pop_front();
           {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
             fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
             fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
           }
           delete fh;
         }
@@ -1707,6 +1732,9 @@ namespace dso {
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
     traceNewCoarseKey(fh);
@@ -1721,6 +1749,10 @@ namespace dso {
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+
+      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
     traceNewCoarseKey(fh);
@@ -1986,12 +2018,20 @@ namespace dso {
       firstFrame->shell->trackingRef = 0;
       firstFrame->shell->camToTrackingRef = SE3();
 
+      firstFrameRight->shell->aff_g2l = firstFrame->shell->aff_g2l;
+      firstFrameRight->shell->T_WC = firstFrame->shell->T_WC * leftToRight_SE3.inverse();
+      firstFrameRight->setEvalPT_scaled(firstFrameRight->shell->T_WC.inverse(), firstFrameRight->shell->aff_g2l);
+
       newFrame->shell->T_WC = T_10.inverse();
       newFrame->shell->aff_g2l = AffLight(0, 0);
       newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(), newFrame->shell->aff_g2l);
       newFrame->shell->trackingRef = firstFrame->shell;
       newFrame->shell->camToTrackingRef = T_10.inverse();
 
+      newFrame->rightFrame->shell->aff_g2l = newFrame->shell->aff_g2l;
+      newFrame->rightFrame->shell->T_WC = newFrame->shell->T_WC * leftToRight_SE3.inverse();
+      newFrame->rightFrame->setEvalPT_scaled(newFrame->rightFrame->shell->T_WC.inverse(),
+                                             newFrame->rightFrame->shell->aff_g2l);
     }
 
     initialized = true;

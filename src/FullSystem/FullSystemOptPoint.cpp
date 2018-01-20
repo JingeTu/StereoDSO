@@ -186,42 +186,46 @@ namespace dso {
 
     //- Also add static stereo residual.
     //- Should check out first if the right Frame can see this point.
-    Mat33f K = Mat33f::Identity();
-    K(0, 0) = Hcalib.fxl();
-    K(1, 1) = Hcalib.fyl();
-    K(0, 2) = Hcalib.cxl();
-    K(1, 2) = Hcalib.cyl();
+    //- And if previous do not add a residual, static stereo residual will not be added.
+    if (!ph->residuals.empty()) {
 
-    point->u_stereo = point->u;
-    point->v_stereo = point->v;
-    point->idepth_min_stereo = point->idepth_min = 0;
-    point->idepth_max_stereo = point->idepth_max = NAN;
+      Mat33f K = Mat33f::Identity();
+      K(0, 0) = Hcalib.fxl();
+      K(1, 1) = Hcalib.fyl();
+      K(0, 2) = Hcalib.cxl();
+      K(1, 2) = Hcalib.cyl();
 
-    ImmaturePointStatus traceLeft2RightStatus = point->traceStereo(point->host->rightFrame, K, 1);
-    if (traceLeft2RightStatus == ImmaturePointStatus::IPS_GOOD) {
-      ImmaturePoint *ipRight = new ImmaturePoint(point->lastTraceUV(0), point->lastTraceUV(1),
-                                                 point->host->rightFrame,
-                                                 point->my_type, &Hcalib);
+      point->u_stereo = point->u;
+      point->v_stereo = point->v;
+      point->idepth_min_stereo = 0;
+      point->idepth_max_stereo = NAN;
 
-      ipRight->u_stereo = ipRight->u;
-      ipRight->v_stereo = ipRight->v;
-      ipRight->idepth_min_stereo = point->idepth_min = 0;
-      ipRight->idepth_max_stereo = point->idepth_max = NAN;
+      ImmaturePointStatus traceLeft2RightStatus = point->traceStereo(point->host->rightFrame, K, 1);
+      if (traceLeft2RightStatus == ImmaturePointStatus::IPS_GOOD) {
+        ImmaturePoint *ipRight = new ImmaturePoint(point->lastTraceUV(0), point->lastTraceUV(1),
+                                                   point->host->rightFrame,
+                                                   point->my_type, &Hcalib);
 
-      ImmaturePointStatus traceRigh2LeftStatus = ipRight->traceStereo(point->host, K, 0);
+        ipRight->u_stereo = ipRight->u;
+        ipRight->v_stereo = ipRight->v;
+        ipRight->idepth_min_stereo = point->idepth_min = 0;
+        ipRight->idepth_max_stereo = point->idepth_max = NAN;
 
-      float u_stereo_delta = abs(point->u_stereo - ipRight->lastTraceUV(0));
-      float depth = 1.0f / point->idepth_stereo;
-      if (traceRigh2LeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-          depth < 70) {
-        PointFrameResidual *r = new PointFrameResidual(ph, ph->host, ph->host->rightFrame);
-        r->staticStereo = true;
-        r->state_NewEnergy = r->state_energy = 0;
-        r->state_NewState = ResState::OUTLIER;
-        r->setState(ResState::IN);
-        ph->rightFrameResidual = r;
+        ImmaturePointStatus traceRigh2LeftStatus = ipRight->traceStereo(point->host, K, 0);
+
+        float u_stereo_delta = abs(point->u_stereo - ipRight->lastTraceUV(0));
+        float depth = 1.0f / point->idepth_stereo;
+        if (traceRigh2LeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
+            depth < 70) {
+          PointFrameResidual *r = new PointFrameResidual(ph, ph->host, ph->host->rightFrame);
+          r->staticStereo = true;
+          r->state_NewEnergy = r->state_energy = 0;
+          r->state_NewState = ResState::OUTLIER;
+          r->setState(ResState::IN);
+//          ph->residuals.push_back(r);
+        }
+        delete ipRight;
       }
-      delete ipRight;
     }
 
     if (print) printf("point activated!\n");

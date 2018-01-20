@@ -201,6 +201,9 @@ namespace dso {
     PRE_RTll_0 = (leftToLeft_0.rotationMatrix()).cast<float>();
     PRE_tTll_0 = (leftToLeft_0.translation()).cast<float>();
 
+//    std::cout << "target->get_worldToCam_evalPT(): \n" << target->get_worldToCam_evalPT().matrix3x4() << std::endl;
+//    std::cout << "host->get_worldToCam_evalPT(): \n" << host->get_worldToCam_evalPT().matrix3x4() << std::endl;
+//    std::cout << "PRE_RTll_0: \n" << leftToLeft_0.matrix3x4() << std::endl;
 
     SE3 leftToLeft = target->PRE_T_CW * host->PRE_T_WC;
     PRE_RTll = (leftToLeft.rotationMatrix()).cast<float>();

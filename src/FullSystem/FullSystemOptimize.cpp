@@ -49,8 +49,10 @@ namespace dso {
                                          int max, Vec10 *stats, int tid) {//- fixLinearization == false
     for (int k = min; k < max; k++) {
       PointFrameResidual *r = activeResiduals[k];
-      if (r->host->rightFrame == r->target) // static residual do something else
+      if (r->staticStereo) {
         (*stats)[0] += r->linearizeStatic(&Hcalib);
+        continue;
+      }
       else
         (*stats)[0] += r->linearize(&Hcalib);
 
@@ -242,6 +244,8 @@ namespace dso {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         fh->setState(fh->state_backup + pstepfac.cwiseProduct(fh->step));
+        fh->rightFrame->setState(fh->rightFrame->state_backup + pstepfac.cwiseProduct(fh->rightFrame->step));
+
         sumA += fh->step[6] * fh->step[6];
         sumB += fh->step[7] * fh->step[7];
         sumT += fh->step.segment<3>(0).squaredNorm();
@@ -393,7 +397,7 @@ namespace dso {
     for (FrameHessian *fh : frameHessians)
       for (PointHessian *ph : fh->pointHessians) {
         for (PointFrameResidual *r : ph->residuals) {
-          if (!r->efResidual->isLinearized) // default is false, after FullSystem::flagPointsForRemoval, becomes true
+          if (!r->efResidual->isLinearized) //- default is false, after FullSystem::flagPointsForRemoval, becomes true
           {
             activeResiduals.push_back(r);
             r->resetOOB();
@@ -501,6 +505,9 @@ namespace dso {
         lambda *= 1e2;
       }
 
+      std::cout << "FullSystem::optimize() iteration " << iteration
+                << "\t frameHessians.front()->PRE_T_WC.matrix3x4() \n"
+                << frameHessians.front()->PRE_T_WC.matrix3x4() << std::endl;
 
       if (canbreak && iteration >= setting_minOptIterations) break;
     }
@@ -542,6 +549,8 @@ namespace dso {
       for (FrameHessian *fh : frameHessians) {
         fh->shell->T_WC = fh->PRE_T_WC;
         fh->shell->aff_g2l = fh->aff_g2l();
+        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
+        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
       }
     }
 

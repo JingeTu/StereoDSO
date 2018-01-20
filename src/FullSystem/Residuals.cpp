@@ -312,6 +312,11 @@ namespace dso {
     Vec2f affLL = precalc->PRE_aff_mode;
     float b0 = precalc->PRE_b0_mode;
 
+//    std::cout << "PRE_tTll_0: \n";
+//    std::cout << PRE_tTll_0 << std::endl;
+//    std::cout << "PRE_RTll_0: \n";
+//    std::cout << PRE_RTll_0 << std::endl;
+
 
 //    Vec6f d_xi_x, d_xi_y;
     Vec4f d_C_x, d_C_y;
@@ -480,6 +485,8 @@ namespace dso {
     J->Jab2(0, 1) = JabJab_01;
     J->Jab2(1, 0) = JabJab_01;
     J->Jab2(1, 1) = JabJab_11;
+
+//    std::cout << "J->Jidx: " << J->JIdx2 << std::endl;
 
     state_NewEnergyWithOutlier = energyLeft;
 

@@ -165,12 +165,17 @@ namespace dso {
 
       Vec2f Ji2_Jpdd = rJ->JIdx2 * rJ->Jpdd;
       bd_acc += JI_r[0] * rJ->Jpdd[0] + JI_r[1] * rJ->Jpdd[1];
+//      float temp = Ji2_Jpdd.dot(rJ->Jpdd);
       Hdd_acc += Ji2_Jpdd.dot(rJ->Jpdd);
       Hcd_acc += rJ->Jpdc[0] * Ji2_Jpdd[0] + rJ->Jpdc[1] * Ji2_Jpdd[1];
 
       nres[tid]++;
     }
 
+//    printf("Hdd_acc: %f\n", Hdd_acc);
+//    assert(Hdd_acc!=0);
+//    printf("Hdd_acc: %f\n", Hdd_acc);
+    assert(std::isfinite(Hdd_acc));
     if (mode == 0) // active
     {
       p->Hdd_accAF = Hdd_acc;

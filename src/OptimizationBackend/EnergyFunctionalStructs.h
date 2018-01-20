@@ -108,6 +108,8 @@ namespace dso {
     EFPoint(PointHessian *d, EFFrame *host_) : data(d), host(host_) {
       takeData();
       stateFlag = EFPointStatus::PS_GOOD;
+      Hdd_accAF = 0.f;
+      Hdd_accLF = 0.f;
     }
 
     void takeData();

@@ -133,7 +133,7 @@ namespace okvis {
 
     template<typename Derived_coeffs>
     inline bool Transformation::setCoeffs(
-        const Eigen::MatrixBase <Derived_coeffs> &coeffs) {
+        const Eigen::MatrixBase<Derived_coeffs> &coeffs) {
       EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived_coeffs, 7);
       parameters_ = coeffs;
       updateC();
@@ -156,11 +156,11 @@ namespace okvis {
     }
 
 // return the translation vector
-    inline const Eigen::Map <Eigen::Vector3d> &Transformation::r() const {
+    inline const Eigen::Map<Eigen::Vector3d> &Transformation::r() const {
       return r_;
     }
 
-    inline const Eigen::Map <Eigen::Quaterniond> &Transformation::q() const {
+    inline const Eigen::Map<Eigen::Quaterniond> &Transformation::q() const {
       return q_;
     }
 
@@ -253,7 +253,7 @@ namespace okvis {
 // apply small update:
     template<typename Derived_delta>
     inline bool Transformation::oplus(
-        const Eigen::MatrixBase <Derived_delta> &delta) {
+        const Eigen::MatrixBase<Derived_delta> &delta) {
       EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived_delta, 6);
       r_ += delta.template head<3>();
       Eigen::Vector4d dq;
@@ -268,8 +268,8 @@ namespace okvis {
 
     template<typename Derived_delta, typename Derived_jacobian>
     inline bool Transformation::oplus(
-        const Eigen::MatrixBase <Derived_delta> &delta,
-        const Eigen::MatrixBase <Derived_jacobian> &jacobian) {
+        const Eigen::MatrixBase<Derived_delta> &delta,
+        const Eigen::MatrixBase<Derived_jacobian> &jacobian) {
       EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived_delta, 6);
       EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Derived_jacobian, 7, 6);
       if (!oplus(delta)) {
@@ -280,27 +280,27 @@ namespace okvis {
 
     template<typename Derived_jacobian>
     inline bool Transformation::oplusJacobian(
-        const Eigen::MatrixBase <Derived_jacobian> &jacobian) const {
+        const Eigen::MatrixBase<Derived_jacobian> &jacobian) const {
       EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Derived_jacobian, 7, 6);
       Eigen::Matrix<double, 4, 3> S = Eigen::Matrix<double, 4, 3>::Zero();
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian).setZero();
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian)
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian).setZero();
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian)
           .template topLeftCorner<3, 3>().setIdentity();
       S(0, 0) = 0.5;
       S(1, 1) = 0.5;
       S(2, 2) = 0.5;
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian)
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian)
           .template bottomRightCorner<4, 3>() = okvis::kinematics::oplus(q_) * S;
       return true;
     }
 
     template<typename Derived_jacobian>
-    inline bool Transformation::liftJacobian(const Eigen::MatrixBase <Derived_jacobian> &jacobian) const {
+    inline bool Transformation::liftJacobian(const Eigen::MatrixBase<Derived_jacobian> &jacobian) const {
       EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Derived_jacobian, 6, 7);
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian).setZero();
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian).template topLeftCorner<3, 3>()
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian).setZero();
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian).template topLeftCorner<3, 3>()
           = Eigen::Matrix3d::Identity();
-      const_cast<Eigen::MatrixBase <Derived_jacobian> &>(jacobian).template bottomRightCorner<3, 4>()
+      const_cast<Eigen::MatrixBase<Derived_jacobian> &>(jacobian).template bottomRightCorner<3, 4>()
           = 2 * okvis::kinematics::oplus(q_.inverse()).template topLeftCorner<3, 4>();
       return true;
     }
