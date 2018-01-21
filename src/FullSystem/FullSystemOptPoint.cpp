@@ -222,7 +222,7 @@ namespace dso {
           r->state_NewEnergy = r->state_energy = 0;
           r->state_NewState = ResState::OUTLIER;
           r->setState(ResState::IN);
-//          ph->residuals.push_back(r);
+          ph->residuals.push_back(r);
         }
         delete ipRight;
       }

@@ -175,10 +175,14 @@ namespace dso {
 //    printf("Hdd_acc: %f\n", Hdd_acc);
 //    assert(Hdd_acc!=0);
 //    printf("Hdd_acc: %f\n", Hdd_acc);
-    assert(std::isfinite(Hdd_acc));
+//    assert(std::isfinite(Hdd_acc));
+//    if (!std::isfinite(Hdd_acc)) {
+//      Hdd_acc = 0.0f;
+//    }
     if (mode == 0) // active
     {
       p->Hdd_accAF = Hdd_acc;
+      assert(std::isfinite(Hdd_acc));
       p->bd_accAF = bd_acc;
       p->Hcd_accAF = Hcd_acc;
     }

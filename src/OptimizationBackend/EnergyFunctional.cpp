@@ -248,8 +248,8 @@ namespace dso {
       h->data->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
       h->data->step.tail<2>().setZero();
 
-      h->data->rightFrame->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
-      h->data->rightFrame->step.tail<2>().setZero();
+//      h->data->rightFrame->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
+//      h->data->rightFrame->step.tail<2>().setZero();
 
       for (EFFrame *t : frames)
         xAd[nFrames * h->idx + t->idx] =

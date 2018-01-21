@@ -368,20 +368,6 @@ namespace dso {
       d_C_y[2] *= SCALE_C;
       d_C_y[3] = (d_C_y[3] + 1) * SCALE_C;
 
-      //- {\partial x_2} \over {\partial \xi_{21}}
-//      d_xi_x[0] = new_idepth * HCalib->fxl();
-//      d_xi_x[1] = 0;
-//      d_xi_x[2] = -new_idepth * u * HCalib->fxl();
-//      d_xi_x[3] = -u * v * HCalib->fxl();
-//      d_xi_x[4] = (1 + u * u) * HCalib->fxl();
-//      d_xi_x[5] = -v * HCalib->fxl();
-//
-//      d_xi_y[0] = 0;
-//      d_xi_y[1] = new_idepth * HCalib->fyl();
-//      d_xi_y[2] = -new_idepth * v * HCalib->fyl();
-//      d_xi_y[3] = -(1 + v * v) * HCalib->fyl();
-//      d_xi_y[4] = u * v * HCalib->fyl();
-//      d_xi_y[5] = u * HCalib->fyl();
     }
 
 

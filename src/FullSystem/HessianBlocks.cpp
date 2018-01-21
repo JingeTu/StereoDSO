@@ -227,5 +227,43 @@ namespace dso {
     PRE_b0_mode = host->aff_g2l_0().b;
   }
 
+
+  void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
+    this->host = host;
+    this->target = target;
+
+    // T_th (host to target)
+    PRE_RTll_0 = Mat33f::Identity();
+    PRE_tTll_0 << -baseline, 0, 0;
+
+    PRE_RTll = PRE_RTll_0;
+    PRE_tTll = PRE_tTll_0;
+    distanceLL = baseline;
+
+
+    Mat33f K = Mat33f::Zero();
+    K(0, 0) = HCalib->fxl();
+    K(1, 1) = HCalib->fyl();
+    K(0, 2) = HCalib->cxl();
+    K(1, 2) = HCalib->cyl();
+    K(2, 2) = 1;
+    PRE_KRKiTll = K * PRE_RTll * K.inverse();
+    PRE_RKiTll = PRE_RTll * K.inverse();
+    PRE_KtTll = K * PRE_tTll;
+
+    //- Assume there is not aff light transform between static stereo.
+    PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(),
+                                               host->aff_g2l()).cast<float>();
+
+    PRE_b0_mode = host->aff_g2l_0().b;
+
+//    std::cout << "target->ab_exposure.a: " << target->ab_exposure << std::endl;
+//    std::cout << "target->aff_g2l().a: " << target->aff_g2l().a << std::endl;
+//    std::cout << "target->aff_g2l().b: " << target->aff_g2l().b << std::endl;
+//    std::cout << "PRE_aff_mode: " << PRE_aff_mode << std::endl;
+//    std::cout << "PRE_b0_mode: " << PRE_b0_mode << std::endl;
+//    ;
+  }
+
 }
 

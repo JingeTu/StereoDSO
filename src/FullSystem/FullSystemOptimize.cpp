@@ -236,15 +236,15 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + step);
         }
 
-        assert(fh->rightFrame != 0);
-        fh->rightFrame->setState(fh->rightFrame->state_backup + step);
+//        assert(fh->rightFrame != 0);
+//        fh->rightFrame->setState(fh->rightFrame->state_backup + step);
       }
     }
     else {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         fh->setState(fh->state_backup + pstepfac.cwiseProduct(fh->step));
-        fh->rightFrame->setState(fh->rightFrame->state_backup + pstepfac.cwiseProduct(fh->rightFrame->step));
+//        fh->rightFrame->setState(fh->rightFrame->state_backup + pstepfac.cwiseProduct(fh->rightFrame->step));
 
         sumA += fh->step[6] * fh->step[6];
         sumB += fh->step[7] * fh->step[7];
@@ -305,8 +305,8 @@ namespace dso {
             ph->idepth_backup = ph->idepth;
             ph->step_backup = ph->step;
           }
-          fh->rightFrame->step_backup = fh->rightFrame->step;
-          fh->rightFrame->state_backup = fh->rightFrame->get_state();
+//          fh->rightFrame->step_backup = fh->rightFrame->step;
+//          fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
       }
       else {
@@ -319,8 +319,8 @@ namespace dso {
             ph->idepth_backup = ph->idepth;
             ph->step_backup = 0;
           }
-          fh->rightFrame->step_backup.setZero();
-          fh->rightFrame->state_backup = fh->rightFrame->get_state();
+//          fh->rightFrame->step_backup.setZero();
+//          fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
       }
     }
@@ -330,7 +330,7 @@ namespace dso {
         fh->state_backup = fh->get_state();
         for (PointHessian *ph : fh->pointHessians)
           ph->idepth_backup = ph->idepth;
-        fh->rightFrame->state_backup = fh->rightFrame->get_state();
+//        fh->rightFrame->state_backup = fh->rightFrame->get_state();
       }
     }
   }
@@ -345,7 +345,7 @@ namespace dso {
 
         ph->setIdepthZero(ph->idepth_backup);
       }
-      fh->rightFrame->setState(fh->state_backup);
+//      fh->rightFrame->setState(fh->state_backup);
     }
 
 
@@ -505,10 +505,6 @@ namespace dso {
         lambda *= 1e2;
       }
 
-      std::cout << "FullSystem::optimize() iteration " << iteration
-                << "\t frameHessians.front()->PRE_T_WC.matrix3x4() \n"
-                << frameHessians.front()->PRE_T_WC.matrix3x4() << std::endl;
-
       if (canbreak && iteration >= setting_minOptIterations) break;
     }
 
@@ -549,8 +545,8 @@ namespace dso {
       for (FrameHessian *fh : frameHessians) {
         fh->shell->T_WC = fh->PRE_T_WC;
         fh->shell->aff_g2l = fh->aff_g2l();
-        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
-        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
+//        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
+//        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
       }
     }
 

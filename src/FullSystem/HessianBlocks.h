@@ -104,6 +104,8 @@ namespace dso {
     inline FrameFramePrecalc() { host = target = 0; }
 
     void set(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib);
+
+    void setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib);
   };
 
 

@@ -541,8 +541,8 @@ namespace dso {
     fh->shell->aff_g2l = aff_g2l;
     fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
     //- And also calculate right frame
-    fhRight->shell->aff_g2l = aff_g2l;
-    fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//    fhRight->shell->aff_g2l = aff_g2l;
+//    fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
 
 
     if (coarseTracker->firstCoarseRMSE < 0)
@@ -1504,7 +1504,6 @@ namespace dso {
     allFrameHistory.push_back(shell);
     //- Right Image
     FrameHessian *fhRight = new FrameHessian();
-    fhRight->shell = shell;
 
     fh->rightFrame = fhRight;
     fhRight->leftFrame = fh;
@@ -1540,9 +1539,9 @@ namespace dso {
         fh->shell->T_WC = coarseInitializer->T_WC_ini;
         fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
-        fhRight->shell->T_WC = fhRight->shell->T_WC * leftToRight_SE3.inverse();
-        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
+//        fhRight->shell->T_WC = fhRight->shell->T_WC * leftToRight_SE3.inverse();
+//        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
       }
 //      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
 //      {
@@ -1690,8 +1689,8 @@ namespace dso {
             fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
             fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
           }
           delete fh;
         }
@@ -1733,8 +1732,8 @@ namespace dso {
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
     traceNewCoarseKey(fh);
@@ -1751,8 +1750,8 @@ namespace dso {
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
 
-      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
     traceNewCoarseKey(fh);
@@ -1776,6 +1775,7 @@ namespace dso {
 
 
     // =========================== add new residuals for old points =========================
+//    printf("ef->nResiduals: %d\n", ef->nResiduals);
     int numFwdResAdded = 0;
     for (FrameHessian *fh1 : frameHessians)    // go through all active frames
     {
@@ -2018,9 +2018,9 @@ namespace dso {
       firstFrame->shell->trackingRef = 0;
       firstFrame->shell->camToTrackingRef = SE3();
 
-      firstFrameRight->shell->aff_g2l = firstFrame->shell->aff_g2l;
-      firstFrameRight->shell->T_WC = firstFrame->shell->T_WC * leftToRight_SE3.inverse();
-      firstFrameRight->setEvalPT_scaled(firstFrameRight->shell->T_WC.inverse(), firstFrameRight->shell->aff_g2l);
+//      firstFrameRight->shell->aff_g2l = firstFrame->shell->aff_g2l;
+//      firstFrameRight->shell->T_WC = firstFrame->shell->T_WC * leftToRight_SE3.inverse();
+//      firstFrameRight->setEvalPT_scaled(firstFrameRight->shell->T_WC.inverse(), firstFrameRight->shell->aff_g2l);
 
       newFrame->shell->T_WC = T_10.inverse();
       newFrame->shell->aff_g2l = AffLight(0, 0);
@@ -2028,10 +2028,10 @@ namespace dso {
       newFrame->shell->trackingRef = firstFrame->shell;
       newFrame->shell->camToTrackingRef = T_10.inverse();
 
-      newFrame->rightFrame->shell->aff_g2l = newFrame->shell->aff_g2l;
-      newFrame->rightFrame->shell->T_WC = newFrame->shell->T_WC * leftToRight_SE3.inverse();
-      newFrame->rightFrame->setEvalPT_scaled(newFrame->rightFrame->shell->T_WC.inverse(),
-                                             newFrame->rightFrame->shell->aff_g2l);
+//      newFrame->rightFrame->shell->aff_g2l = newFrame->shell->aff_g2l;
+//      newFrame->rightFrame->shell->T_WC = newFrame->shell->T_WC * leftToRight_SE3.inverse();
+//      newFrame->rightFrame->setEvalPT_scaled(newFrame->rightFrame->shell->T_WC.inverse(),
+//                                             newFrame->rightFrame->shell->aff_g2l);
     }
 
     initialized = true;
@@ -2068,7 +2068,7 @@ namespace dso {
       fh->targetPrecalc.resize(frameHessians.size() + 1);
       for (unsigned int i = 0; i < frameHessians.size(); i++)
         fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
-      fh->targetPrecalc.back().set(fh, fh->rightFrame, &Hcalib);
+      fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
     }
 
     ef->setDeltaF(&Hcalib);
