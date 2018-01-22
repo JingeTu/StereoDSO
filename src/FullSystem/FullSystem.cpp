@@ -862,8 +862,8 @@ namespace dso {
 
             phNonKeyRight->u_stereo = phNonKeyRight->u;
             phNonKeyRight->v_stereo = phNonKeyRight->v;
-            phNonKeyRight->idepth_min_stereo = phNonKey->idepth_min;
-            phNonKeyRight->idepth_max_stereo = phNonKey->idepth_max;
+            phNonKeyRight->idepth_min_stereo = 0;
+            phNonKeyRight->idepth_max_stereo = NAN;
 
             ImmaturePointStatus phNonKeyRightStereoStatus = phNonKeyRight->traceStereo(fh, K, false);
 
@@ -1430,6 +1430,11 @@ namespace dso {
     K(0, 2) = Hcalib.cxl();
     K(1, 2) = Hcalib.cyl();
 
+//    std::vector<cv::KeyPoint> keypoints_left;
+//    std::vector<cv::KeyPoint> keypoints_right;
+//    std::vector<cv::DMatch> matches;
+//    float debugKeepPercentage = 0.2;
+
     for (ImmaturePoint *ip : fh->immaturePoints) {
       ip->u_stereo = ip->u;
       ip->v_stereo = ip->v;
@@ -1457,11 +1462,27 @@ namespace dso {
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
             depth < 70) //original u_stereo_delta 1 depth < 70
         {
+
           ip->idepth_min = ip->idepth_min_stereo;
           ip->idepth_max = ip->idepth_max_stereo;
+
+//          if (rand() / (float) RAND_MAX > debugKeepPercentage) continue;
+//          keypoints_left.emplace_back(ip->u, ip->v, 1);
+//          keypoints_right.emplace_back(ip->lastTraceUV(0), ip->lastTraceUV(1), 1);
+//          matches.emplace_back(keypoints_left.size() - 1, keypoints_right.size() - 1, 1.0f);
         }
       }
     }
+
+//    cv::Mat matLeft(hG[0], wG[0], CV_32FC3, fh->dI);
+//    cv::Mat matRight(hG[0], wG[0], CV_32FC3, fhRight->dI);
+//    matLeft.convertTo(matLeft, CV_8UC3);
+//    matRight.convertTo(matRight, CV_8UC3);
+//
+//    cv::Mat matMatches;
+//    cv::drawMatches(matLeft, keypoints_left, matRight, keypoints_right, matches, matMatches);
+//    cv::imshow("matches", matMatches);
+//    cv::waitKey(0);
   }
 
   void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight,
@@ -1737,6 +1758,7 @@ namespace dso {
     }
 
     traceNewCoarseKey(fh);
+//    traceNewCoarseNonKey(fh, fhRight);
     delete fh;
     delete fhRight;
   }
@@ -1944,39 +1966,40 @@ namespace dso {
 
       const ImmaturePointStatus ipTraceRightStatus = ip->traceStereo(firstFrameRight, K, 1);
 
-//      if (ipTraceRightStatus == ImmaturePointStatus::IPS_GOOD) {
-//        ImmaturePoint *ipRight = new ImmaturePoint(ip->lastTraceUV(0), ip->lastTraceUV(1), firstFrameRight, point->my_type, &Hcalib);
-//
-//        ipRight->u_stereo = ipRight->u;
-//        ipRight->v_stereo = ipRight->v;
-//        ipRight->idepth_min_stereo = ipRight->idepth_min = 0;
-//        ipRight->idepth_max_stereo = ipRight->idepth_max = 0;
-//        const ImmaturePointStatus ipTraceLeftStatus = ipRight->traceStereo(firstFrame, K, 0);
-//
-//        float u_stereo_delta = abs(ip->u_stereo - ipRight->lastTraceUV(0));
-//        float depth = 1.0f / ip->idepth_stereo;
-//
-//        if (ipTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 && depth < 70) {
-//          ip->idepth_min = ip->idepth_min_stereo;
-//          ip->idepth_max = ip->idepth_max_stereo;
-//
-//          PointHessian *ph = new PointHessian(ip, &Hcalib);
-//          delete ip;
-//          if (!std::isfinite(ph->energyTH)) {
-//            delete ph;
-//            continue;
-//          }
-//
-//          ph->setIdepthScaled(ip->idepth_stereo);
-//          ph->setIdepthZero(ip->idepth_stereo);
-//          ph->hasDepthPrior = true;
-//          ph->setPointStatus(PointHessian::ACTIVE);
-//
-//
-//          firstFrame->pointHessians.push_back(ph);
-//          ef->insertPoint(ph);
-//        }
-//      }
+      if (ipTraceRightStatus == ImmaturePointStatus::IPS_GOOD) {
+        ImmaturePoint *ipRight = new ImmaturePoint(ip->lastTraceUV(0), ip->lastTraceUV(1), firstFrameRight,
+                                                   point->my_type, &Hcalib);
+
+        ipRight->u_stereo = ipRight->u;
+        ipRight->v_stereo = ipRight->v;
+        ipRight->idepth_min_stereo = ipRight->idepth_min = 0;
+        ipRight->idepth_max_stereo = ipRight->idepth_max = 0;
+        const ImmaturePointStatus ipTraceLeftStatus = ipRight->traceStereo(firstFrame, K, 0);
+
+        float u_stereo_delta = abs(ip->u_stereo - ipRight->lastTraceUV(0));
+        float depth = 1.0f / ip->idepth_stereo;
+
+        if (ipTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 && depth < 70) {
+          ip->idepth_min = ip->idepth_min_stereo;
+          ip->idepth_max = ip->idepth_max_stereo;
+
+          PointHessian *ph = new PointHessian(ip, &Hcalib);
+          delete ip;
+          if (!std::isfinite(ph->energyTH)) {
+            delete ph;
+            continue;
+          }
+
+          ph->setIdepthScaled(ip->idepth_stereo);
+          ph->setIdepthZero(ip->idepth_stereo);
+          ph->hasDepthPrior = true;
+          ph->setPointStatus(PointHessian::ACTIVE);
+
+
+          firstFrame->pointHessians.push_back(ph);
+          ef->insertPoint(ph);
+        }
+      }
 
       ip->idepth_min = ip->idepth_min_stereo;
       ip->idepth_max = ip->idepth_max_stereo;

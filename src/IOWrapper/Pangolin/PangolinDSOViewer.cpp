@@ -178,7 +178,7 @@ namespace dso {
       pangolin::Var<double> settings_trackFps("ui.Track fps", 0, 0, 0, false);
       pangolin::Var<double> settings_mapFps("ui.KF fps", 0, 0, 0, false);
 
-
+      glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
       // Default hooks for exiting (Esc) and fullscreen (tab).
       while (!pangolin::ShouldQuit() && running) {
         // Clear entire screen

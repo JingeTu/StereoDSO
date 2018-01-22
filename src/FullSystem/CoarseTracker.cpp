@@ -138,6 +138,7 @@ namespace dso {
           int v = r->centerProjectedTo[1] + 0.5f;
           float new_idepth = r->centerProjectedTo[2];
           float weight = sqrtf(1e-3 / (ph->efPoint->HdiF + 1e-12));
+//          float weight = 1.0f;
 
           idepth[0][u + w[0] * v] += new_idepth * weight;
           weightSums[0][u + w[0] * v] += weight;
@@ -524,6 +525,7 @@ namespace dso {
       int v = ph->v + 0.5f;
       float new_idepth = ph->idepth;
       float weight = sqrtf(1e-3 / (ph->efPoint->HdiF + 1e-12));
+//      float weight = 1.0f;
 
       idepth[0][u + w[0] * v] += new_idepth * weight;
       weightSums[0][u + w[0] * v] += weight;

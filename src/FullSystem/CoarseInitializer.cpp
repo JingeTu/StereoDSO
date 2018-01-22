@@ -989,8 +989,8 @@ namespace dso {
 
 
       float b = JbBuffer[i][8] + JbBuffer[i].head<8>().dot(inc);
-      float step = -b * JbBuffer[i][9] / (1 + lambda);
-//      float step = -b * JbBuffer[i][9];
+//      float step = -b * JbBuffer[i][9] / (1 + lambda);
+      float step = -b * JbBuffer[i][9];
 
       float maxstep = maxPixelStep * pts[i].maxstep;
       if (maxstep > idMaxStep) maxstep = idMaxStep;

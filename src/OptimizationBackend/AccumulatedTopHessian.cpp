@@ -165,24 +165,15 @@ namespace dso {
 
       Vec2f Ji2_Jpdd = rJ->JIdx2 * rJ->Jpdd;
       bd_acc += JI_r[0] * rJ->Jpdd[0] + JI_r[1] * rJ->Jpdd[1];
-//      float temp = Ji2_Jpdd.dot(rJ->Jpdd);
       Hdd_acc += Ji2_Jpdd.dot(rJ->Jpdd);
       Hcd_acc += rJ->Jpdc[0] * Ji2_Jpdd[0] + rJ->Jpdc[1] * Ji2_Jpdd[1];
 
       nres[tid]++;
     }
 
-//    printf("Hdd_acc: %f\n", Hdd_acc);
-//    assert(Hdd_acc!=0);
-//    printf("Hdd_acc: %f\n", Hdd_acc);
-//    assert(std::isfinite(Hdd_acc));
-//    if (!std::isfinite(Hdd_acc)) {
-//      Hdd_acc = 0.0f;
-//    }
     if (mode == 0) // active
     {
       p->Hdd_accAF = Hdd_acc;
-      assert(std::isfinite(Hdd_acc));
       p->bd_accAF = bd_acc;
       p->Hcd_accAF = Hcd_acc;
     }
@@ -304,25 +295,26 @@ namespace dso {
         accH += acc[tid2][aidx].H.cast<double>();
       }
 
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial \xi_i}
       H[tid].block<8, 8>(hIdx, hIdx).noalias() +=
           EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adHost[aidx].transpose();
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T {\partial r_{(k)} \over \partial \xi_j}
       H[tid].block<8, 8>(tIdx, tIdx).noalias() +=
           EF->adTarget[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial \xi_j}
       H[tid].block<8, 8>(hIdx, tIdx).noalias() +=
           EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial C}
       H[tid].block<8, CPARS>(hIdx, 0).noalias() += EF->adHost[aidx] * accH.block<8, CPARS>(CPARS, 0);
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T {\partial r_{(k)} \over \partial C}
       H[tid].block<8, CPARS>(tIdx, 0).noalias() += EF->adTarget[aidx] * accH.block<8, CPARS>(CPARS, 0);
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial C}^T {\partial r_{(k)} \over \partial C}
       H[tid].topLeftCorner<CPARS, CPARS>().noalias() += accH.block<CPARS, CPARS>(0, 0);
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T r_{(k)}
       b[tid].segment<8>(hIdx).noalias() += EF->adHost[aidx] * accH.block<8, 1>(CPARS, CPARS + 8);
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T r_{(k)}
       b[tid].segment<8>(tIdx).noalias() += EF->adTarget[aidx] * accH.block<8, 1>(CPARS, CPARS + 8);
-
+      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial C}^T r_{(k)}
       b[tid].head<CPARS>().noalias() += accH.block<CPARS, 1>(0, CPARS + 8);
 
     }

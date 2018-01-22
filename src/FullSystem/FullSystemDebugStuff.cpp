@@ -105,6 +105,40 @@ namespace dso {
     if (!setting_render_renderWindowFrames) return;
     std::vector<MinimalImageB3 *> images;
 
+    std::string typeinfo;
+
+    switch ((int) (freeDebugParam5 + 0.5f)) {
+      case 0:
+        typeinfo = "\tpointHessians out white";
+        break;
+      case 1:
+        typeinfo = "\tpointHessians marg black out white";
+        break;
+      case 2:
+        typeinfo = "\tnothing";
+        break;
+      case 3:
+        typeinfo = "\timmaturePoints idepth unknown black";
+        break;
+      case 4:
+        typeinfo = "\timmaturePoints GOOD G OOB R OUTLIER B";
+        break;
+      case 5:
+        typeinfo = "\timmaturePoints quality";
+        break;
+      case 6:
+        typeinfo = "\timmaturePoints type";
+        break;
+      case 7:
+        typeinfo = "\tpointHessians norm idepth";
+        break;
+      case 8:
+        break;
+      case 9:
+        break;
+    }
+
+    name = name + "\tTYPE: " + std::to_string(freeDebugParam5) + typeinfo;
 
     float minID = 0, maxID = 0;
     if ((int) (freeDebugParam5 + 0.5f) == 7 || (debugSaveImages && false)) {
@@ -174,7 +208,7 @@ namespace dso {
         for (PointHessian *ph : frameHessians[f]->pointHessiansOut)
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, Vec3b(255, 255, 255));
       }
-      else if ((int) (freeDebugParam5 + 0.5f) == 1) {
+      else if ((int) (freeDebugParam5 + 0.5f) == 1) { //- Default freeDebugParam5 == 1
         for (PointHessian *ph : frameHessians[f]->pointHessians) {
           if (ph == 0) continue;
           img->setPixelCirc(ph->u + 0.5f, ph->v + 0.5f, makeRainbow3B(ph->idepth_scaled));
