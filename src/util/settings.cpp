@@ -53,7 +53,8 @@ namespace dso {
 
 
 /* some modes for solving the resulting linear system (e.g. orthogonalize wrt. unobservable dimensions) */
-  int setting_solverMode = SOLVER_FIX_LAMBDA | SOLVER_ORTHOGONALIZE_X_LATER;
+  int setting_solverMode =
+      SOLVER_FIX_LAMBDA | SOLVER_ORTHOGONALIZE_X_LATER; //- original SOLVER_FIX_LAMBDA | SOLVER_ORTHOGONALIZE_X_LATER
   double setting_solverModeDelta = 0.00001;
   bool setting_forceAceptStep = true;
 

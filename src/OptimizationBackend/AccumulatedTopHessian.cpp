@@ -96,7 +96,6 @@ namespace dso {
           }
         }
         else { //- static stereo residual
-          Mat18f dp = ef->adHTdeltaF[htIDX];
           // compute Jp*delta
           __m128 Jp_delta_x = _mm_set1_ps(rJ->Jpdc[0].dot(dc) + rJ->Jpdd[0] * dd);
           __m128 Jp_delta_y = _mm_set1_ps(rJ->Jpdc[1].dot(dc) + rJ->Jpdd[1] * dd);

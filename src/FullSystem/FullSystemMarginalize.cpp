@@ -188,6 +188,8 @@ namespace dso {
     deleteOutOrder<FrameHessian>(frameHessiansRight, frame->rightFrame);
     for (unsigned int i = 0; i < frameHessians.size(); i++)
       frameHessians[i]->idx = i;
+    for (unsigned int i = 0; i < frameHessiansRight.size(); i++)
+      frameHessiansRight[i]->idx = i;
 
 
     setPrecalcValues();

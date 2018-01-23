@@ -283,7 +283,7 @@ namespace dso {
     if (allFrameHistory.size() == 2) {
 
 //    if (false) {
-      initializeFromInitializer(fh);
+      initializeFromInitializerStereo(fh);
 
       lastF_2_fh_tries.push_back(SE3(Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 1>::Zero()));
 
@@ -482,22 +482,22 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-        printf(
-            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
-                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
-            i,
-            i, pyrLevelsUsed - 1,
-            aff_g2l_this.a, aff_g2l_this.b,
-            achievedRes[0],
-            achievedRes[1],
-            achievedRes[2],
-            achievedRes[3],
-            achievedRes[4],
-            coarseTracker->lastResiduals[0],
-            coarseTracker->lastResiduals[1],
-            coarseTracker->lastResiduals[2],
-            coarseTracker->lastResiduals[3],
-            coarseTracker->lastResiduals[4]);
+//        printf(
+//            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+//                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+//            i,
+//            i, pyrLevelsUsed - 1,
+//            aff_g2l_this.a, aff_g2l_this.b,
+//            achievedRes[0],
+//            achievedRes[1],
+//            achievedRes[2],
+//            achievedRes[3],
+//            achievedRes[4],
+//            coarseTracker->lastResiduals[0],
+//            coarseTracker->lastResiduals[1],
+//            coarseTracker->lastResiduals[2],
+//            coarseTracker->lastResiduals[3],
+//            coarseTracker->lastResiduals[4]);
       }
 
 
@@ -569,7 +569,7 @@ namespace dso {
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
 
-/*
+
   Vec4 FullSystem::trackNewCoarse(FrameHessian *fh) {
 
     assert(allFrameHistory.size() > 0);
@@ -805,7 +805,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
-*/
+
   void FullSystem::traceNewCoarseNonKey(FrameHessian *fh, FrameHessian *fhRight) {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -1073,16 +1073,13 @@ namespace dso {
         newpoint->host->immaturePoints[ph->idxInImmaturePoints] = 0;
         newpoint->host->pointHessians.push_back(newpoint);
         ef->insertPoint(newpoint);
-        int staticNum = 0;
         for (PointFrameResidual *r : newpoint->residuals) {
           if (r->staticStereo) { //- static stereo residual
             ef->insertStaticResidual(r);
-            staticNum++;
           }
           else
             ef->insertResidual(r);
         }
-        assert(staticNum <= 1);
         assert(newpoint->efPoint != 0);
         delete ph;
       }
@@ -1374,7 +1371,7 @@ namespace dso {
         float depth = 1.0f / ph->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < 70)    //original u_stereo_delta 1 depth < 70
+            depth < 50 * baseline)    //original u_stereo_delta 1 depth < 70
         {
 //          if (ph->u - ph->lastTraceUV(0) > 0) {
           keypoints_left.emplace_back(ph->u, ph->v, 1);
@@ -1460,7 +1457,7 @@ namespace dso {
         float depth = 1.0f / ip->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < 70) //original u_stereo_delta 1 depth < 70
+            depth < 50 * baseline) //original u_stereo_delta 1 depth < 70
         {
 
           ip->idepth_min = ip->idepth_min_stereo;
@@ -1508,7 +1505,7 @@ namespace dso {
     if (isLost) return;
     boost::unique_lock<boost::mutex> lock(trackMutex);
 
-    printf("addActive Frame left timestamp: %lf, right timestamp: %lf\n", image->timestamp, imageRight->timestamp);
+//    printf("addActive Frame left timestamp: %lf, right timestamp: %lf\n", image->timestamp, imageRight->timestamp);
 
     //- Checkout if camera intrinsics changed.
 //    printf("Hcalib: %f, %f, %f, %f\n", Hcalib.fxl(), Hcalib.fyl(), Hcalib.cxl(), Hcalib.cyl());
@@ -1543,6 +1540,7 @@ namespace dso {
 //           frameHessians.size(), frameHessiansRight.size());
 
     if (!initialized) {
+#if STEREO_MODE
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -1561,8 +1559,8 @@ namespace dso {
         fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
 //        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
-//        fhRight->shell->T_WC = fhRight->shell->T_WC * leftToRight_SE3.inverse();
-//        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//        fhRight->shell->camToWorld = fhRight->shell->camToWorld * leftToRight_SE3.inverse();
+//        fhRight->setEvalPT_scaled(fhRight->shell->camToWorld.inverse(), fhRight->shell->aff_g2l);
       }
 //      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
 //      {
@@ -1576,6 +1574,32 @@ namespace dso {
 //        delete fh;
 //      }
       return;
+#else
+      // use initializer!
+      if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
+      {
+        //- Initialize IMU
+        Sophus::Quaterniond q_WS = imuPropagation->initializeRollPitchFromMeasurements(imuMeasurements);
+        q_WS.setIdentity();
+        // T_WS * T_SC0 = T_WC0
+//        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond::Identity(), Vec3(0, 0, 0)) * T_SC0;
+        coarseInitializer->T_WC_ini = SE3();
+        //- Add the First frame to the corseInitializer.
+        coarseInitializer->setFirst(&Hcalib, fh);
+      }
+      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
+      {
+        initializeFromInitializer(fh);
+        lock.unlock();
+        deliverTrackedFrame(fh, fhRight, true);
+      }
+      else {
+        // if still initializing
+        fh->shell->poseValid = false;
+        delete fh;
+      }
+      return;
+#endif
     }
     else  // do front-end operation.
     {
@@ -1587,7 +1611,11 @@ namespace dso {
         coarseTracker_forNewKF = tmp;
       }
 
+#if STEREO_MODE
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
+#else
+      Vec4 tres = trackNewCoarse(fh);
+#endif
       if (!std::isfinite((double) tres[0]) || !std::isfinite((double) tres[1]) || !std::isfinite((double) tres[2]) ||
           !std::isfinite((double) tres[3])) {
         printf("Initial Tracking failed: LOST!\n");
@@ -1757,8 +1785,12 @@ namespace dso {
 //      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
+//    traceNewCoarseKey(fh);
+#if STEREO_MODE
+    traceNewCoarseNonKey(fh, fhRight);
+#else
     traceNewCoarseKey(fh);
-//    traceNewCoarseNonKey(fh, fhRight);
+#endif
     delete fh;
     delete fhRight;
   }
@@ -1777,6 +1809,7 @@ namespace dso {
     }
 
     traceNewCoarseKey(fh);
+//    traceNewCoarseNonKey(fh, fhRight);
 
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -1885,9 +1918,11 @@ namespace dso {
 
     // =========================== add new Immature points & new residuals =========================
     makeNewTraces(fh, 0);
+#if STEREO_MODE
     //- use right frame to initialize the depth of fh->immaturePoints
     stereoMatch(fh, fhRight);
 //    activatePointsRight(fh, fhRight);
+#endif
 
 
     for (IOWrap::Output3DWrapper *ow : outputWrapper) {
@@ -1899,11 +1934,12 @@ namespace dso {
 
     // =========================== Marginalize Frames =========================
     //- When marginalize left frame, will also marginalize right frame.
-    for (unsigned int i = 0; i < frameHessians.size(); i++)
+    for (unsigned int i = 0; i < frameHessians.size(); i++) {
       if (frameHessians[i]->flaggedForMarginalization) {
         marginalizeFrame(frameHessians[i]);
         i = 0;
       }
+    }
 
 
     printLogLine();
@@ -1912,6 +1948,97 @@ namespace dso {
   }
 
   void FullSystem::initializeFromInitializer(FrameHessian *newFrame) {
+
+    boost::unique_lock<boost::mutex> lock(mapMutex);
+
+    // add firstframe.
+    FrameHessian *firstFrame = coarseInitializer->firstFrame;
+    firstFrame->idx = frameHessians.size();
+    frameHessians.push_back(firstFrame);
+    frameHessiansRight.push_back(firstFrame->rightFrame);
+    firstFrame->frameID = allKeyFramesHistory.size();
+    allKeyFramesHistory.push_back(firstFrame->shell);
+    ef->insertFrame(firstFrame, &Hcalib);
+    setPrecalcValues();
+
+    //int numPointsTotal = makePixelStatus(firstFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
+    //int numPointsTotal = pixelSelector->makeMaps(firstFrame->dIp, selectionMap,setting_desiredDensity);
+
+    firstFrame->pointHessians.reserve(wG[0] * hG[0] * 0.2f);
+    firstFrame->pointHessiansMarginalized.reserve(wG[0] * hG[0] * 0.2f);
+    firstFrame->pointHessiansOut.reserve(wG[0] * hG[0] * 0.2f);
+
+
+    float sumID = 1e-5, numID = 1e-5;
+    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
+      sumID += coarseInitializer->points[0][i].iR;
+      numID++;
+    }
+    float rescaleFactor = 1 / (sumID / numID);
+
+    // randomly sub-select the points I need.
+    float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
+
+    if (!setting_debugout_runquiet)
+      printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
+             (int) (setting_desiredPointDensity), coarseInitializer->numPoints[0]);
+
+    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
+      if (rand() / (float) RAND_MAX > keepPercentage) continue;
+
+      Pnt *point = coarseInitializer->points[0] + i;
+      ImmaturePoint *pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib);
+
+      if (!std::isfinite(pt->energyTH)) {
+        delete pt;
+        continue;
+      }
+
+
+      pt->idepth_max = pt->idepth_min = 1;
+      PointHessian *ph = new PointHessian(pt, &Hcalib);
+      delete pt;
+      if (!std::isfinite(ph->energyTH)) {
+        delete ph;
+        continue;
+      }
+
+      ph->setIdepthScaled(point->iR * rescaleFactor);
+      ph->setIdepthZero(ph->idepth);
+      ph->hasDepthPrior = true;
+      ph->setPointStatus(PointHessian::ACTIVE);
+
+      firstFrame->pointHessians.push_back(ph);
+      ef->insertPoint(ph);
+    }
+
+
+    SE3 firstToNew = coarseInitializer->thisToNext;
+    firstToNew.translation() /= rescaleFactor;
+
+
+    // really no lock required, as we are initializing.
+    {
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      firstFrame->shell->T_WC = coarseInitializer->T_WC_ini;
+      firstFrame->shell->aff_g2l = AffLight(0, 0);
+      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(), firstFrame->shell->aff_g2l);
+      firstFrame->shell->trackingRef = 0;
+      firstFrame->shell->camToTrackingRef = SE3();
+
+      newFrame->shell->T_WC = firstToNew.inverse();
+      newFrame->shell->aff_g2l = AffLight(0, 0);
+      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(), newFrame->shell->aff_g2l);
+      newFrame->shell->trackingRef = firstFrame->shell;
+      newFrame->shell->camToTrackingRef = firstToNew.inverse();
+
+    }
+
+    initialized = true;
+    printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
+  }
+
+  void FullSystem::initializeFromInitializerStereo(FrameHessian *newFrame) {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
 
@@ -1979,7 +2106,8 @@ namespace dso {
         float u_stereo_delta = abs(ip->u_stereo - ipRight->lastTraceUV(0));
         float depth = 1.0f / ip->idepth_stereo;
 
-        if (ipTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 && depth < 70) {
+        if (ipTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
+            depth < 50 * baseline) {
           ip->idepth_min = ip->idepth_min_stereo;
           ip->idepth_max = ip->idepth_max_stereo;
 
@@ -2030,7 +2158,7 @@ namespace dso {
       ef->insertPoint(ph);
     }
 
-    SE3 T_10 = coarseInitializer->T_10;
+    SE3 T_10 = coarseInitializer->thisToNext;
 
     // really no lock required, as we are initializing.
     {

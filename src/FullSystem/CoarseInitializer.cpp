@@ -45,7 +45,7 @@
 
 namespace dso {
 
-  CoarseInitializer::CoarseInitializer(int ww, int hh) : thisToNext_aff(0, 0), T_10(SE3()) {
+  CoarseInitializer::CoarseInitializer(int ww, int hh) : thisToNext_aff(0, 0), thisToNext(SE3()) {
     for (int lvl = 0; lvl < pyrLevelsUsed; lvl++) {
       points[lvl] = 0;
       numPoints[lvl] = 0;
@@ -92,7 +92,7 @@ namespace dso {
     couplingWeight = 1;//*freeDebugParam5;
 
     if (!snapped) {
-      T_10.translation().setZero();
+      thisToNext.translation().setZero();
       for (int lvl = 0; lvl < pyrLevelsUsed; lvl++) {
         int npts = numPoints[lvl];
         Pnt *ptsl = points[lvl];
@@ -105,7 +105,7 @@ namespace dso {
     }
 
 
-    SE3 refToNew_current = T_10;
+    SE3 refToNew_current = thisToNext;
     AffLight refToNew_aff_current = thisToNext_aff;
 
     if (firstFrame->ab_exposure > 0 && newFrame->ab_exposure > 0)
@@ -243,7 +243,7 @@ namespace dso {
     }
 
 
-    T_10 = refToNew_current;
+    thisToNext = refToNew_current;
     thisToNext_aff = refToNew_aff_current;
 
     for (int i = 0; i < pyrLevelsUsed - 1; i++)
@@ -562,7 +562,7 @@ namespace dso {
   }
 
   float CoarseInitializer::rescale() {
-    float factor = 20 * T_10.translation().norm();
+    float factor = 20 * thisToNext.translation().norm();
 //	float factori = 1.0f/factor;
 //	float factori2 = factori*factori;
 //
@@ -577,7 +577,7 @@ namespace dso {
 //			ptsl[i].lastHessian *= factori2;
 //		}
 //	}
-//	T_10.translation() *= factori;
+//	thisToNext.translation() *= factori;
 
     return factor;
   }
@@ -802,7 +802,7 @@ namespace dso {
     //- Find the nearest neighbour in the level + 1 as parent.
     makeNN();
 
-    T_10 = SE3();
+    thisToNext = SE3();
     snapped = false;
     frameID = snappedAt = 0;
 
@@ -945,7 +945,7 @@ namespace dso {
 
     makeNN();
 
-    T_10 = SE3();
+    thisToNext = SE3();
     snapped = false;
     frameID = snappedAt = 0;
 

@@ -24,6 +24,7 @@
 
 #pragma once
 #define MAX_ACTIVE_FRAMES 100
+#define STEREO_MODE 1
 
 #include <deque>
 #include "util/NumType.h"
@@ -187,7 +188,7 @@ namespace dso {
     PointHessian *optimizeImmaturePoint(ImmaturePoint *point, int minObs, ImmaturePointTemporaryResidual *residuals);
 
     // mainPipelineFunctions
-//    Vec4 trackNewCoarse(FrameHessian *fh);
+    Vec4 trackNewCoarse(FrameHessian *fh);
 
     Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight);
 
@@ -206,6 +207,8 @@ namespace dso {
     void flagPointsForRemoval();
 
     void makeNewTraces(FrameHessian *newFrame, float *gtDepth);
+
+    void initializeFromInitializerStereo(FrameHessian *newFrame);
 
     void initializeFromInitializer(FrameHessian *newFrame);
 

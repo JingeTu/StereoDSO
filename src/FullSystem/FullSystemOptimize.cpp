@@ -215,7 +215,7 @@ namespace dso {
     float sumNID = 0;
 
     if (setting_solverMode & SOLVER_MOMENTUM) {
-      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
+//      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         Vec10 step = fh->step;
         step.head<6>() += 0.5f * (fh->step_backup.head<6>());

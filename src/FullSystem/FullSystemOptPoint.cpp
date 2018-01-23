@@ -187,6 +187,7 @@ namespace dso {
     //- Also add static stereo residual.
     //- Should check out first if the right Frame can see this point.
     //- And if previous do not add a residual, static stereo residual will not be added.
+#if STEREO_MODE
     if (!ph->residuals.empty()) {
 
       Mat33f K = Mat33f::Identity();
@@ -227,6 +228,7 @@ namespace dso {
         delete ipRight;
       }
     }
+#endif
 
     if (print) printf("point activated!\n");
 
