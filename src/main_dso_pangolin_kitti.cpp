@@ -422,7 +422,7 @@ int main(int argc, char **argv) {
     clock_t started = clock();
     double sInitializerOffset = 0;
 
-    for (int ii = 1; ii < (int) idsToPlay.size(); ii++) {
+    for (int ii = 0; ii < (int) idsToPlay.size(); ii++) {
       if (!fullSystem->initialized)  // if not initialized: reset start time.
       {
         gettimeofday(&tv_start, NULL);

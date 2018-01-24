@@ -475,14 +475,14 @@ namespace dso {
     for (unsigned int i = 0; i < lastF_2_fh_tries.size(); i++) {
       AffLight aff_g2l_this = aff_last_2_l;
       SE3 lastF_2_fh_this = lastF_2_fh_tries[i];
-//      bool trackingIsGood = coarseTracker->trackNewestCoarseStereo(
-//          fh, fhRight, lastF_2_fh_this, aff_g2l_this,
-//          pyrLevelsUsed - 1,
-//          achievedRes);  // in each level has to be at least as good as the last try.
-      bool trackingIsGood = coarseTracker->trackNewestCoarse(
-          fh, lastF_2_fh_this, aff_g2l_this,
+      bool trackingIsGood = coarseTracker->trackNewestCoarseStereo(
+          fh, fhRight, lastF_2_fh_this, aff_g2l_this,
           pyrLevelsUsed - 1,
           achievedRes);  // in each level has to be at least as good as the last try.
+//      bool trackingIsGood = coarseTracker->trackNewestCoarse(
+//          fh, lastF_2_fh_this, aff_g2l_this,
+//          pyrLevelsUsed - 1,
+//          achievedRes);  // in each level has to be at least as good as the last try.
       tryIterations++;
 
       if (i != 0) {
@@ -1375,7 +1375,7 @@ namespace dso {
         float depth = 1.0f / ph->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < 50 * baseline)    //original u_stereo_delta 1 depth < 70
+            depth < setting_acceptStaticDepthFactor * baseline)    //original u_stereo_delta 1 depth < 70
         {
 //          if (ph->u - ph->lastTraceUV(0) > 0) {
           keypoints_left.emplace_back(ph->u, ph->v, 1);
@@ -1461,7 +1461,7 @@ namespace dso {
         float depth = 1.0f / ip->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < 50 * baseline) //original u_stereo_delta 1 depth < 70
+            depth < setting_acceptStaticDepthFactor * baseline) //original u_stereo_delta 1 depth < 70
         {
 
           ip->idepth_min = ip->idepth_min_stereo;
@@ -1791,6 +1791,7 @@ namespace dso {
 
 //    traceNewCoarseKey(fh);
 #if STEREO_MODE
+//    traceNewCoarseKey(fh);
     traceNewCoarseNonKey(fh, fhRight);
 #else
     traceNewCoarseKey(fh);
@@ -2111,7 +2112,7 @@ namespace dso {
         float depth = 1.0f / ip->idepth_stereo;
 
         if (ipTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < 50 * baseline) {
+            depth < setting_acceptStaticDepthFactor * baseline) {
           ip->idepth_min = ip->idepth_min_stereo;
           ip->idepth_max = ip->idepth_max_stereo;
 

@@ -59,6 +59,7 @@ namespace dso {
   extern float setting_kfGlobalWeight;
 
   extern float setting_staticLambda;
+  extern float setting_acceptStaticDepthFactor;
 
   extern float setting_idepthFixPrior;
   extern float setting_idepthFixPriorMargFac;

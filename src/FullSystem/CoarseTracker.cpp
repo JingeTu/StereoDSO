@@ -1158,7 +1158,7 @@ namespace dso {
       int coarsestLvl, Vec5 minResForAbort,
       IOWrap::Output3DWrapper *wrap) {
     debugPlot = setting_render_displayCoarseTrackingFull;
-    debugPrint = false;
+//    debugPrint = false;
 
     assert(coarsestLvl < 5 && coarsestLvl < pyrLevelsUsed);
 
@@ -1343,6 +1343,7 @@ namespace dso {
           allID.push_back(idepth[lvl][i]);
       }
       std::sort(allID.begin(), allID.end());
+      if (allID.size() == 0) return;
       int n = allID.size() - 1;
 
       float minID_new = allID[(int) (n * 0.05)];
