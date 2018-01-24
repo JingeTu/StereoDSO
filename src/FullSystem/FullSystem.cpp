@@ -475,6 +475,10 @@ namespace dso {
     for (unsigned int i = 0; i < lastF_2_fh_tries.size(); i++) {
       AffLight aff_g2l_this = aff_last_2_l;
       SE3 lastF_2_fh_this = lastF_2_fh_tries[i];
+//      bool trackingIsGood = coarseTracker->trackNewestCoarseStereo(
+//          fh, fhRight, lastF_2_fh_this, aff_g2l_this,
+//          pyrLevelsUsed - 1,
+//          achievedRes);  // in each level has to be at least as good as the last try.
       bool trackingIsGood = coarseTracker->trackNewestCoarse(
           fh, lastF_2_fh_this, aff_g2l_this,
           pyrLevelsUsed - 1,

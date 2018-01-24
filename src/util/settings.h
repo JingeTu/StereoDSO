@@ -58,6 +58,7 @@ namespace dso {
   extern float setting_maxAffineWeight;
   extern float setting_kfGlobalWeight;
 
+  extern float setting_staticLambda;
 
   extern float setting_idepthFixPrior;
   extern float setting_idepthFixPriorMargFac;

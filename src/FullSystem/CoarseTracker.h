@@ -52,6 +52,13 @@ namespace dso {
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper *wrap = 0);
 
+    bool trackNewestCoarseStereo(
+        FrameHessian *newFrameHessian,
+        FrameHessian *newFrameHessianRight,
+        SE3 &lastToNew_out, AffLight &aff_g2l_out,
+        int coarsestLvl, Vec5 minResForAbort,
+        IOWrap::Output3DWrapper *wrap = 0);
+
     void setCTRefForFirstFrame(std::vector<FrameHessian *> frameHessians);
 
     void makeCoarseDepthForFirstFrame(FrameHessian *fh);
@@ -84,6 +91,7 @@ namespace dso {
     FrameHessian *lastRef;
     AffLight lastRef_aff_g2l;
     FrameHessian *newFrame;
+    FrameHessian *newFrameRight;
     int refFrameID;
 
     //- This is jinge comment
@@ -110,7 +118,11 @@ namespace dso {
 
     Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
+    Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
+
     void calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
+
+    void calcGSSSEStereo(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
 
     void calcGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
 
@@ -131,6 +143,12 @@ namespace dso {
     float *buf_warped_weight;
     float *buf_warped_refColor;
     int buf_warped_n;
+    //- warped buffers for stereo
+    float *buf_warped_idepth_r;
+    float *buf_warped_dx_r;
+    float *buf_warped_dy_r;
+    float *buf_warped_residual_r;
+    float *buf_warped_weight_r;
 
 
     std::vector<float *> ptrToDelete;

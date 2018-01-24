@@ -482,6 +482,7 @@ int main(int argc, char **argv) {
         reader_imu->getIMUMeasurementsBetween(lastImuEndTimestamp, img_left->timestamp, imuMeasurements);
         lastImuEndTimestamp = img_left->timestamp;
 //        std::cout << imuMeasurements.size() << std::endl;
+        img_right->exposure_time = 0.5f;
         if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, imuMeasurements, i);
       }
 

@@ -118,7 +118,7 @@ namespace dso {
 
   float setting_huberTH = 9; // Huber Threshold
 
-
+  float setting_staticLambda = 0.5; //- For temporal stereo and static stereo combination.
 
 
 
