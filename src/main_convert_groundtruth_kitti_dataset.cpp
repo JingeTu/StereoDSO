@@ -74,7 +74,7 @@ bool combineAndOutput(const std::string &file, const std::vector<double> &vec_Ti
 
 int main(int argc, char **argv) {
 
-  if (argc != 4) return 1;
+  if (argc < 4) return 1;
 
   std::string inputfile(argv[1]);
   std::string timefile(argv[2]);

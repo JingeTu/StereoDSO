@@ -161,7 +161,7 @@ namespace dso {
 
     needNewKFAfter = -1;
 
-    linearizeOperation = false;
+    linearizeOperation = true;
     runMapping = true;
     mappingThread = boost::thread(&FullSystem::mappingLoop, this);
     lastRefStopID = 0;
@@ -287,7 +287,7 @@ namespace dso {
 
       lastF_2_fh_tries.push_back(SE3(Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 1>::Zero()));
 
-      for (float rotDelta = 0.02; rotDelta < 0.05; rotDelta = rotDelta + 0.02) {
+      for (float rotDelta = 0.02; rotDelta < 0.1; rotDelta = rotDelta + 0.02) {
         lastF_2_fh_tries.push_back(
             SE3(Sophus::Quaterniond(1, rotDelta, 0, 0), Vec3(0, 0, 0)));      // assume constant motion.
         lastF_2_fh_tries.push_back(
@@ -373,7 +373,7 @@ namespace dso {
       // just try a TON of different initializations (all rotations). In the end,
       // if they don't work they will only be tried on the coarsest level, which is super fast anyway.
       // also, if tracking rails here we loose, so we really, really want to avoid that.
-      for (float rotDelta = 0.02; rotDelta < 0.05; rotDelta = rotDelta + 0.02) {
+      for (float rotDelta = 0.02; rotDelta < 0.1; rotDelta = rotDelta + 0.02) {
         lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, rotDelta, 0, 0),
                                                                               Vec3(0, 0,
                                                                                    0)));      // assume constant motion.
@@ -486,22 +486,22 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-//        printf(
-//            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
-//                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
-//            i,
-//            i, pyrLevelsUsed - 1,
-//            aff_g2l_this.a, aff_g2l_this.b,
-//            achievedRes[0],
-//            achievedRes[1],
-//            achievedRes[2],
-//            achievedRes[3],
-//            achievedRes[4],
-//            coarseTracker->lastResiduals[0],
-//            coarseTracker->lastResiduals[1],
-//            coarseTracker->lastResiduals[2],
-//            coarseTracker->lastResiduals[3],
-//            coarseTracker->lastResiduals[4]);
+        printf(
+            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+            i,
+            i, pyrLevelsUsed - 1,
+            aff_g2l_this.a, aff_g2l_this.b,
+            achievedRes[0],
+            achievedRes[1],
+            achievedRes[2],
+            achievedRes[3],
+            achievedRes[4],
+            coarseTracker->lastResiduals[0],
+            coarseTracker->lastResiduals[1],
+            coarseTracker->lastResiduals[2],
+            coarseTracker->lastResiduals[3],
+            coarseTracker->lastResiduals[4]);
       }
 
 
@@ -1791,8 +1791,8 @@ namespace dso {
 
 //    traceNewCoarseKey(fh);
 #if STEREO_MODE
-//    traceNewCoarseKey(fh);
-    traceNewCoarseNonKey(fh, fhRight);
+    traceNewCoarseKey(fh);
+//    traceNewCoarseNonKey(fh, fhRight);
 #else
     traceNewCoarseKey(fh);
 #endif

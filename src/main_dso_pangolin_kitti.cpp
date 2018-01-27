@@ -357,7 +357,7 @@ int main(int argc, char **argv) {
   // build system
   FullSystem *fullSystem = new FullSystem();
   fullSystem->setGammaFunction(reader->getPhotometricGamma());
-  fullSystem->linearizeOperation = (playbackSpeed == 0);
+//  fullSystem->linearizeOperation = (playbackSpeed == 0);
 
 
   IOWrap::PangolinDSOViewer *viewer = 0;
@@ -432,6 +432,7 @@ int main(int argc, char **argv) {
 
       int i = idsToPlay[ii];
 
+      printf("main image i: %d\n", i);
 
       ImageAndExposure *img_left;
       ImageAndExposure *img_right;
@@ -511,7 +512,7 @@ int main(int argc, char **argv) {
 
           fullSystem = new FullSystem();
           fullSystem->setGammaFunction(reader->getPhotometricGamma());
-          fullSystem->linearizeOperation = (playbackSpeed == 0);
+//          fullSystem->linearizeOperation = (playbackSpeed == 0);
 
 
           fullSystem->outputWrapper = wraps;
@@ -554,7 +555,8 @@ int main(int argc, char **argv) {
            MilliSecondsTakenMT / (float) numFramesProcessed,
            1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
-    //fullSystem->printFrameLifetimes();
+
+    // fullSystem->printFrameLifetimes();
     if (setting_logStuff) {
       std::ofstream tmlog;
       tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
@@ -564,6 +566,7 @@ int main(int argc, char **argv) {
       tmlog.flush();
       tmlog.close();
     }
+//    viewer->close();
 
   });
 
