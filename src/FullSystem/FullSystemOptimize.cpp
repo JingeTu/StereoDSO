@@ -345,7 +345,7 @@ namespace dso {
 
         ph->setIdepthZero(ph->idepth_backup);
       }
-//      fh->rightFrame->setState(fh->state_backup);
+//      fh->rightFrame->setState(fh->rightFrame->state_backup);
     }
 
 

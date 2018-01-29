@@ -328,7 +328,7 @@ namespace dso {
     float cyl = cy[lvl];
 
 
-    Accumulator11 E;
+    Accumulator1 E;
     acc9.initialize();
     E.initialize();
 
@@ -483,7 +483,7 @@ namespace dso {
 
 
     // calculate alpha energy, and decide if we cap it.
-    Accumulator11 EAlpha;
+    Accumulator1 EAlpha;
     EAlpha.initialize();
     for (int i = 0; i < npts; i++) {
       Pnt *point = ptsl + i;

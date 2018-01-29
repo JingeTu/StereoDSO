@@ -309,7 +309,7 @@ namespace dso {
 
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
-    Accumulator11 E;
+    Accumulator1 E;
     E.initialize();
     VecCf dc = cDeltaF;
 

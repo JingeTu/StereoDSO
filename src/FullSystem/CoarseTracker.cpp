@@ -310,7 +310,293 @@ namespace dso {
 
   }
 
+#if STEREO_MODE
 
+  void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r) {
+    acc.initialize();
+
+    __m128 fxl = _mm_set1_ps(fx[lvl]);
+    __m128 fyl = _mm_set1_ps(fy[lvl]);
+    __m128 b0 = _mm_set1_ps(lastRef_aff_g2l.b);
+    __m128 a = _mm_set1_ps(
+        (float) (AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                             aff_g2l)[0]));
+    __m128 a_r = _mm_set1_ps(
+        (float) (AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                             aff_g2l_r)[0]));
+
+    __m128 one = _mm_set1_ps(1);
+    __m128 minusOne = _mm_set1_ps(-1);
+    __m128 zero = _mm_set1_ps(0);
+
+    int n = buf_warped_n;
+    assert(n % 4 == 0);
+    for (int i = 0; i < n; i += 4) {
+      __m128 dx = _mm_mul_ps(_mm_load_ps(buf_warped_dx + i), fxl);
+      __m128 dy = _mm_mul_ps(_mm_load_ps(buf_warped_dy + i), fyl);
+      __m128 u = _mm_load_ps(buf_warped_u + i);
+      __m128 v = _mm_load_ps(buf_warped_v + i);
+      __m128 id = _mm_load_ps(buf_warped_idepth + i);
+
+
+      acc.updateSSE_tened(
+          _mm_mul_ps(id, dx),
+          _mm_mul_ps(id, dy),
+          _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx), _mm_mul_ps(v, dy)))),
+          _mm_sub_ps(zero, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dx),
+              _mm_mul_ps(dy, _mm_add_ps(one, _mm_mul_ps(v, v))))),
+          _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dy),
+              _mm_mul_ps(dx, _mm_add_ps(one, _mm_mul_ps(u, u)))),
+          _mm_sub_ps(_mm_mul_ps(u, dy), _mm_mul_ps(v, dx)),
+          _mm_mul_ps(a, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))),
+          zero,
+          minusOne,
+          zero,
+          _mm_load_ps(buf_warped_residual + i),
+          _mm_load_ps(buf_warped_weight + i));
+
+      __m128 dx_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
+                                          _mm_load_ps(buf_warped_dx_r + i)), fxl);
+      __m128 dy_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
+                                          _mm_load_ps(buf_warped_dy_r + i)), fyl);
+
+      acc.updateSSE_tened(
+          _mm_mul_ps(id, dx_r),
+          _mm_mul_ps(id, dy_r),
+          _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx_r), _mm_mul_ps(v, dy_r)))),
+          _mm_sub_ps(zero, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dx_r),
+              _mm_mul_ps(dy_r, _mm_add_ps(one, _mm_mul_ps(v, v))))),
+          _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dy_r),
+              _mm_mul_ps(dx_r, _mm_add_ps(one, _mm_mul_ps(u, u)))),
+          _mm_sub_ps(_mm_mul_ps(u, dy_r), _mm_mul_ps(v, dx_r)),
+          zero,
+          _mm_mul_ps(a_r, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))),
+          zero,
+          minusOne,
+          _mm_load_ps(buf_warped_residual_r + i),
+          _mm_load_ps(buf_warped_weight_r + i));
+
+    }
+
+    acc.finish();
+    H_out = acc.H.topLeftCorner<10, 10>().cast<double>() * (1.0f / n);
+    b_out = acc.H.topRightCorner<10, 1>().cast<double>() * (1.0f / n);
+
+    H_out.block<10, 3>(0, 0) *= SCALE_XI_ROT;
+    H_out.block<10, 3>(0, 3) *= SCALE_XI_TRANS;
+    H_out.block<10, 1>(0, 6) *= SCALE_A;
+    H_out.block<10, 1>(0, 7) *= SCALE_A;
+    H_out.block<10, 1>(0, 8) *= SCALE_B;
+    H_out.block<10, 1>(0, 9) *= SCALE_B;
+    H_out.block<3, 10>(0, 0) *= SCALE_XI_ROT;
+    H_out.block<3, 10>(3, 0) *= SCALE_XI_TRANS;
+    H_out.block<1, 10>(6, 0) *= SCALE_A;
+    H_out.block<1, 10>(7, 0) *= SCALE_A;
+    H_out.block<1, 10>(8, 0) *= SCALE_B;
+    H_out.block<1, 10>(9, 0) *= SCALE_B;
+    b_out.segment<3>(0) *= SCALE_XI_ROT;
+    b_out.segment<3>(3) *= SCALE_XI_TRANS;
+    b_out.segment<1>(6) *= SCALE_A;
+    b_out.segment<1>(7) *= SCALE_A;
+    b_out.segment<1>(8) *= SCALE_B;
+    b_out.segment<1>(9) *= SCALE_B;
+  }
+
+  Vec6 CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH) {
+    float E = 0;
+    float Et = 0;
+    float Es = 0;
+    int numTermsInE = 0;
+    int numTermsInWarped = 0;
+    int numSaturated = 0;
+
+    int wl = w[lvl];
+    int hl = h[lvl];
+    Eigen::Vector3f *dINewl = newFrame->dIp[lvl];
+    Eigen::Vector3f *dINewl_r = newFrameRight->dIp[lvl];
+    float fxl = fx[lvl];
+    float fyl = fy[lvl];
+    float cxl = cx[lvl];
+    float cyl = cy[lvl];
+
+
+    Mat33f RKi = (refToNew.rotationMatrix().cast<float>() * Ki[lvl]);
+    Vec3f t = (refToNew.translation()).cast<float>();
+    Vec2f affLL = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                              aff_g2l).cast<float>();
+    Vec2f affLL_r = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrameRight->ab_exposure, lastRef_aff_g2l,
+                                                aff_g2l_r).cast<float>();
+
+    //- Static stereo reprojection
+    Mat33f RKi_s = Mat33f::Identity() * Ki[lvl];
+    Vec3f t_s(-baseline, 0, 0);
+
+    float sumSquaredShiftT = 0;
+    float sumSquaredShiftRT = 0;
+    float sumSquaredShiftNum = 0;
+
+    float maxEnergy =
+        2 * setting_huberTH * cutoffTH - setting_huberTH * setting_huberTH;  // energy for r=setting_coarseCutoffTH.
+
+
+    MinimalImageB3 *resImage = 0;
+    if (debugPlot) {
+      resImage = new MinimalImageB3(wl, hl);
+      resImage->setConst(Vec3b(255, 255, 255));
+    }
+
+    int nl = pc_n[lvl];
+    float *lpc_u = pc_u[lvl];
+    float *lpc_v = pc_v[lvl];
+    float *lpc_idepth = pc_idepth[lvl];
+    float *lpc_color = pc_color[lvl];
+
+
+    for (int i = 0; i < nl; i++) {
+      float id = lpc_idepth[i];
+      float x = lpc_u[i];
+      float y = lpc_v[i];
+
+      Vec3f pt = RKi * Vec3f(x, y, 1) + t * id;
+      float u = pt[0] / pt[2];
+      float v = pt[1] / pt[2];
+      float Ku = fxl * u + cxl;
+      float Kv = fyl * v + cyl;
+      float new_idepth = id / pt[2];
+
+      Vec3f pt_r = RKi_s * Vec3f(Ku, Kv, 1) + t_s * new_idepth;
+      float u_r = pt_r[0] / pt_r[2];
+      float v_r = pt_r[1] / pt_r[2];
+      float Ku_r = fxl * u_r + cxl;
+      float Kv_r = fyl * v_r + cyl;
+      float new_idepth_r = new_idepth / pt_r[2];
+
+      if (lvl == 0 && i % 32 == 0) {
+        // translation only (positive)
+        Vec3f ptT = Ki[lvl] * Vec3f(x, y, 1) + t * id;
+        float uT = ptT[0] / ptT[2];
+        float vT = ptT[1] / ptT[2];
+        float KuT = fxl * uT + cxl;
+        float KvT = fyl * vT + cyl;
+
+        // translation only (negative)
+        Vec3f ptT2 = Ki[lvl] * Vec3f(x, y, 1) - t * id;
+        float uT2 = ptT2[0] / ptT2[2];
+        float vT2 = ptT2[1] / ptT2[2];
+        float KuT2 = fxl * uT2 + cxl;
+        float KvT2 = fyl * vT2 + cyl;
+
+        //translation and rotation (negative)
+        Vec3f pt3 = RKi * Vec3f(x, y, 1) - t * id;
+        float u3 = pt3[0] / pt3[2];
+        float v3 = pt3[1] / pt3[2];
+        float Ku3 = fxl * u3 + cxl;
+        float Kv3 = fyl * v3 + cyl;
+
+        //translation and rotation (positive)
+        //already have it.
+
+        sumSquaredShiftT += (KuT - x) * (KuT - x) + (KvT - y) * (KvT - y);
+        sumSquaredShiftT += (KuT2 - x) * (KuT2 - x) + (KvT2 - y) * (KvT2 - y);
+        sumSquaredShiftRT += (Ku - x) * (Ku - x) + (Kv - y) * (Kv - y);
+        sumSquaredShiftRT += (Ku3 - x) * (Ku3 - x) + (Kv3 - y) * (Kv3 - y);
+        sumSquaredShiftNum += 2;
+      }
+
+      if (!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0)) continue;
+      if (!(Ku_r > 2 && Kv_r > 2 && Ku_r < wl - 3 && Kv_r < hl - 3 && new_idepth_r > 0)) continue;
+
+      float refColor = lpc_color[i];
+      Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
+      if (!std::isfinite((float) hitColor[0])) continue;
+      float residual = hitColor[0] - (float) (affLL[0] * refColor + affLL[1]);
+      float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+
+      Vec3f hitColor_r = getInterpolatedElement33(dINewl_r, Ku_r, Kv_r, wl);
+      if (!std::isfinite((float) hitColor_r[0])) continue;
+      float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
+      float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
+
+      if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
+        if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
+        E += maxEnergy;
+        E += maxEnergy;
+        Et += maxEnergy;
+        Es += maxEnergy;
+        numTermsInE++;
+        numSaturated++;
+      }
+      else {
+        if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual + 128, residual + 128, residual + 128));
+
+        E += hw * residual * residual * (2 - hw);
+        E += hw_r * residual_r * residual_r * (2 - hw_r);
+        Et += hw * residual * residual * (2 - hw);
+        Es += hw_r * residual_r * residual_r * (2 - hw_r);
+        numTermsInE++;
+
+        buf_warped_idepth[numTermsInWarped] = new_idepth;
+        buf_warped_u[numTermsInWarped] = u;
+        buf_warped_v[numTermsInWarped] = v;
+        buf_warped_dx[numTermsInWarped] = hitColor[1];
+        buf_warped_dy[numTermsInWarped] = hitColor[2];
+        buf_warped_residual[numTermsInWarped] = residual;
+        buf_warped_weight[numTermsInWarped] = hw;
+        buf_warped_refColor[numTermsInWarped] = lpc_color[i];
+
+        buf_warped_idepth_r[numTermsInWarped] = new_idepth_r / new_idepth;
+        buf_warped_dx_r[numTermsInWarped] = hitColor_r[1];
+        buf_warped_dy_r[numTermsInWarped] = hitColor_r[2];
+        buf_warped_residual_r[numTermsInWarped] = residual_r;
+        buf_warped_weight_r[numTermsInWarped] = hw_r;
+
+        numTermsInWarped++;
+      }
+    }
+
+    while (numTermsInWarped % 4 != 0) {
+      buf_warped_idepth[numTermsInWarped] = 0;
+      buf_warped_u[numTermsInWarped] = 0;
+      buf_warped_v[numTermsInWarped] = 0;
+      buf_warped_dx[numTermsInWarped] = 0;
+      buf_warped_dy[numTermsInWarped] = 0;
+      buf_warped_residual[numTermsInWarped] = 0;
+      buf_warped_weight[numTermsInWarped] = 0;
+      buf_warped_refColor[numTermsInWarped] = 0;
+
+      buf_warped_idepth_r[numTermsInWarped] = 0;
+      buf_warped_dx_r[numTermsInWarped] = 0;
+      buf_warped_dy_r[numTermsInWarped] = 0;
+      buf_warped_weight_r[numTermsInWarped] = 0;
+      numTermsInWarped++;
+    }
+    buf_warped_n = numTermsInWarped;
+
+
+    if (debugPlot) {
+      IOWrap::displayImage("RES", resImage, false);
+      IOWrap::waitKey(0);
+      delete resImage;
+    }
+
+//    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
+//    printf("Et: %f\t Es: %f\n", Et, Es);
+
+    Vec6 rs;
+    rs[0] = E;
+    rs[1] = numTermsInE;
+    rs[2] = sumSquaredShiftT / (sumSquaredShiftNum + 0.1);
+    rs[3] = 0;
+    rs[4] = sumSquaredShiftRT / (sumSquaredShiftNum + 0.1);
+    rs[5] = numSaturated / (float) numTermsInE;
+
+    return rs;
+  }
+#else
   void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
     acc.initialize();
 
@@ -350,87 +636,6 @@ namespace dso {
           minusOne,
           _mm_load_ps(buf_warped_residual + i),
           _mm_load_ps(buf_warped_weight + i));
-    }
-
-    acc.finish();
-    H_out = acc.H.topLeftCorner<8, 8>().cast<double>() * (1.0f / n);
-    b_out = acc.H.topRightCorner<8, 1>().cast<double>() * (1.0f / n);
-
-    H_out.block<8, 3>(0, 0) *= SCALE_XI_ROT;
-    H_out.block<8, 3>(0, 3) *= SCALE_XI_TRANS;
-    H_out.block<8, 1>(0, 6) *= SCALE_A;
-    H_out.block<8, 1>(0, 7) *= SCALE_B;
-    H_out.block<3, 8>(0, 0) *= SCALE_XI_ROT;
-    H_out.block<3, 8>(3, 0) *= SCALE_XI_TRANS;
-    H_out.block<1, 8>(6, 0) *= SCALE_A;
-    H_out.block<1, 8>(7, 0) *= SCALE_B;
-    b_out.segment<3>(0) *= SCALE_XI_ROT;
-    b_out.segment<3>(3) *= SCALE_XI_TRANS;
-    b_out.segment<1>(6) *= SCALE_A;
-    b_out.segment<1>(7) *= SCALE_B;
-  }
-
-  void CoarseTracker::calcGSSSEStereo(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
-    acc.initialize();
-
-    __m128 fxl = _mm_set1_ps(fx[lvl]);
-    __m128 fyl = _mm_set1_ps(fy[lvl]);
-    __m128 b0 = _mm_set1_ps(lastRef_aff_g2l.b);
-    __m128 a = _mm_set1_ps(
-        (float) (AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
-                                             aff_g2l)[0]));
-
-    __m128 one = _mm_set1_ps(1);
-    __m128 minusOne = _mm_set1_ps(-1);
-    __m128 zero = _mm_set1_ps(0);
-
-    int n = buf_warped_n;
-    assert(n % 4 == 0);
-    for (int i = 0; i < n; i += 4) {
-      __m128 dx = _mm_mul_ps(_mm_load_ps(buf_warped_dx + i), fxl);
-      __m128 dy = _mm_mul_ps(_mm_load_ps(buf_warped_dy + i), fyl);
-      __m128 u = _mm_load_ps(buf_warped_u + i);
-      __m128 v = _mm_load_ps(buf_warped_v + i);
-      __m128 id = _mm_load_ps(buf_warped_idepth + i);
-
-
-      acc.updateSSE_eighted(
-          _mm_mul_ps(id, dx),
-          _mm_mul_ps(id, dy),
-          _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx), _mm_mul_ps(v, dy)))),
-          _mm_sub_ps(zero, _mm_add_ps(
-              _mm_mul_ps(_mm_mul_ps(u, v), dx),
-              _mm_mul_ps(dy, _mm_add_ps(one, _mm_mul_ps(v, v))))),
-          _mm_add_ps(
-              _mm_mul_ps(_mm_mul_ps(u, v), dy),
-              _mm_mul_ps(dx, _mm_add_ps(one, _mm_mul_ps(u, u)))),
-          _mm_sub_ps(_mm_mul_ps(u, dy), _mm_mul_ps(v, dx)),
-          _mm_mul_ps(a, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))),
-          minusOne,
-          _mm_load_ps(buf_warped_residual + i),
-          _mm_load_ps(buf_warped_weight + i));
-
-      __m128 dx_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
-                                          _mm_load_ps(buf_warped_dx_r + i)), fxl);
-      __m128 dy_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
-                                          _mm_load_ps(buf_warped_dy_r + i)), fyl);
-
-      acc.updateSSE_eighted(
-          _mm_mul_ps(id, dx_r),
-          _mm_mul_ps(id, dy_r),
-          _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx_r), _mm_mul_ps(v, dy_r)))),
-          _mm_sub_ps(zero, _mm_add_ps(
-              _mm_mul_ps(_mm_mul_ps(u, v), dx_r),
-              _mm_mul_ps(dy_r, _mm_add_ps(one, _mm_mul_ps(v, v))))),
-          _mm_add_ps(
-              _mm_mul_ps(_mm_mul_ps(u, v), dy_r),
-              _mm_mul_ps(dx_r, _mm_add_ps(one, _mm_mul_ps(u, u)))),
-          _mm_sub_ps(_mm_mul_ps(u, dy_r), _mm_mul_ps(v, dx_r)),
-          zero,
-          zero,
-          _mm_load_ps(buf_warped_residual_r + i),
-          _mm_load_ps(buf_warped_weight_r + i));
-
     }
 
     acc.finish();
@@ -602,194 +807,9 @@ namespace dso {
     return rs;
   }
 
-  Vec6 CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH) {
-    float E = 0;
-    float Et = 0;
-    float Es = 0;
-    int numTermsInE = 0;
-    int numTermsInWarped = 0;
-    int numSaturated = 0;
-
-    int wl = w[lvl];
-    int hl = h[lvl];
-    Eigen::Vector3f *dINewl = newFrame->dIp[lvl];
-    Eigen::Vector3f *dINewl_r = newFrameRight->dIp[lvl];
-    float fxl = fx[lvl];
-    float fyl = fy[lvl];
-    float cxl = cx[lvl];
-    float cyl = cy[lvl];
+#endif
 
 
-    Mat33f RKi = (refToNew.rotationMatrix().cast<float>() * Ki[lvl]);
-    Vec3f t = (refToNew.translation()).cast<float>();
-    Vec2f affLL = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
-                                              aff_g2l).cast<float>();
-
-    //- Static stereo reprojection
-    Mat33f RKi_s = Mat33f::Identity() * Ki[lvl];
-    Vec3f t_s(-baseline, 0, 0);
-
-    float sumSquaredShiftT = 0;
-    float sumSquaredShiftRT = 0;
-    float sumSquaredShiftNum = 0;
-
-    float maxEnergy =
-        2 * setting_huberTH * cutoffTH - setting_huberTH * setting_huberTH;  // energy for r=setting_coarseCutoffTH.
-
-
-    MinimalImageB3 *resImage = 0;
-    if (debugPlot) {
-      resImage = new MinimalImageB3(wl, hl);
-      resImage->setConst(Vec3b(255, 255, 255));
-    }
-
-    int nl = pc_n[lvl];
-    float *lpc_u = pc_u[lvl];
-    float *lpc_v = pc_v[lvl];
-    float *lpc_idepth = pc_idepth[lvl];
-    float *lpc_color = pc_color[lvl];
-
-
-    for (int i = 0; i < nl; i++) {
-      float id = lpc_idepth[i];
-      float x = lpc_u[i];
-      float y = lpc_v[i];
-
-      Vec3f pt = RKi * Vec3f(x, y, 1) + t * id;
-      float u = pt[0] / pt[2];
-      float v = pt[1] / pt[2];
-      float Ku = fxl * u + cxl;
-      float Kv = fyl * v + cyl;
-      float new_idepth = id / pt[2];
-
-      Vec3f pt_r = RKi_s * Vec3f(Ku, Kv, 1) + t_s * new_idepth;
-      float u_r = pt_r[0] / pt_r[2];
-      float v_r = pt_r[1] / pt_r[2];
-      float Ku_r = fxl * u_r + cxl;
-      float Kv_r = fyl * v_r + cyl;
-      float new_idepth_r = new_idepth / pt_r[2];
-
-      if (lvl == 0 && i % 32 == 0) {
-        // translation only (positive)
-        Vec3f ptT = Ki[lvl] * Vec3f(x, y, 1) + t * id;
-        float uT = ptT[0] / ptT[2];
-        float vT = ptT[1] / ptT[2];
-        float KuT = fxl * uT + cxl;
-        float KvT = fyl * vT + cyl;
-
-        // translation only (negative)
-        Vec3f ptT2 = Ki[lvl] * Vec3f(x, y, 1) - t * id;
-        float uT2 = ptT2[0] / ptT2[2];
-        float vT2 = ptT2[1] / ptT2[2];
-        float KuT2 = fxl * uT2 + cxl;
-        float KvT2 = fyl * vT2 + cyl;
-
-        //translation and rotation (negative)
-        Vec3f pt3 = RKi * Vec3f(x, y, 1) - t * id;
-        float u3 = pt3[0] / pt3[2];
-        float v3 = pt3[1] / pt3[2];
-        float Ku3 = fxl * u3 + cxl;
-        float Kv3 = fyl * v3 + cyl;
-
-        //translation and rotation (positive)
-        //already have it.
-
-        sumSquaredShiftT += (KuT - x) * (KuT - x) + (KvT - y) * (KvT - y);
-        sumSquaredShiftT += (KuT2 - x) * (KuT2 - x) + (KvT2 - y) * (KvT2 - y);
-        sumSquaredShiftRT += (Ku - x) * (Ku - x) + (Kv - y) * (Kv - y);
-        sumSquaredShiftRT += (Ku3 - x) * (Ku3 - x) + (Kv3 - y) * (Kv3 - y);
-        sumSquaredShiftNum += 2;
-      }
-
-      if (!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0)) continue;
-      if (!(Ku_r > 2 && Kv_r > 2 && Ku_r < wl - 3 && Kv_r < hl - 3 && new_idepth_r > 0)) continue;
-
-      float refColor = lpc_color[i];
-      Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
-      if (!std::isfinite((float) hitColor[0])) continue;
-      float residual = hitColor[0] - (float) (affLL[0] * refColor + affLL[1]);
-      float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-
-      Vec3f hitColor_r = getInterpolatedElement33(dINewl_r, Ku_r, Kv_r, wl);
-      if (!std::isfinite((float) hitColor_r[0])) continue;
-      float residual_r = hitColor_r[0] - (float) (affLL[0] * refColor + affLL[1]);
-      float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
-
-      if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
-        if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
-        E += maxEnergy;
-        E += maxEnergy;
-        Et += maxEnergy;
-        Es += maxEnergy;
-        numTermsInE++;
-        numSaturated++;
-      }
-      else {
-        if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual + 128, residual + 128, residual + 128));
-
-        E += hw * residual * residual * (2 - hw);
-        E += hw_r * residual_r * residual_r * (2 - hw_r);
-        Et += hw * residual * residual * (2 - hw);
-        Es += hw_r * residual_r * residual_r * (2 - hw_r);
-        numTermsInE++;
-
-        buf_warped_idepth[numTermsInWarped] = new_idepth;
-        buf_warped_u[numTermsInWarped] = u;
-        buf_warped_v[numTermsInWarped] = v;
-        buf_warped_dx[numTermsInWarped] = hitColor[1];
-        buf_warped_dy[numTermsInWarped] = hitColor[2];
-        buf_warped_residual[numTermsInWarped] = residual;
-        buf_warped_weight[numTermsInWarped] = hw;
-        buf_warped_refColor[numTermsInWarped] = lpc_color[i];
-
-        buf_warped_idepth_r[numTermsInWarped] = new_idepth_r / new_idepth;
-        buf_warped_dx_r[numTermsInWarped] = hitColor_r[1];
-        buf_warped_dy_r[numTermsInWarped] = hitColor_r[2];
-        buf_warped_residual_r[numTermsInWarped] = residual_r;
-        buf_warped_weight_r[numTermsInWarped] = hw_r;
-
-        numTermsInWarped++;
-      }
-    }
-
-    while (numTermsInWarped % 4 != 0) {
-      buf_warped_idepth[numTermsInWarped] = 0;
-      buf_warped_u[numTermsInWarped] = 0;
-      buf_warped_v[numTermsInWarped] = 0;
-      buf_warped_dx[numTermsInWarped] = 0;
-      buf_warped_dy[numTermsInWarped] = 0;
-      buf_warped_residual[numTermsInWarped] = 0;
-      buf_warped_weight[numTermsInWarped] = 0;
-      buf_warped_refColor[numTermsInWarped] = 0;
-
-      buf_warped_idepth_r[numTermsInWarped] = 0;
-      buf_warped_dx_r[numTermsInWarped] = 0;
-      buf_warped_dy_r[numTermsInWarped] = 0;
-      buf_warped_weight_r[numTermsInWarped] = 0;
-      numTermsInWarped++;
-    }
-    buf_warped_n = numTermsInWarped;
-
-
-    if (debugPlot) {
-      IOWrap::displayImage("RES", resImage, false);
-      IOWrap::waitKey(0);
-      delete resImage;
-    }
-
-//    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
-//    printf("Et: %f\t Es: %f\n", Et, Es);
-
-    Vec6 rs;
-    rs[0] = E;
-    rs[1] = numTermsInE;
-    rs[2] = sumSquaredShiftT / (sumSquaredShiftNum + 0.1);
-    rs[3] = 0;
-    rs[4] = sumSquaredShiftRT / (sumSquaredShiftNum + 0.1);
-    rs[5] = numSaturated / (float) numTermsInE;
-
-    return rs;
-  }
 
   void CoarseTracker::makeCoarseDepthForFirstFrame(FrameHessian *fh) {
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
@@ -974,6 +994,197 @@ namespace dso {
 
   }
 
+#if STEREO_MODE
+  bool CoarseTracker::trackNewestCoarseStereo(
+      FrameHessian *newFrameHessian,
+      FrameHessian *newFrameHessianRight,
+      SE3 &lastToNew_out,
+      AffLight &aff_g2l_out, AffLight &aff_g2l_r_out,
+      int coarsestLvl, Vec5 minResForAbort,
+      IOWrap::Output3DWrapper *wrap) {
+    debugPlot = setting_render_displayCoarseTrackingFull;
+//    debugPrint = false;
+
+    assert(coarsestLvl < 5 && coarsestLvl < pyrLevelsUsed);
+
+    lastResiduals.setConstant(NAN);
+    lastFlowIndicators.setConstant(1000);
+
+
+    newFrame = newFrameHessian;
+    newFrameRight = newFrameHessianRight;
+    int maxIterations[] = {10, 20, 50, 50, 50};
+    float lambdaExtrapolationLimit = 0.001;
+
+    SE3 refToNew_current = lastToNew_out;
+    AffLight aff_g2l_current = aff_g2l_out;
+    AffLight aff_g2l_r_current = aff_g2l_r_out;
+
+    bool haveRepeated = false;
+
+
+    for (int lvl = coarsestLvl; lvl >= 0; lvl--) {
+      Mat1010 H;
+      Vec10 b;
+      float levelCutoffRepeat = 1;
+      Vec6 resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current, setting_coarseCutoffTH * levelCutoffRepeat);
+      while (resOld[5] > 0.6 && levelCutoffRepeat < 50) {
+        levelCutoffRepeat *= 2;
+        resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current, setting_coarseCutoffTH * levelCutoffRepeat);
+
+        if (!setting_debugout_runquiet)
+          printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
+      }
+
+      calcGSSSEStereo(lvl, H, b, refToNew_current, aff_g2l_current, aff_g2l_r_current);
+
+      float lambda = 0.01;
+
+      if (debugPrint) {
+        Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                                   aff_g2l_current).cast<float>();
+        printf("lvl%d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
+               lvl, -1, lambda, 1.0f,
+               "INITIA",
+               0.0f,
+               resOld[0] / resOld[1],
+               0, (int) resOld[1],
+               0.0f);
+        std::cout << refToNew_current.log().transpose() << " AFF " << aff_g2l_current.vec().transpose() << " (rel "
+                  << relAff.transpose() << ")\n";
+      }
+
+
+      for (int iteration = 0; iteration < maxIterations[lvl]; iteration++) {
+        Mat1010 Hl = H;
+        for (int i = 0; i < 10; i++) Hl(i, i) *= (1 + lambda);
+        Vec10 inc = Hl.ldlt().solve(-b);
+
+        if (setting_affineOptModeA < 0 && setting_affineOptModeB < 0)  // fix a, b
+        {
+          inc.head<6>() = Hl.topLeftCorner<6, 6>().ldlt().solve(-b.head<6>());
+          inc.tail<4>().setZero();
+        }
+        if (!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)  // fix b
+        {
+          inc.head<8>() = Hl.topLeftCorner<8, 8>().ldlt().solve(-b.head<8>());
+          inc.tail<2>().setZero();
+        }
+        if (setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))  // fix a
+        {
+          Mat1010 HlStitch = Hl;
+          Vec10 bStitch = b;
+          HlStitch.col(6) = HlStitch.col(8);
+          HlStitch.col(7) = HlStitch.col(9);
+          HlStitch.row(6) = HlStitch.row(8);
+          HlStitch.row(7) = HlStitch.row(9);
+          bStitch[6] = bStitch[8];
+          bStitch[7] = bStitch[9];
+          Vec8 incStitch = HlStitch.topLeftCorner<8, 8>().ldlt().solve(-bStitch.head<8>());
+          inc.setZero();
+          inc.head<6>() = incStitch.head<6>();
+          inc[6] = 0;
+          inc[7] = 0;
+          inc[8] = incStitch[6];
+          inc[9] = incStitch[7];
+        }
+
+
+        float extrapFac = 1;
+        if (lambda < lambdaExtrapolationLimit) extrapFac = sqrt(sqrt(lambdaExtrapolationLimit / lambda));
+        inc *= extrapFac;
+
+        Vec10 incScaled = inc;
+        incScaled.segment<3>(0) *= SCALE_XI_ROT;
+        incScaled.segment<3>(3) *= SCALE_XI_TRANS;
+        incScaled.segment<2>(6) *= SCALE_A;
+        incScaled.segment<2>(8) *= SCALE_B;
+
+        if (!std::isfinite(incScaled.sum())) incScaled.setZero();
+
+        SE3 refToNew_new = SE3::exp((Vec6) (incScaled.head<6>())) * refToNew_current;
+        AffLight aff_g2l_new = aff_g2l_current;
+        AffLight aff_g2l_r_new = aff_g2l_r_current;
+        aff_g2l_new.a += incScaled[6];
+        aff_g2l_new.b += incScaled[8];
+        aff_g2l_r_new.a += incScaled[7];
+        aff_g2l_r_new.b += incScaled[9];
+
+        Vec6 resNew = calcResStereo(lvl, refToNew_new, aff_g2l_new, aff_g2l_r_new, setting_coarseCutoffTH * levelCutoffRepeat);
+
+        bool accept = (resNew[0] / resNew[1]) < (resOld[0] / resOld[1]);
+
+        if (debugPrint) {
+          Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                                     aff_g2l_new).cast<float>();
+          printf("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
+                 lvl, iteration, lambda,
+                 extrapFac,
+                 (accept ? "ACCEPT" : "REJECT"),
+                 resOld[0] / resOld[1],
+                 resNew[0] / resNew[1],
+                 (int) resOld[1], (int) resNew[1],
+                 inc.norm());
+          std::cout << refToNew_new.log().transpose() << " AFF " << aff_g2l_new.vec().transpose() << " (rel "
+                    << relAff.transpose() << ")\n";
+        }
+        if (accept) {
+          calcGSSSEStereo(lvl, H, b, refToNew_new, aff_g2l_new, aff_g2l_r_new);
+          resOld = resNew;
+          aff_g2l_current = aff_g2l_new;
+          aff_g2l_r_current = aff_g2l_r_new;
+          refToNew_current = refToNew_new;
+          lambda *= 0.5;
+        }
+        else {
+          lambda *= 4;
+          if (lambda < lambdaExtrapolationLimit) lambda = lambdaExtrapolationLimit;
+        }
+
+        if (!(inc.norm() > 1e-3)) {
+          if (debugPrint)
+            printf("inc too small, break!\n");
+          break;
+        }
+      }
+
+      // set last residual for that level, as well as flow indicators.
+      lastResiduals[lvl] = sqrtf((float) (resOld[0] / resOld[1]));
+      lastFlowIndicators = resOld.segment<3>(2);
+      if (lastResiduals[lvl] > 1.5 * minResForAbort[lvl]) return false;
+
+
+      if (levelCutoffRepeat > 1 && !haveRepeated) {
+        lvl++;
+        haveRepeated = true;
+        printf("REPEAT LEVEL!\n");
+      }
+    }
+
+    // set!
+    lastToNew_out = refToNew_current;
+    aff_g2l_out = aff_g2l_current;
+    aff_g2l_r_out = aff_g2l_r_current;
+
+
+    if ((setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2))
+        || (setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200)))
+      return false;
+
+    Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                               aff_g2l_out).cast<float>();
+
+    if ((setting_affineOptModeA == 0 && (fabsf(logf((float) relAff[0])) > 1.5))
+        || (setting_affineOptModeB == 0 && (fabsf((float) relAff[1]) > 200)))
+      return false;
+
+
+    if (setting_affineOptModeA < 0) aff_g2l_out.a = 0;
+    if (setting_affineOptModeB < 0) aff_g2l_out.b = 0;
+
+    return true;
+  }
+#else
   bool CoarseTracker::trackNewestCoarse(
       FrameHessian *newFrameHessian,
       SE3 &lastToNew_out, AffLight &aff_g2l_out,
@@ -1150,184 +1361,7 @@ namespace dso {
 
     return true;
   }
-
-  bool CoarseTracker::trackNewestCoarseStereo(
-      FrameHessian *newFrameHessian,
-      FrameHessian *newFrameHessianRight,
-      SE3 &lastToNew_out, AffLight &aff_g2l_out,
-      int coarsestLvl, Vec5 minResForAbort,
-      IOWrap::Output3DWrapper *wrap) {
-    debugPlot = setting_render_displayCoarseTrackingFull;
-//    debugPrint = false;
-
-    assert(coarsestLvl < 5 && coarsestLvl < pyrLevelsUsed);
-
-    lastResiduals.setConstant(NAN);
-    lastFlowIndicators.setConstant(1000);
-
-
-    newFrame = newFrameHessian;
-    newFrameRight = newFrameHessianRight;
-    int maxIterations[] = {10, 20, 50, 50, 50};
-    float lambdaExtrapolationLimit = 0.001;
-
-    SE3 refToNew_current = lastToNew_out;
-    AffLight aff_g2l_current = aff_g2l_out;
-
-    bool haveRepeated = false;
-
-
-    for (int lvl = coarsestLvl; lvl >= 0; lvl--) {
-      Mat88 H;
-      Vec8 b;
-      float levelCutoffRepeat = 1;
-      Vec6 resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH * levelCutoffRepeat);
-      while (resOld[5] > 0.6 && levelCutoffRepeat < 50) {
-        levelCutoffRepeat *= 2;
-        resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH * levelCutoffRepeat);
-
-        if (!setting_debugout_runquiet)
-          printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
-      }
-
-      calcGSSSEStereo(lvl, H, b, refToNew_current, aff_g2l_current);
-
-      float lambda = 0.01;
-
-      if (debugPrint) {
-        Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
-                                                   aff_g2l_current).cast<float>();
-        printf("lvl%d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
-               lvl, -1, lambda, 1.0f,
-               "INITIA",
-               0.0f,
-               resOld[0] / resOld[1],
-               0, (int) resOld[1],
-               0.0f);
-        std::cout << refToNew_current.log().transpose() << " AFF " << aff_g2l_current.vec().transpose() << " (rel "
-                  << relAff.transpose() << ")\n";
-      }
-
-
-      for (int iteration = 0; iteration < maxIterations[lvl]; iteration++) {
-        Mat88 Hl = H;
-        for (int i = 0; i < 8; i++) Hl(i, i) *= (1 + lambda);
-        Vec8 inc = Hl.ldlt().solve(-b);
-
-        if (setting_affineOptModeA < 0 && setting_affineOptModeB < 0)  // fix a, b
-        {
-          inc.head<6>() = Hl.topLeftCorner<6, 6>().ldlt().solve(-b.head<6>());
-          inc.tail<2>().setZero();
-        }
-        if (!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)  // fix b
-        {
-          inc.head<7>() = Hl.topLeftCorner<7, 7>().ldlt().solve(-b.head<7>());
-          inc.tail<1>().setZero();
-        }
-        if (setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))  // fix a
-        {
-          Mat88 HlStitch = Hl;
-          Vec8 bStitch = b;
-          HlStitch.col(6) = HlStitch.col(7);
-          HlStitch.row(6) = HlStitch.row(7);
-          bStitch[6] = bStitch[7];
-          Vec7 incStitch = HlStitch.topLeftCorner<7, 7>().ldlt().solve(-bStitch.head<7>());
-          inc.setZero();
-          inc.head<6>() = incStitch.head<6>();
-          inc[6] = 0;
-          inc[7] = incStitch[6];
-        }
-
-
-        float extrapFac = 1;
-        if (lambda < lambdaExtrapolationLimit) extrapFac = sqrt(sqrt(lambdaExtrapolationLimit / lambda));
-        inc *= extrapFac;
-
-        Vec8 incScaled = inc;
-        incScaled.segment<3>(0) *= SCALE_XI_ROT;
-        incScaled.segment<3>(3) *= SCALE_XI_TRANS;
-        incScaled.segment<1>(6) *= SCALE_A;
-        incScaled.segment<1>(7) *= SCALE_B;
-
-        if (!std::isfinite(incScaled.sum())) incScaled.setZero();
-
-        SE3 refToNew_new = SE3::exp((Vec6) (incScaled.head<6>())) * refToNew_current;
-        AffLight aff_g2l_new = aff_g2l_current;
-        aff_g2l_new.a += incScaled[6];
-        aff_g2l_new.b += incScaled[7];
-
-        Vec6 resNew = calcResStereo(lvl, refToNew_new, aff_g2l_new, setting_coarseCutoffTH * levelCutoffRepeat);
-
-        bool accept = (resNew[0] / resNew[1]) < (resOld[0] / resOld[1]);
-
-        if (debugPrint) {
-          Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
-                                                     aff_g2l_new).cast<float>();
-          printf("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
-                 lvl, iteration, lambda,
-                 extrapFac,
-                 (accept ? "ACCEPT" : "REJECT"),
-                 resOld[0] / resOld[1],
-                 resNew[0] / resNew[1],
-                 (int) resOld[1], (int) resNew[1],
-                 inc.norm());
-          std::cout << refToNew_new.log().transpose() << " AFF " << aff_g2l_new.vec().transpose() << " (rel "
-                    << relAff.transpose() << ")\n";
-        }
-        if (accept) {
-          calcGSSSEStereo(lvl, H, b, refToNew_new, aff_g2l_new);
-          resOld = resNew;
-          aff_g2l_current = aff_g2l_new;
-          refToNew_current = refToNew_new;
-          lambda *= 0.5;
-        }
-        else {
-          lambda *= 4;
-          if (lambda < lambdaExtrapolationLimit) lambda = lambdaExtrapolationLimit;
-        }
-
-        if (!(inc.norm() > 1e-3)) {
-          if (debugPrint)
-            printf("inc too small, break!\n");
-          break;
-        }
-      }
-
-      // set last residual for that level, as well as flow indicators.
-      lastResiduals[lvl] = sqrtf((float) (resOld[0] / resOld[1]));
-      lastFlowIndicators = resOld.segment<3>(2);
-      if (lastResiduals[lvl] > 1.5 * minResForAbort[lvl]) return false;
-
-
-      if (levelCutoffRepeat > 1 && !haveRepeated) {
-        lvl++;
-        haveRepeated = true;
-        printf("REPEAT LEVEL!\n");
-      }
-    }
-
-    // set!
-    lastToNew_out = refToNew_current;
-    aff_g2l_out = aff_g2l_current;
-
-
-    if ((setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2))
-        || (setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200)))
-      return false;
-
-    Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
-                                               aff_g2l_out).cast<float>();
-
-    if ((setting_affineOptModeA == 0 && (fabsf(logf((float) relAff[0])) > 1.5))
-        || (setting_affineOptModeB == 0 && (fabsf((float) relAff[1]) > 200)))
-      return false;
-
-
-    if (setting_affineOptModeA < 0) aff_g2l_out.a = 0;
-    if (setting_affineOptModeB < 0) aff_g2l_out.b = 0;
-
-    return true;
-  }
+#endif
 
   void
   CoarseTracker::debugPlotIDepthMap(float *minID_pt, float *maxID_pt, std::vector<IOWrap::Output3DWrapper *> &wraps) {

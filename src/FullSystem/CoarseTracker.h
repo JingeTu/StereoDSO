@@ -31,6 +31,7 @@
 #include "util/settings.h"
 #include "OptimizationBackend/MatrixAccumulators.h"
 #include "IOWrapper/Output3DWrapper.h"
+#include "FullSystem.h"
 
 
 namespace dso {
@@ -45,20 +46,21 @@ namespace dso {
     CoarseTracker(int w, int h);
 
     ~CoarseTracker();
-
+#if STEREO_MODE
+    bool trackNewestCoarseStereo(
+        FrameHessian *newFrameHessian,
+        FrameHessian *newFrameHessianRight,
+        SE3 &lastToNew_out,
+        AffLight &aff_g2l_out, AffLight &aff_g2l_r_out,
+        int coarsestLvl, Vec5 minResForAbort,
+        IOWrap::Output3DWrapper *wrap = 0);
+#else
     bool trackNewestCoarse(
         FrameHessian *newFrameHessian,
         SE3 &lastToNew_out, AffLight &aff_g2l_out,
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper *wrap = 0);
-
-    bool trackNewestCoarseStereo(
-        FrameHessian *newFrameHessian,
-        FrameHessian *newFrameHessianRight,
-        SE3 &lastToNew_out, AffLight &aff_g2l_out,
-        int coarsestLvl, Vec5 minResForAbort,
-        IOWrap::Output3DWrapper *wrap = 0);
-
+#endif
     void setCTRefForFirstFrame(std::vector<FrameHessian *> frameHessians);
 
     void makeCoarseDepthForFirstFrame(FrameHessian *fh);
@@ -116,14 +118,16 @@ namespace dso {
 
     Vec6 calcResAndGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
+#if STEREO_MODE
+
+    Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH);
+
+    void calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r);
+#else
     Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
-    Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
-
     void calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
-
-    void calcGSSSEStereo(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
-
+#endif
     void calcGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
 
     // pc buffers
@@ -153,8 +157,11 @@ namespace dso {
 
     std::vector<float *> ptrToDelete;
 
-
+#if STEREO_MODE
+    Accumulator11 acc;
+#else
     Accumulator9 acc;
+#endif
   };
 
 

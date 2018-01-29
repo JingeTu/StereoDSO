@@ -293,6 +293,7 @@ namespace dso {
     // =================== changed by tracker-thread. protected by trackMutex ============
     boost::mutex trackMutex;
     std::vector<FrameShell *> allFrameHistory;
+    std::vector<FrameShell *> allFrameHistoryRight;
     CoarseInitializer *coarseInitializer;
     Vec5 lastCoarseRMSE;
 

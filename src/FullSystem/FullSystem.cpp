@@ -203,6 +203,8 @@ namespace dso {
 
     for (FrameShell *s : allFrameHistory)
       delete s;
+    for (FrameShell *s : allFrameHistoryRight)
+      delete s;
     for (FrameHessian *fh : unmappedTrackedFrames)
       delete fh;
 
@@ -265,7 +267,7 @@ namespace dso {
     }
     myfile.close();
   }
-
+#if STEREO_MODE
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight) {
 
     assert(allFrameHistory.size() > 0);
@@ -278,6 +280,7 @@ namespace dso {
     FrameHessian *lastF = coarseTracker->lastRef;
 
     AffLight aff_last_2_l = AffLight(0, 0);
+    AffLight aff_last_2_l_r = AffLight(0, 0);
 
     std::vector<SE3, Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
     if (allFrameHistory.size() == 2) {
@@ -349,6 +352,7 @@ namespace dso {
     else {
 
       FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
+      FrameShell *slastRight = allFrameHistoryRight[allFrameHistoryRight.size() - 2];
       FrameShell *sprelast = allFrameHistory[allFrameHistory.size() - 3];
       SE3 slast_2_sprelast;
       SE3 lastF_2_slast;
@@ -357,6 +361,7 @@ namespace dso {
         slast_2_sprelast = sprelast->T_WC.inverse() * slast->T_WC;
         lastF_2_slast = slast->T_WC.inverse() * lastF->shell->T_WC;
         aff_last_2_l = slast->aff_g2l;
+        aff_last_2_l_r = slastRight->aff_g2l;
       }
       SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
 
@@ -464,6 +469,7 @@ namespace dso {
     Vec3 flowVecs = Vec3(100, 100, 100);
     SE3 lastF_2_fh = SE3();
     AffLight aff_g2l = AffLight(0, 0);
+    AffLight aff_g2l_r = AffLight(0, 0);
 
 
     // as long as maxResForImmediateAccept is not reached, I'll continue through the options.
@@ -474,9 +480,10 @@ namespace dso {
     int tryIterations = 0;
     for (unsigned int i = 0; i < lastF_2_fh_tries.size(); i++) {
       AffLight aff_g2l_this = aff_last_2_l;
+      AffLight aff_g2l_r_this = aff_last_2_l_r;
       SE3 lastF_2_fh_this = lastF_2_fh_tries[i];
       bool trackingIsGood = coarseTracker->trackNewestCoarseStereo(
-          fh, fhRight, lastF_2_fh_this, aff_g2l_this,
+          fh, fhRight, lastF_2_fh_this, aff_g2l_this, aff_g2l_r_this,
           pyrLevelsUsed - 1,
           achievedRes);  // in each level has to be at least as good as the last try.
 //      bool trackingIsGood = coarseTracker->trackNewestCoarse(
@@ -511,6 +518,7 @@ namespace dso {
         //printf("take over. minRes %f -> %f!\n", achievedRes[0], coarseTracker->lastResiduals[0]);
         flowVecs = coarseTracker->lastFlowIndicators;
         aff_g2l = aff_g2l_this;
+        aff_g2l_r = aff_g2l_r_this;
         lastF_2_fh = lastF_2_fh_this;
         haveOneGood = true;
       }
@@ -534,6 +542,7 @@ namespace dso {
       printf("BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.\n");
       flowVecs = Vec3(0, 0, 0);
       aff_g2l = aff_last_2_l;
+      aff_g2l_r = aff_last_2_l_r;
       lastF_2_fh = lastF_2_fh_tries[0];
     }
 
@@ -545,8 +554,7 @@ namespace dso {
     fh->shell->aff_g2l = aff_g2l;
     fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
     //- And also calculate right frame
-//    fhRight->shell->aff_g2l = aff_g2l;
-//    fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+    fhRight->shell->aff_g2l = aff_g2l_r;
 
 
     if (coarseTracker->firstCoarseRMSE < 0)
@@ -572,7 +580,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
-
+#else
 
   Vec4 FullSystem::trackNewCoarse(FrameHessian *fh) {
 
@@ -809,6 +817,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
+#endif
 
   void FullSystem::traceNewCoarseNonKey(FrameHessian *fh, FrameHessian *fhRight) {
     boost::unique_lock<boost::mutex> lock(mapMutex);
@@ -1526,6 +1535,10 @@ namespace dso {
     allFrameHistory.push_back(shell);
     //- Right Image
     FrameHessian *fhRight = new FrameHessian();
+    FrameShell *shellRight = new FrameShell();
+    shellRight->aff_g2l = AffLight(0, 0); //- only use the afflight parametere of right shell
+    fhRight->shell = shellRight;
+    allFrameHistoryRight.push_back(shellRight);
 
     fh->rightFrame = fhRight;
     fhRight->leftFrame = fh;
@@ -1562,9 +1575,9 @@ namespace dso {
         fh->shell->T_WC = coarseInitializer->T_WC_ini;
         fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-//        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
-//        fhRight->shell->camToWorld = fhRight->shell->camToWorld * leftToRight_SE3.inverse();
-//        fhRight->setEvalPT_scaled(fhRight->shell->camToWorld.inverse(), fhRight->shell->aff_g2l);
+        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
+        fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
       }
 //      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
 //      {
@@ -1742,8 +1755,8 @@ namespace dso {
             fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
             fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-//            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
           }
           delete fh;
         }
@@ -1785,14 +1798,14 @@ namespace dso {
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
 //    traceNewCoarseKey(fh);
 #if STEREO_MODE
-    traceNewCoarseKey(fh);
-//    traceNewCoarseNonKey(fh, fhRight);
+//    traceNewCoarseKey(fh);
+    traceNewCoarseNonKey(fh, fhRight);
 #else
     traceNewCoarseKey(fh);
 #endif
@@ -1809,8 +1822,8 @@ namespace dso {
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
 
-//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 
     traceNewCoarseKey(fh);

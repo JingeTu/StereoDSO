@@ -134,6 +134,8 @@ namespace dso {
   typedef Eigen::Matrix<float, 4, 1> Vec4f;
   typedef Eigen::Matrix<float, 4, 4> Mat44f;
   typedef Eigen::Matrix<float, 3, 4> Mat34f;
+  typedef Eigen::Matrix<float, 11, 11> Mat1111f;
+  typedef Eigen::Matrix<float, 11, 1> Vec11f;
   typedef Eigen::Matrix<float, 12, 12> Mat1212f;
   typedef Eigen::Matrix<float, 12, 1> Vec12f;
   typedef Eigen::Matrix<float, 13, 13> Mat1313f;

@@ -251,10 +251,8 @@ namespace dso {
     PRE_RKiTll = PRE_RTll * K.inverse();
     PRE_KtTll = K * PRE_tTll;
 
-    //- Assume there is not aff light transform between static stereo.
     PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(),
-                                               host->aff_g2l()).cast<float>();
-
+                                               target->aff_g2l()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
 
 //    std::cout << "target->ab_exposure.a: " << target->ab_exposure << std::endl;
