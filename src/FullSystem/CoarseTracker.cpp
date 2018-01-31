@@ -521,6 +521,7 @@ namespace dso {
       float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
       float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
 
+      assert(std::isfinite(residual) && std::isfinite(residual_r));
       if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
         if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
         E += maxEnergy;
@@ -583,9 +584,10 @@ namespace dso {
       delete resImage;
     }
 
-//    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
-//    printf("Et: %f\t Es: %f\n", Et, Es);
+    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
+    printf("Et: %f\t Es: %f\n", Et, Es);
 
+//    assert(std::isfinite(E) && std::isfinite(numTermsInE));
     Vec6 rs;
     rs[0] = E;
     rs[1] = numTermsInE;

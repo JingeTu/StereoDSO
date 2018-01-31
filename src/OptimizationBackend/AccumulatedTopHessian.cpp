@@ -65,10 +65,8 @@ namespace dso {
         assert(r->isLinearized);
       }
 
-
       RawResidualJacobian *rJ = r->J;
       int htIDX = r->hostIDX + r->targetIDX * nframes[tid];
-
 
       VecNRf resApprox;
       if (mode == 0) // active

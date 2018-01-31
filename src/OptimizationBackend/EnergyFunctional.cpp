@@ -65,10 +65,16 @@ namespace dso {
 
         Vec2f affLL = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l_0(),
                                                   target->aff_g2l_0()).cast<float>();
+        //- original
+//        AT(6, 6) = -affLL[0];
+//        AH(6, 6) = affLL[0];
+//        AT(7, 7) = -1;
+//        AH(7, 7) = affLL[0];
+
         AT(6, 6) = -affLL[0];
         AH(6, 6) = affLL[0];
         AT(7, 7) = -1;
-        AH(7, 7) = affLL[0];
+        AH(7, 7) = 0;
 
         AH.block<3, 8>(0, 0) *= SCALE_XI_TRANS;
         AH.block<3, 8>(3, 0) *= SCALE_XI_ROT;
@@ -291,7 +297,7 @@ namespace dso {
       }
 
       p->data->step = -b * p->HdiF;
-      assert(std::isfinite(p->data->step));
+//      assert(std::isfinite(p->data->step));
     }
   }
 

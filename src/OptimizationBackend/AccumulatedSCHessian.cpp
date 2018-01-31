@@ -132,7 +132,8 @@ namespace dso {
         for (int tid2 = 0; tid2 < toAggregate; tid2++) {
           accD[tid2][ijkIdx].finish();
           if (accD[tid2][ijkIdx].num == 0) continue;
-          accDM += accD[tid2][ijkIdx].A1m.cast<double>();
+          accDM +=
+              accD[tid2][ijkIdx].A1m.cast<double>();
         }
 
         H[tid].block<8, 8>(iIdx, iIdx) += EF->adHost[ijIdx] * accDM * EF->adHost[ikIdx].transpose();

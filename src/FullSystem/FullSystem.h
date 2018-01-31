@@ -24,7 +24,6 @@
 
 #pragma once
 #define MAX_ACTIVE_FRAMES 100
-#define STEREO_MODE 1
 
 #include <deque>
 #include "util/NumType.h"

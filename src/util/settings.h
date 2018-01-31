@@ -25,6 +25,8 @@
 
 #pragma once
 
+#define STEREO_MODE 1
+
 #include <string.h>
 #include <string>
 #include <cmath>

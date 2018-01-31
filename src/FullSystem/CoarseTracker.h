@@ -31,7 +31,6 @@
 #include "util/settings.h"
 #include "OptimizationBackend/MatrixAccumulators.h"
 #include "IOWrapper/Output3DWrapper.h"
-#include "FullSystem.h"
 
 
 namespace dso {
