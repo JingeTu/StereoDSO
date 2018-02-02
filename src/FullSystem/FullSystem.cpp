@@ -267,7 +267,9 @@ namespace dso {
     }
     myfile.close();
   }
+
 #if STEREO_MODE
+
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight) {
 
     assert(allFrameHistory.size() > 0);
@@ -580,6 +582,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
+
 #else
 
   Vec4 FullSystem::trackNewCoarse(FrameHessian *fh) {
@@ -1572,12 +1575,13 @@ namespace dso {
         initialized = true;
 
         fh->shell->aff_g2l = AffLight(0, 0);
+        fh->rightFrame->shell->aff_g2l = AffLight(0, 0);
         fh->shell->T_WC = coarseInitializer->T_WC_ini;
-        fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+        fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
 
         fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
         fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
       }
 //      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
 //      {
@@ -1749,6 +1753,17 @@ namespace dso {
           unmappedTrackedFrames.pop_front();
           FrameHessian *fhRight = unmappedTrackedFramesRight.front();
           unmappedTrackedFramesRight.pop_front();
+#if STEREO_MODE
+          {
+            boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+            assert(fh->shell->trackingRef != 0);
+            fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
+
+            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+          }
+#else
           {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
@@ -1758,6 +1773,7 @@ namespace dso {
             fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
             fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
           }
+#endif
           delete fh;
         }
 
@@ -1792,15 +1808,27 @@ namespace dso {
 
   void FullSystem::makeNonKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread. no lock required since we are in mapping thread.
+#if STEREO_MODE
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
-      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
 
       fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
+#else
+    {
+            boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+            assert(fh->shell->trackingRef != 0);
+            fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+          }
+#endif
 
 //    traceNewCoarseKey(fh);
 #if STEREO_MODE
@@ -1815,16 +1843,27 @@ namespace dso {
 
   void FullSystem::makeKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread
+#if STEREO_MODE
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
-      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
 
-
-      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
+#else
+    {
+            boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+            assert(fh->shell->trackingRef != 0);
+            fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+
+            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+          }
+#endif
 
     traceNewCoarseKey(fh);
 //    traceNewCoarseNonKey(fh, fhRight);
@@ -1965,96 +2004,8 @@ namespace dso {
 
   }
 
-  void FullSystem::initializeFromInitializer(FrameHessian *newFrame) {
 
-    boost::unique_lock<boost::mutex> lock(mapMutex);
-
-    // add firstframe.
-    FrameHessian *firstFrame = coarseInitializer->firstFrame;
-    firstFrame->idx = frameHessians.size();
-    frameHessians.push_back(firstFrame);
-    frameHessiansRight.push_back(firstFrame->rightFrame);
-    firstFrame->frameID = allKeyFramesHistory.size();
-    allKeyFramesHistory.push_back(firstFrame->shell);
-    ef->insertFrame(firstFrame, &Hcalib);
-    setPrecalcValues();
-
-    //int numPointsTotal = makePixelStatus(firstFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
-    //int numPointsTotal = pixelSelector->makeMaps(firstFrame->dIp, selectionMap,setting_desiredDensity);
-
-    firstFrame->pointHessians.reserve(wG[0] * hG[0] * 0.2f);
-    firstFrame->pointHessiansMarginalized.reserve(wG[0] * hG[0] * 0.2f);
-    firstFrame->pointHessiansOut.reserve(wG[0] * hG[0] * 0.2f);
-
-
-    float sumID = 1e-5, numID = 1e-5;
-    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
-      sumID += coarseInitializer->points[0][i].iR;
-      numID++;
-    }
-    float rescaleFactor = 1 / (sumID / numID);
-
-    // randomly sub-select the points I need.
-    float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
-
-    if (!setting_debugout_runquiet)
-      printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
-             (int) (setting_desiredPointDensity), coarseInitializer->numPoints[0]);
-
-    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
-      if (rand() / (float) RAND_MAX > keepPercentage) continue;
-
-      Pnt *point = coarseInitializer->points[0] + i;
-      ImmaturePoint *pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib);
-
-      if (!std::isfinite(pt->energyTH)) {
-        delete pt;
-        continue;
-      }
-
-
-      pt->idepth_max = pt->idepth_min = 1;
-      PointHessian *ph = new PointHessian(pt, &Hcalib);
-      delete pt;
-      if (!std::isfinite(ph->energyTH)) {
-        delete ph;
-        continue;
-      }
-
-      ph->setIdepthScaled(point->iR * rescaleFactor);
-      ph->setIdepthZero(ph->idepth);
-      ph->hasDepthPrior = true;
-      ph->setPointStatus(PointHessian::ACTIVE);
-
-      firstFrame->pointHessians.push_back(ph);
-      ef->insertPoint(ph);
-    }
-
-
-    SE3 firstToNew = coarseInitializer->thisToNext;
-    firstToNew.translation() /= rescaleFactor;
-
-
-    // really no lock required, as we are initializing.
-    {
-      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-      firstFrame->shell->T_WC = coarseInitializer->T_WC_ini;
-      firstFrame->shell->aff_g2l = AffLight(0, 0);
-      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(), firstFrame->shell->aff_g2l);
-      firstFrame->shell->trackingRef = 0;
-      firstFrame->shell->camToTrackingRef = SE3();
-
-      newFrame->shell->T_WC = firstToNew.inverse();
-      newFrame->shell->aff_g2l = AffLight(0, 0);
-      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(), newFrame->shell->aff_g2l);
-      newFrame->shell->trackingRef = firstFrame->shell;
-      newFrame->shell->camToTrackingRef = firstToNew.inverse();
-
-    }
-
-    initialized = true;
-    printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
-  }
+#if STEREO_MODE
 
   void FullSystem::initializeFromInitializerStereo(FrameHessian *newFrame) {
     boost::unique_lock<boost::mutex> lock(mapMutex);
@@ -2183,7 +2134,10 @@ namespace dso {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       firstFrame->shell->T_WC = coarseInitializer->T_WC_ini; // already used IMU initialize this
       firstFrame->shell->aff_g2l = AffLight(0, 0);
-      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(), firstFrame->shell->aff_g2l);
+      firstFrame->rightFrame->shell->aff_g2l = AffLight(0, 0);
+      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(),
+                                   firstFrame->shell->aff_g2l,
+                                   firstFrame->rightFrame->shell->aff_g2l);
       firstFrame->shell->trackingRef = 0;
       firstFrame->shell->camToTrackingRef = SE3();
 
@@ -2193,7 +2147,10 @@ namespace dso {
 
       newFrame->shell->T_WC = T_10.inverse();
       newFrame->shell->aff_g2l = AffLight(0, 0);
-      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(), newFrame->shell->aff_g2l);
+      newFrame->rightFrame->shell->aff_g2l = AffLight(0, 0);
+      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(),
+                                 newFrame->shell->aff_g2l,
+                                 newFrame->rightFrame->shell->aff_g2l);
       newFrame->shell->trackingRef = firstFrame->shell;
       newFrame->shell->camToTrackingRef = T_10.inverse();
 
@@ -2206,6 +2163,99 @@ namespace dso {
     initialized = true;
     printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
   }
+
+#else
+  void FullSystem::initializeFromInitializer(FrameHessian *newFrame) {
+
+    boost::unique_lock<boost::mutex> lock(mapMutex);
+
+    // add firstframe.
+    FrameHessian *firstFrame = coarseInitializer->firstFrame;
+    firstFrame->idx = frameHessians.size();
+    frameHessians.push_back(firstFrame);
+    frameHessiansRight.push_back(firstFrame->rightFrame);
+    firstFrame->frameID = allKeyFramesHistory.size();
+    allKeyFramesHistory.push_back(firstFrame->shell);
+    ef->insertFrame(firstFrame, &Hcalib);
+    setPrecalcValues();
+
+    //int numPointsTotal = makePixelStatus(firstFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
+    //int numPointsTotal = pixelSelector->makeMaps(firstFrame->dIp, selectionMap,setting_desiredDensity);
+
+    firstFrame->pointHessians.reserve(wG[0] * hG[0] * 0.2f);
+    firstFrame->pointHessiansMarginalized.reserve(wG[0] * hG[0] * 0.2f);
+    firstFrame->pointHessiansOut.reserve(wG[0] * hG[0] * 0.2f);
+
+
+    float sumID = 1e-5, numID = 1e-5;
+    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
+      sumID += coarseInitializer->points[0][i].iR;
+      numID++;
+    }
+    float rescaleFactor = 1 / (sumID / numID);
+
+    // randomly sub-select the points I need.
+    float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
+
+    if (!setting_debugout_runquiet)
+      printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
+             (int) (setting_desiredPointDensity), coarseInitializer->numPoints[0]);
+
+    for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
+      if (rand() / (float) RAND_MAX > keepPercentage) continue;
+
+      Pnt *point = coarseInitializer->points[0] + i;
+      ImmaturePoint *pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib);
+
+      if (!std::isfinite(pt->energyTH)) {
+        delete pt;
+        continue;
+      }
+
+
+      pt->idepth_max = pt->idepth_min = 1;
+      PointHessian *ph = new PointHessian(pt, &Hcalib);
+      delete pt;
+      if (!std::isfinite(ph->energyTH)) {
+        delete ph;
+        continue;
+      }
+
+      ph->setIdepthScaled(point->iR * rescaleFactor);
+      ph->setIdepthZero(ph->idepth);
+      ph->hasDepthPrior = true;
+      ph->setPointStatus(PointHessian::ACTIVE);
+
+      firstFrame->pointHessians.push_back(ph);
+      ef->insertPoint(ph);
+    }
+
+
+    SE3 firstToNew = coarseInitializer->thisToNext;
+    firstToNew.translation() /= rescaleFactor;
+
+
+    // really no lock required, as we are initializing.
+    {
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      firstFrame->shell->T_WC = coarseInitializer->T_WC_ini;
+      firstFrame->shell->aff_g2l = AffLight(0, 0);
+      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(), firstFrame->shell->aff_g2l);
+      firstFrame->shell->trackingRef = 0;
+      firstFrame->shell->camToTrackingRef = SE3();
+
+      newFrame->shell->T_WC = firstToNew.inverse();
+      newFrame->shell->aff_g2l = AffLight(0, 0);
+      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(), newFrame->shell->aff_g2l);
+      newFrame->shell->trackingRef = firstFrame->shell;
+      newFrame->shell->camToTrackingRef = firstToNew.inverse();
+
+    }
+
+    initialized = true;
+    printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
+  }
+#endif
 
   void FullSystem::makeNewTraces(FrameHessian *newFrame, float *gtDepth) {
     pixelSelector->allowFast = true;

@@ -252,12 +252,12 @@ namespace dso {
     PRE_KtTll = K * PRE_tTll;
 
     PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(),
-                                               target->aff_g2l()).cast<float>();
+                                               host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
 
 //    std::cout << "target->ab_exposure.a: " << target->ab_exposure << std::endl;
-//    std::cout << "target->aff_g2l().a: " << target->aff_g2l().a << std::endl;
-//    std::cout << "target->aff_g2l().b: " << target->aff_g2l().b << std::endl;
+//    std::cout << "target->aff_g2l().a: " << target->shell->aff_g2l.a << std::endl;
+//    std::cout << "target->aff_g2l().b: " << target->shell->aff_g2l.b << std::endl;
 //    std::cout << "PRE_aff_mode: " << PRE_aff_mode << std::endl;
 //    std::cout << "PRE_b0_mode: " << PRE_b0_mode << std::endl;
 //    ;

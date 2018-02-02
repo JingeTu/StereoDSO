@@ -43,15 +43,32 @@ namespace dso {
     for (int i = 0; i < 6; i++)
       JpJdF[i] = J->Jpdxi[0][i] * JI_JI_Jd[0] + J->Jpdxi[1][i] * JI_JI_Jd[1];
 
+#if STEREO_MODE
+//    if (targetIDX == -1) { //- static residual
+//      JpJdF.segment<2>(6).setZero();
+//      JpJdF.segment<2>(8) = J->JabJIdx * J->Jpdd;
+//    }
+//    else { //- temporal residual
+//      JpJdF.segment<2>(6) = J->JabJIdx * J->Jpdd;
+//      JpJdF.segment<2>(8).setZero();
+//    }
+    JpJdF.segment<4>(6) = J->JabJIdx * J->Jpdd;
+#else
     JpJdF.segment<2>(6) = J->JabJIdx * J->Jpdd;
+#endif
   }
 
 
   void EFFrame::takeData() {
+#if STEREO_MODE
+    prior = data->getPrior().head<10>();
+    delta = data->get_state_minus_stateZero().head<10>();
+    delta_prior = (data->get_state() - data->getPriorZero()).head<10>();
+#else
     prior = data->getPrior().head<8>();
     delta = data->get_state_minus_stateZero().head<8>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<8>();
-
+#endif
 
 
 //	Vec10 state_zero =  data->get_state_zero();
@@ -78,7 +95,45 @@ namespace dso {
     deltaF = data->idepth - data->idepth_zero;
   }
 
+#if STEREO_MODE
 
+  void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
+    Vec10f dp;
+    if (targetIDX == -1) { //- static stereo residual
+      dp = ef->adHTdeltaF[hostIDX + ef->nFrames * hostIDX];
+    }
+    else { //- temporal stereo residual
+      dp = ef->adHTdeltaF[hostIDX + ef->nFrames * targetIDX];
+    }
+
+    // compute Jp*delta
+    __m128 Jp_delta_x = _mm_set1_ps(J->Jpdxi[0].dot(dp.head<6>())
+                                    + J->Jpdc[0].dot(ef->cDeltaF)
+                                    + J->Jpdd[0] * point->deltaF);
+    __m128 Jp_delta_y = _mm_set1_ps(J->Jpdxi[1].dot(dp.head<6>())
+                                    + J->Jpdc[1].dot(ef->cDeltaF)
+                                    + J->Jpdd[1] * point->deltaF);
+    __m128 delta_a = _mm_set1_ps((float) (dp[6]));
+    __m128 delta_b = _mm_set1_ps((float) (dp[7]));
+    __m128 delta_a_r = _mm_set1_ps((float) (dp[8]));
+    __m128 delta_b_r = _mm_set1_ps((float) (dp[9]));
+
+    for (int i = 0; i < patternNum; i += 4) {
+      // PATTERN: rtz = resF - [JI*Jp Ja]*delta.
+      __m128 rtz = _mm_load_ps(((float *) &J->resF) + i);
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JIdx)) + i), Jp_delta_x));
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JIdx + 1)) + i), Jp_delta_y));
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JabF)) + i), delta_a));
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JabF + 1)) + i), delta_b));
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JabF + 2)) + i), delta_a_r));
+      rtz = _mm_sub_ps(rtz, _mm_mul_ps(_mm_load_ps(((float *) (J->JabF + 3)) + i), delta_b_r));
+      _mm_store_ps(((float *) &res_toZeroF) + i, rtz);
+    }
+
+    isLinearized = true;
+  }
+
+#else
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec8f dp;
     if (targetIDX == -1) { //- static stereo residual
@@ -110,5 +165,5 @@ namespace dso {
 
     isLinearized = true;
   }
-
+#endif
 }

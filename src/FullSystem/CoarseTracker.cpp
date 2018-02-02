@@ -312,7 +312,8 @@ namespace dso {
 
 #if STEREO_MODE
 
-  void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r) {
+  void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
+                                      AffLight aff_g2l_r) {
     acc.initialize();
 
     __m128 fxl = _mm_set1_ps(fx[lvl]);
@@ -406,7 +407,8 @@ namespace dso {
     b_out.segment<1>(9) *= SCALE_B;
   }
 
-  Vec6 CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH) {
+  Vec6
+  CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH) {
     float E = 0;
     float Et = 0;
     float Es = 0;
@@ -598,6 +600,7 @@ namespace dso {
 
     return rs;
   }
+
 #else
   void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
     acc.initialize();
@@ -812,7 +815,6 @@ namespace dso {
 #endif
 
 
-
   void CoarseTracker::makeCoarseDepthForFirstFrame(FrameHessian *fh) {
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
     memset(weightSums[0], 0, sizeof(float) * w[0] * h[0]);
@@ -997,6 +999,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
+
   bool CoarseTracker::trackNewestCoarseStereo(
       FrameHessian *newFrameHessian,
       FrameHessian *newFrameHessianRight,
@@ -1029,10 +1032,12 @@ namespace dso {
       Mat1010 H;
       Vec10 b;
       float levelCutoffRepeat = 1;
-      Vec6 resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current, setting_coarseCutoffTH * levelCutoffRepeat);
+      Vec6 resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current,
+                                  setting_coarseCutoffTH * levelCutoffRepeat);
       while (resOld[5] > 0.6 && levelCutoffRepeat < 50) {
         levelCutoffRepeat *= 2;
-        resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current, setting_coarseCutoffTH * levelCutoffRepeat);
+        resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current,
+                               setting_coarseCutoffTH * levelCutoffRepeat);
 
         if (!setting_debugout_runquiet)
           printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
@@ -1112,7 +1117,8 @@ namespace dso {
         aff_g2l_r_new.a += incScaled[7];
         aff_g2l_r_new.b += incScaled[9];
 
-        Vec6 resNew = calcResStereo(lvl, refToNew_new, aff_g2l_new, aff_g2l_r_new, setting_coarseCutoffTH * levelCutoffRepeat);
+        Vec6 resNew = calcResStereo(lvl, refToNew_new, aff_g2l_new, aff_g2l_r_new,
+                                    setting_coarseCutoffTH * levelCutoffRepeat);
 
         bool accept = (resNew[0] / resNew[1]) < (resOld[0] / resOld[1]);
 
@@ -1186,6 +1192,7 @@ namespace dso {
 
     return true;
   }
+
 #else
   bool CoarseTracker::trackNewestCoarse(
       FrameHessian *newFrameHessian,

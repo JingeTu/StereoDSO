@@ -75,6 +75,11 @@ namespace dso {
   typedef Eigen::Matrix<float, 8, CPARS> Mat8Cf;
   typedef Eigen::Matrix<float, CPARS, 8> MatC8f;
 
+  typedef Eigen::Matrix<double, 10, CPARS> Mat10C;
+  typedef Eigen::Matrix<double, CPARS, 10> MatC10;
+  typedef Eigen::Matrix<float, 10, CPARS> Mat10Cf;
+  typedef Eigen::Matrix<float, CPARS, 10> MatC10f;
+
   typedef Eigen::Matrix<double, 8, 8> Mat88;
   typedef Eigen::Matrix<double, 7, 7> Mat77;
 
@@ -125,6 +130,7 @@ namespace dso {
   typedef Eigen::Matrix<float, MAX_RES_PER_POINT, 1> VecNRf;
   typedef Eigen::Matrix<float, 12, 1> Vec12f;
   typedef Eigen::Matrix<float, 1, 8> Mat18f;
+  typedef Eigen::Matrix<float, 1, 10> Mat110f;
   typedef Eigen::Matrix<float, 6, 6> Mat66f;
   typedef Eigen::Matrix<float, 8, 8> Mat88f;
   typedef Eigen::Matrix<float, 8, 4> Mat84f;
@@ -139,6 +145,7 @@ namespace dso {
   typedef Eigen::Matrix<float, 12, 12> Mat1212f;
   typedef Eigen::Matrix<float, 12, 1> Vec12f;
   typedef Eigen::Matrix<float, 13, 13> Mat1313f;
+  typedef Eigen::Matrix<float, 15, 15> Mat1515f;
   typedef Eigen::Matrix<float, 10, 10> Mat1010f;
   typedef Eigen::Matrix<float, 13, 1> Vec13f;
   typedef Eigen::Matrix<float, 9, 9> Mat99f;
@@ -156,6 +163,11 @@ namespace dso {
   typedef Eigen::Matrix<float, 8 + CPARS + 1, 8 + CPARS + 1> MatPCPCf;
   typedef Eigen::Matrix<double, 8 + CPARS + 1, 1> VecPC;
   typedef Eigen::Matrix<float, 8 + CPARS + 1, 1> VecPCf;
+
+  typedef Eigen::Matrix<double, 10 + CPARS + 1, 10 + CPARS + 1> MatPCPC15;
+  typedef Eigen::Matrix<float, 10 + CPARS + 1, 10 + CPARS + 1> MatPCPC15f;
+  typedef Eigen::Matrix<double, 10 + CPARS + 1, 1> VecPC15;
+  typedef Eigen::Matrix<float, 10 + CPARS + 1, 1> VecPC15f;
 
   typedef Eigen::Matrix<float, 14, 14> Mat1414f;
   typedef Eigen::Matrix<float, 14, 1> Vec14f;

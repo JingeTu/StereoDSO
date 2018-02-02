@@ -139,7 +139,7 @@ namespace dso {
     std::vector<PointHessian *> pointHessiansOut;    // contains all OUTLIER points (= discarded.).
     std::vector<ImmaturePoint *> immaturePoints;    // contains all OUTLIER points (= discarded.).
 
-
+    //- Currently for stereo mode, do not take nullspaces into account.
     Mat66 nullspaces_pose;
     Mat42 nullspaces_affine;
     Vec6 nullspaces_scale;
@@ -148,7 +148,7 @@ namespace dso {
     SE3 worldToCam_evalPT;
     Vec10 state_zero;
     Vec10 state_scaled;
-    Vec10 state;  // [0-5: worldToCam-leftEps. 6-7: a,b]
+    Vec10 state;  // [0-5: worldToCam-leftEps. 6-7: a,b. 8-9: a_r,b_r.]
     Vec10 step;
     Vec10 step_backup;
     Vec10 state_backup;
@@ -178,6 +178,15 @@ namespace dso {
 
     inline AffLight aff_g2l_0() const { return AffLight(get_state_zero()[6] * SCALE_A, get_state_zero()[7] * SCALE_B); }
 
+#if STEREO_MODE
+
+    inline AffLight aff_g2l_r() const { return AffLight(get_state_scaled()[8], get_state_scaled()[9]); }
+
+    inline AffLight aff_g2l_r_0() const {
+      return AffLight(get_state_zero()[8] * SCALE_A, get_state_zero()[9] * SCALE_B);
+    }
+
+#endif
 
     void setStateZero(const Vec10 &state_zero);
 
@@ -218,7 +227,19 @@ namespace dso {
       setStateZero(state);
     };
 
+#if STEREO_MODE
 
+    inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r) {
+      Vec10 initial_state = Vec10::Zero();
+      initial_state[6] = aff_g2l.a;
+      initial_state[7] = aff_g2l.b;
+      initial_state[8] = aff_g2l_r.a;
+      initial_state[9] = aff_g2l_r.b;
+      this->worldToCam_evalPT = worldToCam_evalPT;
+      setStateScaled(initial_state);
+      setStateZero(this->get_state());
+    };
+#else
     inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l) {
       Vec10 initial_state = Vec10::Zero();
       initial_state[6] = aff_g2l.a;
@@ -227,6 +248,7 @@ namespace dso {
       setStateScaled(initial_state);
       setStateZero(this->get_state());
     };
+#endif
 
     void release();
 
@@ -259,6 +281,43 @@ namespace dso {
 
     void makeImages(float *color, CalibHessian *HCalib);
 
+#if STEREO_MODE
+
+    inline Vec10 getPrior() {
+      Vec10 p = Vec10::Zero();
+      if (frameID == 0) {
+        p.head<3>() = Vec3::Constant(setting_initialTransPrior);
+        p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
+        if (setting_solverMode & SOLVER_REMOVE_POSEPRIOR) p.head<6>().setZero();
+
+        p[6] = setting_initialAffAPrior;
+        p[7] = setting_initialAffBPrior;
+        p[8] = setting_initialAffAPrior;
+        p[9] = setting_initialAffBPrior;
+      }
+      else {
+        if (setting_affineOptModeA < 0) {
+          p[6] = setting_initialAffAPrior;
+          p[8] = setting_initialAffAPrior;
+        }
+        else {
+          p[6] = setting_affineOptModeA;
+          p[8] = setting_affineOptModeA;
+        }
+
+        if (setting_affineOptModeB < 0) {
+          p[7] = setting_initialAffBPrior;
+          p[9] = setting_initialAffBPrior;
+        }
+        else {
+          p[7] = setting_affineOptModeB;
+          p[9] = setting_affineOptModeB;
+        }
+      }
+      return p;
+    }
+
+#else
     inline Vec10 getPrior() {
       Vec10 p = Vec10::Zero();
       if (frameID == 0) {
@@ -284,7 +343,7 @@ namespace dso {
       p[9] = setting_initialAffBPrior;
       return p;
     }
-
+#endif
 
     inline Vec10 getPriorZero() {
       return Vec10::Zero();

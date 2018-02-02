@@ -151,7 +151,13 @@ namespace dso {
 
     void resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT);
 
+#if STEREO_MODE
+
+    void resubstituteFPt(const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid);
+
+#else
     void resubstituteFPt(const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid);
+#endif
 
     void accumulateAF_MT(MatXX &H, VecX &b, bool MT);
 
@@ -163,6 +169,15 @@ namespace dso {
 
     void orthogonalize(VecX *b, MatXX *H);
 
+#if STEREO_MODE
+    Mat110f *adHTdeltaF;
+
+    Mat1010 *adHost;
+    Mat1010 *adTarget;
+
+    Mat1010f *adHostF;
+    Mat1010f *adTargetF;
+#else
     Mat18f *adHTdeltaF;
 
     Mat88 *adHost;
@@ -170,7 +185,7 @@ namespace dso {
 
     Mat88f *adHostF;
     Mat88f *adTargetF;
-
+#endif
 
     VecC cPrior;
     VecCf cDeltaF;

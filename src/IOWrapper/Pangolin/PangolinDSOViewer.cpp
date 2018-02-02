@@ -98,7 +98,7 @@ namespace dso {
     void PangolinDSOViewer::run() {
       printf("START PANGOLIN!\n");
 
-      pangolin::CreateWindowAndBind("Main Stereo DSO", 2 * w, 2 * h);
+      pangolin::CreateWindowAndBind("Jinge Stereo DSO", 2 * w, 2 * h);
       const int UI_WIDTH = 180;
 
       glEnable(GL_DEPTH_TEST);

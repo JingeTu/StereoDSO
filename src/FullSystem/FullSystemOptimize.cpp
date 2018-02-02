@@ -436,7 +436,11 @@ namespace dso {
 
     double lambda = 1e-1;
     float stepsize = 1;
+#if STEREO_MODE
+    VecX previousX = VecX::Constant(CPARS + 10 * frameHessians.size(), NAN);
+#else
     VecX previousX = VecX::Constant(CPARS + 8 * frameHessians.size(), NAN);
+#endif
     for (int iteration = 0; iteration < mnumOptIts; iteration++) {
       // solve!
       //- also back up right frames' states
@@ -511,6 +515,9 @@ namespace dso {
 
     Vec10 newStateZero = Vec10::Zero();
     newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
+#if STEREO_MODE
+    newStateZero.segment<2>(8) = frameHessians.back()->get_state().segment<2>(8);
+#endif
 
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
                                     newStateZero);
@@ -547,6 +554,9 @@ namespace dso {
         fh->shell->aff_g2l = fh->aff_g2l();
 //        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
 //        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
+#if STEREO_MODE
+        fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
+#endif
       }
     }
 
@@ -598,7 +608,61 @@ namespace dso {
     ef->dropPointsF();
   }
 
+#if STEREO_MODE
 
+  std::vector<VecX> FullSystem::getNullspaces(
+      std::vector<VecX> &nullspaces_pose,
+      std::vector<VecX> &nullspaces_scale,
+      std::vector<VecX> &nullspaces_affA,
+      std::vector<VecX> &nullspaces_affB) {
+    nullspaces_pose.clear();
+    nullspaces_scale.clear();
+    nullspaces_affA.clear();
+    nullspaces_affB.clear();
+
+
+    int n = CPARS + frameHessians.size() * 10;
+    std::vector<VecX> nullspaces_x0_pre;
+    for (int i = 0; i < 6; i++) {
+      VecX nullspace_x0(n);
+      nullspace_x0.setZero();
+      for (FrameHessian *fh : frameHessians) {
+        nullspace_x0.segment<6>(CPARS + fh->idx * 10) = fh->nullspaces_pose.col(i);
+        nullspace_x0.segment<3>(CPARS + fh->idx * 10) *= SCALE_XI_TRANS_INVERSE;
+        nullspace_x0.segment<3>(CPARS + fh->idx * 10 + 3) *= SCALE_XI_ROT_INVERSE;
+      }
+      nullspaces_x0_pre.push_back(nullspace_x0);
+      nullspaces_pose.push_back(nullspace_x0);
+    }
+    for (int i = 0; i < 2; i++) {
+      VecX nullspace_x0(n);
+      nullspace_x0.setZero();
+      for (FrameHessian *fh : frameHessians) {
+        nullspace_x0.segment<2>(CPARS + fh->idx * 10 + 6) = fh->nullspaces_affine.col(i).head<2>();
+        nullspace_x0[CPARS + fh->idx * 10 + 6] *= SCALE_A_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 10 + 7] *= SCALE_B_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 10 + 8] *= SCALE_A_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 10 + 9] *= SCALE_B_INVERSE;
+      }
+      nullspaces_x0_pre.push_back(nullspace_x0);
+      if (i == 0) nullspaces_affA.push_back(nullspace_x0);
+      if (i == 1) nullspaces_affB.push_back(nullspace_x0);
+    }
+
+    VecX nullspace_x0(n);
+    nullspace_x0.setZero();
+    for (FrameHessian *fh : frameHessians) {
+      nullspace_x0.segment<6>(CPARS + fh->idx * 10) = fh->nullspaces_scale;
+      nullspace_x0.segment<3>(CPARS + fh->idx * 10) *= SCALE_XI_TRANS_INVERSE;
+      nullspace_x0.segment<3>(CPARS + fh->idx * 10 + 3) *= SCALE_XI_ROT_INVERSE;
+    }
+    nullspaces_x0_pre.push_back(nullspace_x0);
+    nullspaces_scale.push_back(nullspace_x0);
+
+    return nullspaces_x0_pre;
+  }
+
+#else
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,
       std::vector<VecX> &nullspaces_scale,
@@ -648,5 +712,5 @@ namespace dso {
 
     return nullspaces_x0_pre;
   }
-
+#endif
 }
