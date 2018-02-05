@@ -137,13 +137,33 @@ namespace dso {
       // drescale = new_idepth / idepth
       // #define SCALE_F 50.0f
       // #define SCALE_C 50.0f
-      d_C_x[2] = drescale * (PRE_RTll_0(2, 0) * u - PRE_RTll_0(0, 0));
-      d_C_x[3] = HCalib->fxl() * drescale * (PRE_RTll_0(2, 1) * u - PRE_RTll_0(0, 1)) * HCalib->fyli();
+//      d_C_x[2] = drescale * (PRE_RTll_0(2, 0) * u - PRE_RTll_0(0, 0));
+//      d_C_x[3] = HCalib->fxl() * drescale * (PRE_RTll_0(2, 1) * u - PRE_RTll_0(0, 1)) * HCalib->fyli();
+//      d_C_x[0] = KliP[0] * d_C_x[2];
+//      d_C_x[1] = KliP[1] * d_C_x[3];
+//
+//      d_C_y[2] = HCalib->fyl() * drescale * (PRE_RTll_0(2, 0) * v - PRE_RTll_0(1, 0)) * HCalib->fxli();
+//      d_C_y[3] = drescale * (PRE_RTll_0(2, 1) * v - PRE_RTll_0(1, 1));
+//      d_C_y[0] = KliP[0] * d_C_y[2];
+//      d_C_y[1] = KliP[1] * d_C_y[3];
+//
+//      d_C_x[0] = (d_C_x[0] + u) * SCALE_F;
+//      d_C_x[1] *= SCALE_F;
+//      d_C_x[2] = (d_C_x[2] + 1) * SCALE_C;
+//      d_C_x[3] *= SCALE_C;
+//
+//      d_C_y[0] *= SCALE_F;
+//      d_C_y[1] = (d_C_y[1] + v) * SCALE_F;
+//      d_C_y[2] *= SCALE_C;
+//      d_C_y[3] = (d_C_y[3] + 1) * SCALE_C;
+
+      d_C_x[2] = drescale * (- PRE_RTll_0(0, 0));
+      d_C_x[3] = HCalib->fxl() * drescale * (- PRE_RTll_0(0, 1)) * HCalib->fyli();
       d_C_x[0] = KliP[0] * d_C_x[2];
       d_C_x[1] = KliP[1] * d_C_x[3];
 
-      d_C_y[2] = HCalib->fyl() * drescale * (PRE_RTll_0(2, 0) * v - PRE_RTll_0(1, 0)) * HCalib->fxli();
-      d_C_y[3] = drescale * (PRE_RTll_0(2, 1) * v - PRE_RTll_0(1, 1));
+      d_C_y[2] = HCalib->fyl() * drescale * (- PRE_RTll_0(1, 0)) * HCalib->fxli();
+      d_C_y[3] = drescale * (- PRE_RTll_0(1, 1));
       d_C_y[0] = KliP[0] * d_C_y[2];
       d_C_y[1] = KliP[1] * d_C_y[3];
 
@@ -382,13 +402,33 @@ namespace dso {
       // diff calib
       //- {\partial x_2} \over {\partial \begin{bmatrix} f_x & f_y & c_x & c_y\end{bmatrix}}
       // drescale = new_idepth / idepth
-      d_C_x[2] = drescale * (PRE_RTll_0(2, 0) * u - PRE_RTll_0(0, 0));
-      d_C_x[3] = HCalib->fxl() * drescale * (PRE_RTll_0(2, 1) * u - PRE_RTll_0(0, 1)) * HCalib->fyli();
+//      d_C_x[2] = drescale * (PRE_RTll_0(2, 0) * u - PRE_RTll_0(0, 0));
+//      d_C_x[3] = HCalib->fxl() * drescale * (PRE_RTll_0(2, 1) * u - PRE_RTll_0(0, 1)) * HCalib->fyli();
+//      d_C_x[0] = KliP[0] * d_C_x[2];
+//      d_C_x[1] = KliP[1] * d_C_x[3];
+//
+//      d_C_y[2] = HCalib->fyl() * drescale * (PRE_RTll_0(2, 0) * v - PRE_RTll_0(1, 0)) * HCalib->fxli();
+//      d_C_y[3] = drescale * (PRE_RTll_0(2, 1) * v - PRE_RTll_0(1, 1));
+//      d_C_y[0] = KliP[0] * d_C_y[2];
+//      d_C_y[1] = KliP[1] * d_C_y[3];
+//
+//      d_C_x[0] = (d_C_x[0] + u) * SCALE_F;
+//      d_C_x[1] *= SCALE_F;
+//      d_C_x[2] = (d_C_x[2] + 1) * SCALE_C;
+//      d_C_x[3] *= SCALE_C;
+//
+//      d_C_y[0] *= SCALE_F;
+//      d_C_y[1] = (d_C_y[1] + v) * SCALE_F;
+//      d_C_y[2] *= SCALE_C;
+//      d_C_y[3] = (d_C_y[3] + 1) * SCALE_C;
+
+      d_C_x[2] = drescale * (- PRE_RTll_0(0, 0));
+      d_C_x[3] = HCalib->fxl() * drescale * (- PRE_RTll_0(0, 1)) * HCalib->fyli();
       d_C_x[0] = KliP[0] * d_C_x[2];
       d_C_x[1] = KliP[1] * d_C_x[3];
 
-      d_C_y[2] = HCalib->fyl() * drescale * (PRE_RTll_0(2, 0) * v - PRE_RTll_0(1, 0)) * HCalib->fxli();
-      d_C_y[3] = drescale * (PRE_RTll_0(2, 1) * v - PRE_RTll_0(1, 1));
+      d_C_y[2] = HCalib->fyl() * drescale * (- PRE_RTll_0(1, 0)) * HCalib->fxli();
+      d_C_y[3] = drescale * (- PRE_RTll_0(1, 1));
       d_C_y[0] = KliP[0] * d_C_y[2];
       d_C_y[1] = KliP[1] * d_C_y[3];
 
@@ -401,7 +441,6 @@ namespace dso {
       d_C_y[1] = (d_C_y[1] + v) * SCALE_F;
       d_C_y[2] *= SCALE_C;
       d_C_y[3] = (d_C_y[3] + 1) * SCALE_C;
-
     }
 
 

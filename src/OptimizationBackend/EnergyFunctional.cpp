@@ -825,9 +825,9 @@ namespace dso {
     // invert bottom part!
     Mat1010 hpi = HMScaled.bottomRightCorner<10, 10>();
     hpi = 0.5f * (hpi + hpi);
-    std::cout << "hpi: " << hpi << std::endl;
+//    std::cout << "hpi: " << hpi << std::endl;
     hpi = hpi.inverse();
-    std::cout << "hpi: " << hpi << std::endl;
+//    std::cout << "hpi: " << hpi << std::endl;
     hpi = 0.5f * (hpi + hpi);
 
     // schur-complement!

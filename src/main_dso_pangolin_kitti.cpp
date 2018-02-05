@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
         std::vector<IMUMeasurement> imuMeasurements;
 //        reader_imu->getIMUMeasurementsBetween(lastImuEndTimestamp, img_left->timestamp, imuMeasurements);
         lastImuEndTimestamp = img_left->timestamp;
-        std::cout << imuMeasurements.size() << std::endl;
+//        std::cout << imuMeasurements.size() << std::endl;
         if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, imuMeasurements, i);
       }
 

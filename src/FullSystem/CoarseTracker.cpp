@@ -410,8 +410,8 @@ namespace dso {
   Vec6
   CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH) {
     float E = 0;
-    float Et = 0;
-    float Es = 0;
+//    float Et = 0;
+//    float Es = 0;
     int numTermsInE = 0;
     int numTermsInWarped = 0;
     int numSaturated = 0;
@@ -432,6 +432,11 @@ namespace dso {
                                               aff_g2l).cast<float>();
     Vec2f affLL_r = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrameRight->ab_exposure, lastRef_aff_g2l,
                                                 aff_g2l_r).cast<float>();
+
+//    std::cout << "newFrameRight->ab_exposure: " << newFrameRight->ab_exposure << std::endl;
+//    std::cout << "aff_g2l_r.a: " << aff_g2l_r.a << std::endl;
+//    std::cout << "aff_g2l_r.b: " << aff_g2l_r.b << std::endl;
+    assert(std::isfinite(affLL[0]));
 
     //- Static stereo reprojection
     Mat33f RKi_s = Mat33f::Identity() * Ki[lvl];
@@ -523,13 +528,13 @@ namespace dso {
       float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
       float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
 
-      assert(std::isfinite(residual) && std::isfinite(residual_r));
+//      assert(std::isfinite(residual) && std::isfinite(residual_r));
       if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
         if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
         E += maxEnergy;
         E += maxEnergy;
-        Et += maxEnergy;
-        Es += maxEnergy;
+//        Et += maxEnergy;
+//        Es += maxEnergy;
         numTermsInE++;
         numSaturated++;
       }
@@ -538,8 +543,8 @@ namespace dso {
 
         E += hw * residual * residual * (2 - hw);
         E += hw_r * residual_r * residual_r * (2 - hw_r);
-        Et += hw * residual * residual * (2 - hw);
-        Es += hw_r * residual_r * residual_r * (2 - hw_r);
+//        Et += hw * residual * residual * (2 - hw);
+//        Es += hw_r * residual_r * residual_r * (2 - hw_r);
         numTermsInE++;
 
         buf_warped_idepth[numTermsInWarped] = new_idepth;
@@ -586,8 +591,8 @@ namespace dso {
       delete resImage;
     }
 
-    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
-    printf("Et: %f\t Es: %f\n", Et, Es);
+//    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
+//    printf("Et: %f\t Es: %f\n", Et, Es);
 
 //    assert(std::isfinite(E) && std::isfinite(numTermsInE));
     Vec6 rs;
@@ -1008,7 +1013,7 @@ namespace dso {
       int coarsestLvl, Vec5 minResForAbort,
       IOWrap::Output3DWrapper *wrap) {
     debugPlot = setting_render_displayCoarseTrackingFull;
-//    debugPrint = false;
+    debugPrint = false;
 
     assert(coarsestLvl < 5 && coarsestLvl < pyrLevelsUsed);
 

@@ -488,10 +488,6 @@ namespace dso {
           fh, fhRight, lastF_2_fh_this, aff_g2l_this, aff_g2l_r_this,
           pyrLevelsUsed - 1,
           achievedRes);  // in each level has to be at least as good as the last try.
-//      bool trackingIsGood = coarseTracker->trackNewestCoarse(
-//          fh, lastF_2_fh_this, aff_g2l_this,
-//          pyrLevelsUsed - 1,
-//          achievedRes);  // in each level has to be at least as good as the last try.
       tryIterations++;
 
       if (i != 0) {
@@ -1832,7 +1828,6 @@ namespace dso {
 
 //    traceNewCoarseKey(fh);
 #if STEREO_MODE
-//    traceNewCoarseKey(fh);
     traceNewCoarseNonKey(fh, fhRight);
 #else
     traceNewCoarseKey(fh);
@@ -1862,7 +1857,7 @@ namespace dso {
 
             fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
             fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
-          }
+    }
 #endif
 
     traceNewCoarseKey(fh);
@@ -1978,7 +1973,6 @@ namespace dso {
 #if STEREO_MODE
     //- use right frame to initialize the depth of fh->immaturePoints
     stereoMatch(fh, fhRight);
-//    activatePointsRight(fh, fhRight);
 #endif
 
 
