@@ -1367,7 +1367,17 @@ namespace dso {
 
 //      std::cout << "idx: " << ph->idxInImmaturePoints << "\t Right." << std::endl;
       ImmaturePointStatus phTraceRightStatus = ph->traceStereo(fhRight, K, 1);
-
+      /*
+       *   enum ImmaturePointStatus {
+            IPS_GOOD = 0,          // traced well and good
+            IPS_OOB,          // OOB: end tracking & marginalize!
+            IPS_OUTLIER,        // energy too high: if happens again: outlier!
+            IPS_SKIPPED,        // traced well and good (but not actually traced).
+            IPS_BADCONDITION,      // not traced because of bad condition.
+            IPS_UNINITIALIZED
+           };      // not even traced once.
+       */
+//      std::cout << "phTraceRightStatus: " << phTraceRightStatus << std::endl;
       if (phTraceRightStatus == ImmaturePointStatus::IPS_GOOD) {
         ImmaturePoint *phRight = new ImmaturePoint(ph->lastTraceUV(0), ph->lastTraceUV(1), fhRight, ph->my_type,
                                                    &Hcalib);
@@ -1419,9 +1429,44 @@ namespace dso {
     matLeft.convertTo(matLeft, CV_8UC3);
     matRight.convertTo(matRight, CV_8UC3);
 
+    float maxPixSearch = (wG[0] + hG[0]) * setting_maxPixSearch;
+
     cv::Mat matMatches;
-    cv::drawMatches(matLeft, keypoints_left, matRight, keypoints_right, matches, matMatches);
+    if (false) {
+      cv::drawMatches(matLeft, keypoints_left, matRight, keypoints_right, matches, matMatches);
+    }
+    else {
+      matMatches.create(cv::Size(matLeft.cols + matRight.cols, matLeft.rows), CV_MAKETYPE(matLeft.depth(), 3));
+      cv::Mat outLeft = matMatches(cv::Rect(0, 0, matLeft.cols, matLeft.rows));
+      cv::Mat outRight = matMatches(cv::Rect(matLeft.cols, 0, matRight.cols, matRight.rows));
+      cv::RNG rng(0);
+      cv::cvtColor(matLeft, outLeft, cv::COLOR_GRAY2BGR);
+      cv::cvtColor(matRight, outRight, cv::COLOR_GRAY2BGR);
+      for (int i = 0; i < matches.size(); ++i) {
+        keypoints_right[i].pt.x += image->w;
+        cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+        cv::drawMarker(matMatches, keypoints_left[i].pt, color, cv::MARKER_SQUARE, 3);
+        cv::drawMarker(matMatches, keypoints_right[i].pt, color, cv::MARKER_SQUARE, 3);
+
+        //- 1. Draw infinite depth point in right image.
+//        keypoints_left[i].pt.x += image->w;
+//        cv::drawMarker(matMatches, keypoints_left[i].pt, color, cv::MARKER_SQUARE, 3);
+        //- 2. Draw search line in right image.
+        keypoints_right[i].pt = keypoints_left[i].pt;
+        float min_v = keypoints_right[i].pt.x - maxPixSearch;
+        min_v = min_v > 0 ? min_v : 0;
+        keypoints_right[i].pt.x = min_v + image->w;
+        keypoints_left[i].pt.x += image->w;
+        cv::line(matMatches, keypoints_right[i].pt, keypoints_left[i].pt, color);
+        //- 3. Draw search line in left image.
+//        keypoints_right[i].pt.x -= image->w;
+//        cv::line(matMatches, keypoints_right[i].pt, keypoints_left[i].pt, color);
+
+      }
+    }
+
     cv::imshow("matches", matMatches);
+    cv::imwrite("matches.png", matMatches);
     cv::waitKey(0);
 
     delete fh;
@@ -1469,7 +1514,7 @@ namespace dso {
         float depth = 1.0f / ip->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < setting_acceptStaticDepthFactor * baseline) //original u_stereo_delta 1 depth < 70
+            depth < setting_acceptStaticDepthFactor * baseline && depth > 20 * baseline) //original u_stereo_delta 1 depth < 70
         {
 
           ip->idepth_min = ip->idepth_min_stereo;
@@ -2259,7 +2304,7 @@ namespace dso {
     newFrame->pointHessians.reserve(numPointsTotal * 1.2f);
     newFrame->pointHessiansMarginalized.reserve(numPointsTotal * 1.2f);
     newFrame->pointHessiansOut.reserve(numPointsTotal * 1.2f);
-
+    int wl = wG[0];
 
     for (int y = patternPadding + 1; y < hG[0] - patternPadding - 2; y++)
       for (int x = patternPadding + 1; x < wG[0] - patternPadding - 2; x++) {
@@ -2275,7 +2320,7 @@ namespace dso {
 
   }
 
-
+#if STEREO_MODE
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
       fh->targetPrecalc.resize(frameHessians.size() + 1);
@@ -2283,9 +2328,18 @@ namespace dso {
         fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
       fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
     }
-
     ef->setDeltaF(&Hcalib);
   }
+#else
+  void FullSystem::setPrecalcValues() {
+    for (FrameHessian *fh : frameHessians) {
+      fh->targetPrecalc.resize(frameHessians.size());
+      for (unsigned int i = 0; i < frameHessians.size(); i++)
+        fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
+    }
+    ef->setDeltaF(&Hcalib);
+  }
+#endif
 
 
   void FullSystem::printLogLine() {

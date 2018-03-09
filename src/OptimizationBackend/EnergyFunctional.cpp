@@ -843,7 +843,7 @@ namespace dso {
     HM = 0.5 * (HMScaled.topLeftCorner(ndim, ndim) + HMScaled.topLeftCorner(ndim, ndim).transpose());
     bM = bMScaled.head(ndim);
 
-    assert(std::isfinite(bM.norm()));
+//    assert(std::isfinite(bM.norm()));
 
     // remove from vector, without changing the order!
     for (unsigned int i = efF->idx; i + 1 < frames.size(); i++) {

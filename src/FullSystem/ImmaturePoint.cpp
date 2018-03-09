@@ -123,7 +123,7 @@ namespace dso {
     //- setting_maxPixSearch = 0.027
     //- maxPixSearch is the searched epipolar line length in pixel. Of course in pixel :).
     float maxPixSearch = (wG[0] + hG[0]) * setting_maxPixSearch;
-
+//    std::cout << "maxPixSearch: " << maxPixSearch << "\tu_stereo: " << u_stereo << "\tuMin: " << uMin << std::endl;
     if (std::isfinite(idepth_max_stereo)) { //- If the min depth is finite (no too close), calculate the normal dist.
       ptpMax = pr + Kt * idepth_max_stereo;
       uMax = ptpMax[0] / ptpMax[2];
@@ -160,12 +160,15 @@ namespace dso {
       uMax = uMin + dist * (dx * d);
       vMax = vMin + dist * (dy * d);
 
-      //- Check if out of boundary
-      if (!(uMax > 4 && vMax > 4 && uMax < wG[0] - 5 && vMax < hG[0] - 5)) {
-        lastTraceUV = Vec2f(-1, -1);
-        lastTracePixelInterval = 0;
-        return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
-      }
+      if (uMax <= 4) uMax = 5;
+      if (uMax >= wG[0] - 5) uMax = wG[0] - 6;
+
+//      //- Check if out of boundary
+//      if (!(uMax > 4 && vMax > 4 && uMax < wG[0] - 5 && vMax < hG[0] - 5)) {
+//        lastTraceUV = Vec2f(-1, -1);
+//        lastTracePixelInterval = 0;
+//        return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
+//      }
       assert(dist > 0);
     }
 

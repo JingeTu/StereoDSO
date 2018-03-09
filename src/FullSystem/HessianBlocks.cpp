@@ -227,7 +227,7 @@ namespace dso {
     PRE_b0_mode = host->aff_g2l_0().b;
   }
 
-
+#if STEREO_MODE
   void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
     this->host = host;
     this->target = target;
@@ -254,14 +254,7 @@ namespace dso {
     PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(),
                                                host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
-
-//    std::cout << "target->ab_exposure.a: " << target->ab_exposure << std::endl;
-//    std::cout << "target->aff_g2l().a: " << target->shell->aff_g2l.a << std::endl;
-//    std::cout << "target->aff_g2l().b: " << target->shell->aff_g2l.b << std::endl;
-//    std::cout << "PRE_aff_mode: " << PRE_aff_mode << std::endl;
-//    std::cout << "PRE_b0_mode: " << PRE_b0_mode << std::endl;
-//    ;
   }
-
+#endif
 }
 

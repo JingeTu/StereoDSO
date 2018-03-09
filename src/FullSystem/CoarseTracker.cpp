@@ -1426,6 +1426,7 @@ namespace dso {
         }
       }
 
+      int count = 0;
 
       MinimalImageB3 mf(w[lvl], h[lvl]);
       mf.setBlack();
@@ -1465,6 +1466,7 @@ namespace dso {
           if (bp[0] > 0 || nid >= 3) {
             float id = ((sid / nid) - minID) / ((maxID - minID));
             mf.setPixelCirc(x, y, makeJet3B(id));
+            count ++;
             //mf.at(idx) = makeJet3B(id);
           }
         }
@@ -1477,6 +1479,7 @@ namespace dso {
       if (debugSaveImages) {
         char buf[1000];
         snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
+//        snprintf(buf, 1000, "images_out/predicted_%05d_%d.png", lastRef->shell->id, (int)count);
         IOWrap::writeImage(buf, &mf);
       }
 
