@@ -270,12 +270,15 @@ namespace dso {
     sumNID /= numID;
 
 
-    if (!setting_debugout_runquiet)
-      printf("STEPS: A %.1f; B %.1f; R %.1f; T %.1f. \t",
-             sqrtf(sumA) / (0.0005 * setting_thOptIterations),
-             sqrtf(sumB) / (0.00005 * setting_thOptIterations),
-             sqrtf(sumR) / (0.00005 * setting_thOptIterations),
-             sqrtf(sumT) * sumNID / (0.00005 * setting_thOptIterations));
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "STEPS: A %.1f; B %.1f; R %.1f; T %.1f. \t",
+              sqrtf(sumA) / (0.0005 * setting_thOptIterations),
+              sqrtf(sumB) / (0.00005 * setting_thOptIterations),
+              sqrtf(sumR) / (0.00005 * setting_thOptIterations),
+              sqrtf(sumT) * sumNID / (0.00005 * setting_thOptIterations));
+      LOG(INFO) << buf;
+    }
 
 
     EFDeltaValid = false;
@@ -366,14 +369,16 @@ namespace dso {
 
   void
   FullSystem::printOptRes(const Vec3 &res, double resL, double resM, double resPrior, double LExact, float a, float b) {
-    printf("A(%f)=(AV %.3f). Num: A(%'d) + M(%'d); ab %f %f!\n",
-           res[0],
-           sqrtf((float) (res[0] / (patternNum * ef->resInA))),
-           ef->resInA,
-           ef->resInM,
-           a,
-           b
+    char buf[256];
+    sprintf(buf, "A(%f)=(AV %.3f). Num: A(%'d) + M(%'d); ab %f %f!\n",
+            res[0],
+            sqrtf((float) (res[0] / (patternNum * ef->resInA))),
+            ef->resInA,
+            ef->resInM,
+            a,
+            b
     );
+    LOG(INFO) << buf;
 
   }
 
@@ -408,8 +413,11 @@ namespace dso {
         numPoints++;
       }
 
-    if (!setting_debugout_runquiet)
-      printf("OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int) activeResiduals.size(), numLRes);
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int) activeResiduals.size(), numLRes);
+      LOG(INFO) << buf;
+    }
 
     // lastEnergy[0] = all point reprojection error, PointFrameResidual
     // lastEnergy[1] = 0
@@ -426,7 +434,7 @@ namespace dso {
 
 
     if (!setting_debugout_runquiet) {
-      printf("Initial Error       \t");
+      LOG(INFO) << "Initial Error       \t";
       printOptRes(lastEnergy, lastEnergyL, lastEnergyM, 0, 0, frameHessians.back()->aff_g2l().a,
                   frameHessians.back()->aff_g2l().b);
     }
@@ -475,13 +483,15 @@ namespace dso {
 
 
       if (!setting_debugout_runquiet) {
-        printf("%s %d (L %.2f, dir %.2f, ss %.1f): \t",
-               (newEnergy[0] + newEnergy[1] + newEnergyL + newEnergyM <
-                lastEnergy[0] + lastEnergy[1] + lastEnergyL + lastEnergyM) ? "ACCEPT" : "REJECT",
-               iteration,
-               log10(lambda),
-               incDirChange,
-               stepsize);
+        char buf[256];
+        sprintf(buf, "%s %d (L %.2f, dir %.2f, ss %.1f): \t",
+                (newEnergy[0] + newEnergy[1] + newEnergyL + newEnergyM <
+                 lastEnergy[0] + lastEnergy[1] + lastEnergyL + lastEnergyM) ? "ACCEPT" : "REJECT",
+                iteration,
+                log10(lambda),
+                incDirChange,
+                stepsize);
+        LOG(INFO) << buf;
         printOptRes(newEnergy, newEnergyL, newEnergyM, 0, 0, frameHessians.back()->aff_g2l().a,
                     frameHessians.back()->aff_g2l().b);
       }

@@ -228,6 +228,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
+
   void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
     this->host = host;
     this->target = target;
@@ -255,6 +256,7 @@ namespace dso {
                                                host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
   }
+
 #endif
 }
 

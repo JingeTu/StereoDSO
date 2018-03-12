@@ -44,7 +44,7 @@ namespace dso {
     float H = p->Hdd_accAF + p->Hdd_accLF + p->priorF;
     if (H < 1e-10) H = 1e-10;
 
-    printf("H: %f\t%f\t%f\t%f\n", H, p->Hdd_accAF, p->Hdd_accLF, p->priorF);
+//    printf("H: %f\t%f\t%f\t%f\n", H, p->Hdd_accAF, p->Hdd_accLF, p->priorF);
 
     p->data->idepth_hessian = H;
 

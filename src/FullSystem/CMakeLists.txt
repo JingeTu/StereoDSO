@@ -9,4 +9,4 @@ add_library(${PROJECT_NAME} FullSystem.cpp FullSystemOptimize.cpp FullSystemOptP
         FullSystemDebugStuff.cpp FullSystemMarginalize.cpp Residuals.cpp
         CoarseTracker.cpp CoarseInitializer.cpp ImmaturePoint.cpp
         HessianBlocks.cpp PixelSelector2.cpp)
-target_link_libraries(${PROJECT_NAME} dso_util)
+target_link_libraries(${PROJECT_NAME} dso_util ${GLOG_LIBRARY})

@@ -1044,8 +1044,12 @@ namespace dso {
         resOld = calcResStereo(lvl, refToNew_current, aff_g2l_current, aff_g2l_r_current,
                                setting_coarseCutoffTH * levelCutoffRepeat);
 
-        if (!setting_debugout_runquiet)
-          printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
+        if (!setting_debugout_runquiet) {
+          char buf[256];
+          sprintf(buf, "INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat,
+                  resOld[5]);
+          LOG(INFO) << buf;
+        }
       }
 
       calcGSSSEStereo(lvl, H, b, refToNew_current, aff_g2l_current, aff_g2l_r_current);
@@ -1130,15 +1134,17 @@ namespace dso {
         if (debugPrint) {
           Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
                                                      aff_g2l_new).cast<float>();
-          printf("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
-                 lvl, iteration, lambda,
-                 extrapFac,
-                 (accept ? "ACCEPT" : "REJECT"),
-                 resOld[0] / resOld[1],
-                 resNew[0] / resNew[1],
-                 (int) resOld[1], (int) resNew[1],
-                 inc.norm());
-          std::cout << refToNew_new.log().transpose() << " AFF " << aff_g2l_new.vec().transpose() << " (rel "
+          char buf[256];
+          sprintf(buf, "lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
+                  lvl, iteration, lambda,
+                  extrapFac,
+                  (accept ? "ACCEPT" : "REJECT"),
+                  resOld[0] / resOld[1],
+                  resNew[0] / resNew[1],
+                  (int) resOld[1], (int) resNew[1],
+                  inc.norm());
+          LOG(INFO) << buf;
+          LOG(INFO) << refToNew_new.log().transpose() << " AFF " << aff_g2l_new.vec().transpose() << " (rel "
                     << relAff.transpose() << ")\n";
         }
         if (accept) {
@@ -1170,7 +1176,7 @@ namespace dso {
       if (levelCutoffRepeat > 1 && !haveRepeated) {
         lvl++;
         haveRepeated = true;
-        printf("REPEAT LEVEL!\n");
+        LOG(INFO) << "REPEAT LEVEL!";
       }
     }
 
@@ -1466,7 +1472,7 @@ namespace dso {
           if (bp[0] > 0 || nid >= 3) {
             float id = ((sid / nid) - minID) / ((maxID - minID));
             mf.setPixelCirc(x, y, makeJet3B(id));
-            count ++;
+            count++;
             //mf.at(idx) = makeJet3B(id);
           }
         }

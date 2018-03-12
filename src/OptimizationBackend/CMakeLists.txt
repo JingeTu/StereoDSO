@@ -11,4 +11,4 @@ add_library(${PROJECT_NAME}
         AccumulatedSCHessian.cpp
         EnergyFunctionalStructs.cpp)
 
-#target_link_libraries(${PROJECT_NAME} util)
+target_link_libraries(${PROJECT_NAME} ${GLOG_LIBRARY})

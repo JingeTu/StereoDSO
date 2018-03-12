@@ -30,7 +30,7 @@
 #include <string.h>
 #include <string>
 #include <cmath>
-
+#include <glog/logging.h>
 
 namespace dso {
 #define SOLVER_SVD (int)1

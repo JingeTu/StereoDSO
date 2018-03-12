@@ -21,6 +21,7 @@ find_package(Boost COMPONENTS system thread)
 find_package(LibZip QUIET)
 find_package(Pangolin 0.2 QUIET)
 find_package(OpenCV QUIET)
+find_package(Glog REQUIRED)
 
 # flags
 add_definitions("-DENABLE_SSE")
@@ -41,6 +42,7 @@ include_directories(
 		${EIGEN3_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/src/okvis_kinematics/include
     ${PROJECT_SOURCE_DIR}/src/okvis_util/include
+		${GLOG_INCLUDE_DIRS}
 )
 
 include_directories( ${CSPARSE_INCLUDE_DIR} ${CHOLMOD_INCLUDE_DIR})

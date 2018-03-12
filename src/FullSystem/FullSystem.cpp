@@ -558,9 +558,12 @@ namespace dso {
     if (coarseTracker->firstCoarseRMSE < 0)
       coarseTracker->firstCoarseRMSE = achievedRes[0];
 
-    if (!setting_debugout_runquiet)
-      printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
-             achievedRes[0]);
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
+              achievedRes[0]);
+      LOG(INFO) << buf;
+    }
 
 
     if (setting_logStuff) {
@@ -985,9 +988,12 @@ namespace dso {
     if (currentMinActDist < 0) currentMinActDist = 0;
     if (currentMinActDist > 4) currentMinActDist = 4;
 
-    if (!setting_debugout_runquiet)
-      printf("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
-             currentMinActDist, (int) (setting_desiredPointDensity), ef->nPoints);
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
+              currentMinActDist, (int) (setting_desiredPointDensity), ef->nPoints);
+      LOG(INFO) << buf;
+    }
 
     FrameHessian *newestHs = frameHessians.back();
 
@@ -1514,7 +1520,8 @@ namespace dso {
         float depth = 1.0f / ip->idepth_stereo;
 
         if (phTraceLeftStatus == ImmaturePointStatus::IPS_GOOD && u_stereo_delta < 1 && depth > 0 &&
-            depth < setting_acceptStaticDepthFactor * baseline && depth > 20 * baseline) //original u_stereo_delta 1 depth < 70
+            depth < setting_acceptStaticDepthFactor * baseline &&
+            depth > 20 * baseline) //original u_stereo_delta 1 depth < 70
         {
 
           ip->idepth_min = ip->idepth_min_stereo;
@@ -2321,6 +2328,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
+
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
       fh->targetPrecalc.resize(frameHessians.size() + 1);
@@ -2330,6 +2338,7 @@ namespace dso {
     }
     ef->setDeltaF(&Hcalib);
   }
+
 #else
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
@@ -2345,20 +2354,22 @@ namespace dso {
   void FullSystem::printLogLine() {
     if (frameHessians.size() == 0) return;
 
-    if (!setting_debugout_runquiet)
-      printf("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%'d / %'d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
-             allKeyFramesHistory.back()->id,
-             statistics_lastFineTrackRMSE,
-             ef->resInA,
-             ef->resInL,
-             ef->resInM,
-             (int) statistics_numForceDroppedResFwd,
-             (int) statistics_numForceDroppedResBwd,
-             allKeyFramesHistory.back()->aff_g2l.a,
-             allKeyFramesHistory.back()->aff_g2l.b,
-             frameHessians.back()->shell->id - frameHessians.front()->shell->id,
-             (int) frameHessians.size());
-
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%'d / %'d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
+              allKeyFramesHistory.back()->id,
+              statistics_lastFineTrackRMSE,
+              ef->resInA,
+              ef->resInL,
+              ef->resInM,
+              (int) statistics_numForceDroppedResFwd,
+              (int) statistics_numForceDroppedResBwd,
+              allKeyFramesHistory.back()->aff_g2l.a,
+              allKeyFramesHistory.back()->aff_g2l.b,
+              frameHessians.back()->shell->id - frameHessians.front()->shell->id,
+              (int) frameHessians.size());
+      LOG(INFO) << buf;
+    }
 
     if (!setting_logStuff) return;
 
