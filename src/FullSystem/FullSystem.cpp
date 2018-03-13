@@ -135,7 +135,9 @@ namespace dso {
     coarseTracker_forNewKF = new CoarseTracker(wG[0], hG[0]);
     coarseInitializer = new CoarseInitializer(wG[0], hG[0]);
     pixelSelector = new PixelSelector(wG[0], hG[0]);
-    imuPropagation = new IMUPropagation();
+
+    imuVector = std::vector<IMUMeasurement>(0);
+    lastSpeedAndBiases.setZero();
 
     statistics_lastNumOptIts = 0;
     statistics_numDroppedPoints = 0;
@@ -150,7 +152,7 @@ namespace dso {
 
     currentMinActDist = 2;
     initialized = false;
-
+    lastFrameTimestamp = 0.0;
 
     ef = new EnergyFunctional();
     ef->red = &this->treadReduce;
@@ -214,7 +216,6 @@ namespace dso {
     delete coarseInitializer;
     delete pixelSelector;
     delete ef;
-    delete imuPropagation;
   }
 
   void FullSystem::setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH) {
@@ -244,6 +245,29 @@ namespace dso {
     Hcalib.B[255] = 255;
   }
 
+  void FullSystem::setIMUData(const std::vector<IMUMeasurement> &imuVector_) {
+    imuVector = imuVector_;
+  }
+
+  std::vector<IMUMeasurement> FullSystem::getIMUMeasurements(double timeStart, double timeEnd) {
+    if (timeEnd < timeStart || timeStart > imuVector.back().timestamp)
+      return std::vector<IMUMeasurement>();
+
+    std::vector<IMUMeasurement>::iterator first_imu_package = imuVector.begin();
+    std::vector<IMUMeasurement>::iterator last_imu_package = imuVector.end();
+
+    for (auto iter = imuVector.begin(); iter != imuVector.end(); ++iter) {
+      if (iter->timestamp <= timeStart)
+        first_imu_package = iter;
+      if (iter->timestamp >= timeEnd) {
+        last_imu_package = iter;
+        last_imu_package++;
+        break;
+      }
+    }
+
+    return std::vector<IMUMeasurement>(first_imu_package, last_imu_package);
+  }
 
   void FullSystem::printResult(std::string file) {
     boost::unique_lock<boost::mutex> lock(trackMutex);
@@ -467,6 +491,14 @@ namespace dso {
       }
     }
 
+    FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
+    FrameShell *slastRight = allFrameHistoryRight[allFrameHistoryRight.size() - 2];
+    {  // lock on global pose consistency!
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      aff_last_2_l = slast->aff_g2l;
+      aff_last_2_l_r = slastRight->aff_g2l;
+    }
+
 
     Vec3 flowVecs = Vec3(100, 100, 100);
     SE3 lastF_2_fh = SE3();
@@ -537,7 +569,158 @@ namespace dso {
     }
 
     if (!haveOneGood) {
-      printf("BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.\n");
+      LOG(INFO) << "BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.";
+      flowVecs = Vec3(0, 0, 0);
+      aff_g2l = aff_last_2_l;
+      aff_g2l_r = aff_last_2_l_r;
+      lastF_2_fh = lastF_2_fh_tries[0];
+    }
+
+    lastCoarseRMSE = achievedRes;
+
+    // no lock required, as fh is not used anywhere yet.
+    fh->shell->camToTrackingRef = lastF_2_fh.inverse();
+    fh->shell->trackingRef = lastF->shell;
+    fh->shell->aff_g2l = aff_g2l;
+    fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+    //- And also calculate right frame
+    fhRight->shell->aff_g2l = aff_g2l_r;
+
+
+    if (coarseTracker->firstCoarseRMSE < 0)
+      coarseTracker->firstCoarseRMSE = achievedRes[0];
+
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
+              achievedRes[0]);
+      LOG(INFO) << buf;
+    }
+
+
+    if (setting_logStuff) {
+      (*coarseTrackingLog) << std::setprecision(16)
+                           << fh->shell->id << " "
+                           << fh->shell->timestamp << " "
+                           << fh->ab_exposure << " "
+                           << fh->shell->T_WC.log().transpose() << " "
+                           << aff_g2l.a << " "
+                           << aff_g2l.b << " "
+                           << achievedRes[0] << " "
+                           << tryIterations << "\n";
+    }
+
+
+    return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
+  }
+
+  Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, const SE3 &T_WC0) {
+
+    assert(allFrameHistory.size() > 0);
+
+    for (IOWrap::Output3DWrapper *ow : outputWrapper)
+      ow->pushLiveFrame(fh);
+
+
+    FrameHessian *lastF = coarseTracker->lastRef;
+
+    AffLight aff_last_2_l = AffLight(0, 0);
+    AffLight aff_last_2_l_r = AffLight(0, 0);
+
+    std::vector<SE3, Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
+
+
+    if (allFrameHistory.size() == 2) {
+
+      initializeFromInitializerStereo(fh);
+
+      coarseTracker->makeK(&Hcalib);
+      coarseTracker->setCTRefForFirstFrame(frameHessians);
+      lastF = coarseTracker->lastRef;
+    }
+    else {
+      FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
+      FrameShell *slastRight = allFrameHistoryRight[allFrameHistoryRight.size() - 2];
+      {  // lock on global pose consistency!
+        boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+        aff_last_2_l = slast->aff_g2l;
+        aff_last_2_l_r = slastRight->aff_g2l;
+      }
+    }
+
+    SE3 fh_2_slast = lastF->shell->T_WC.inverse() * T_WC0;
+    //- use only one
+    lastF_2_fh_tries.push_back(fh_2_slast);
+
+    Vec3 flowVecs = Vec3(100, 100, 100);
+    SE3 lastF_2_fh = SE3();
+    AffLight aff_g2l = AffLight(0, 0);
+    AffLight aff_g2l_r = AffLight(0, 0);
+
+    // as long as maxResForImmediateAccept is not reached, I'll continue through the options.
+    // I'll keep track of the so-far best achieved residual for each level in achievedRes.
+    // If on a coarse level, tracking is WORSE than achievedRes, we will not continue to save time.
+    Vec5 achievedRes = Vec5::Constant(NAN);
+    bool haveOneGood = false;
+    int tryIterations = 0;
+    for (unsigned int i = 0; i < lastF_2_fh_tries.size(); i++) {
+      AffLight aff_g2l_this = aff_last_2_l;
+      AffLight aff_g2l_r_this = aff_last_2_l_r;
+      SE3 lastF_2_fh_this = lastF_2_fh_tries[i];
+      bool trackingIsGood = coarseTracker->trackNewestCoarseStereo(
+          fh, fhRight, lastF_2_fh_this, aff_g2l_this, aff_g2l_r_this,
+          pyrLevelsUsed - 1,
+          achievedRes);  // in each level has to be at least as good as the last try.
+      tryIterations++;
+
+      if (i != 0) {
+        printf(
+            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+            i,
+            i, pyrLevelsUsed - 1,
+            aff_g2l_this.a, aff_g2l_this.b,
+            achievedRes[0],
+            achievedRes[1],
+            achievedRes[2],
+            achievedRes[3],
+            achievedRes[4],
+            coarseTracker->lastResiduals[0],
+            coarseTracker->lastResiduals[1],
+            coarseTracker->lastResiduals[2],
+            coarseTracker->lastResiduals[3],
+            coarseTracker->lastResiduals[4]);
+      }
+
+
+      // do we have a new winner?
+      if (trackingIsGood && std::isfinite((float) coarseTracker->lastResiduals[0]) &&
+          !(coarseTracker->lastResiduals[0] >= achievedRes[0])) {
+        //printf("take over. minRes %f -> %f!\n", achievedRes[0], coarseTracker->lastResiduals[0]);
+        flowVecs = coarseTracker->lastFlowIndicators;
+        aff_g2l = aff_g2l_this;
+        aff_g2l_r = aff_g2l_r_this;
+        lastF_2_fh = lastF_2_fh_this;
+        haveOneGood = true;
+      }
+
+      // take over achieved res (always).
+      if (haveOneGood) {
+        for (int i = 0; i < 5; i++) {
+          if (!std::isfinite((float) achievedRes[i]) ||
+              achievedRes[i] > coarseTracker->lastResiduals[i])  // take over if achievedRes is either bigger or NAN.
+            achievedRes[i] = coarseTracker->lastResiduals[i];
+        }
+      }
+
+
+      if (haveOneGood && achievedRes[0] < lastCoarseRMSE[0] * setting_reTrackThreshold)
+        break;
+
+    }
+
+    if (!haveOneGood) {
+      LOG(INFO) << "BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.";
       flowVecs = Vec3(0, 0, 0);
       aff_g2l = aff_last_2_l;
       aff_g2l_r = aff_last_2_l_r;
@@ -1546,33 +1729,10 @@ namespace dso {
 //    cv::waitKey(0);
   }
 
-  void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight,
-                                  std::vector<IMUMeasurement> &imuMeasurements, int id) {
-
-
-//    cv::Mat matLeft(image->h, image->w, CV_32F, image->image);
-//    cv::Mat matRight(imageRight->h, imageRight->w, CV_32F, imageRight->image);
-//
-//
-//    matLeft.convertTo(matLeft, CV_8UC3);
-//    matRight.convertTo(matRight, CV_8UC3);
-//
-//    cv::Mat matShow(image->h, image->w * 2, CV_8UC3);
-//
-//    matShow.rowRange(0, image->h).colRange(0, image->w) = matLeft;
-//    matShow.rowRange(0, image->h).colRange(image->w, image->w * 2) = matRight;
-//
-//
-//    cv::imshow("LR", matShow);
-//    cv::waitKey(0);
+  void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight, int id) {
 
     if (isLost) return;
     boost::unique_lock<boost::mutex> lock(trackMutex);
-
-//    printf("addActive Frame left timestamp: %lf, right timestamp: %lf\n", image->timestamp, imageRight->timestamp);
-
-    //- Checkout if camera intrinsics changed.
-//    printf("Hcalib: %f, %f, %f, %f\n", Hcalib.fxl(), Hcalib.fyl(), Hcalib.cxl(), Hcalib.cyl());
 
     // =========================== add into allFrameHistory =========================
     FrameHessian *fh = new FrameHessian();
@@ -1587,36 +1747,32 @@ namespace dso {
     //- Right Image
     FrameHessian *fhRight = new FrameHessian();
     FrameShell *shellRight = new FrameShell();
-    shellRight->aff_g2l = AffLight(0, 0); //- only use the afflight parametere of right shell
+    shellRight->aff_g2l = AffLight(0, 0);
     fhRight->shell = shellRight;
     allFrameHistoryRight.push_back(shellRight);
 
     fh->rightFrame = fhRight;
     fhRight->leftFrame = fh;
 
-//    printf("addActiveFrame allFrameHistory.size(): %ld\n", allFrameHistory.size());
-
-
     // =========================== make Images / derivatives etc. =========================
     fh->ab_exposure = image->exposure_time;
     fh->makeImages(image->image, &Hcalib);
     fhRight->ab_exposure = imageRight->exposure_time;
     fhRight->makeImages(imageRight->image, &Hcalib);
-    //- FrameHessian::makeImages() just calculate some image gradient.
 
-//    printf("frameHessians.size(), frameHessiansRight.size(): %ld, %ld\n",
-//           frameHessians.size(), frameHessiansRight.size());
+    double imuTimeStart = lastFrameTimestamp - setting_temporal_imu_data_overlap;
+    double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
+    std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+
+    lastFrameTimestamp = fh->shell->timestamp;
 
     if (!initialized) {
 #if STEREO_MODE
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
-        //- Initialize IMU
-        Sophus::Quaterniond q_WS = imuPropagation->initializeRollPitchFromMeasurements(imuMeasurements);
-        q_WS.setIdentity();
-        // T_WS * T_SC0 = T_WC0
-        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond::Identity(), Vec3(0, 0, 0)) * T_SC0;
+        Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuData);
+        coarseInitializer->T_WC_ini = Sophus::SE3d(q_WS, Vec3(0, 0, 0)) * T_SC0;
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
 
@@ -1629,27 +1785,15 @@ namespace dso {
 
         fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
         fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//        fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
       }
-//      else if (coarseInitializer->trackFrame(fh, outputWrapper))  // if SNAPPED
-//      {
-//        initializeFromInitializer(fh);
-//        lock.unlock();
-//        deliverTrackedFrame(fh, fhRight, true);
-//      }
-//      else {
-//        // if still initializing
-//        fh->shell->poseValid = false;
-//        delete fh;
-//      }
       return;
 #else
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
         //- Initialize IMU
-        Sophus::Quaterniond q_WS = imuPropagation->initializeRollPitchFromMeasurements(imuMeasurements);
-        q_WS.setIdentity();
+//        Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuMeasurements);
+//        q_WS.setIdentity();
         // T_WS * T_SC0 = T_WC0
 //        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond::Identity(), Vec3(0, 0, 0)) * T_SC0;
         coarseInitializer->T_WC_ini = SE3();
@@ -1680,14 +1824,22 @@ namespace dso {
         coarseTracker_forNewKF = tmp;
       }
 
+      FrameShell *lastFrame = allFrameHistory[allFrameHistory.size() - 2];
+
+      std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+      SE3 T_WC0 = lastFrame->T_WC;
+      SE3 T_WS = T_WC0 * T_SC0.inverse();
+      IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBiases, lastFrame->timestamp, fh->shell->timestamp, 0, 0);
+      T_WC0 = T_WS * T_SC0;
+
 #if STEREO_MODE
-      Vec4 tres = trackNewCoarseStereo(fh, fhRight);
+      Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
 #else
       Vec4 tres = trackNewCoarse(fh);
 #endif
       if (!std::isfinite((double) tres[0]) || !std::isfinite((double) tres[1]) || !std::isfinite((double) tres[2]) ||
           !std::isfinite((double) tres[3])) {
-        printf("Initial Tracking failed: LOST!\n");
+        LOG(INFO) << "Initial Tracking failed: LOST!";
         isLost = true;
         delete fh;
         delete fhRight;
@@ -2090,9 +2242,12 @@ namespace dso {
     // randomly sub-select the points I need.
     float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
-    if (!setting_debugout_runquiet)
-      printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
-             (int) (setting_desiredPointDensity), coarseInitializer->numPoints[0]);
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
+              (int) (setting_desiredPointDensity), coarseInitializer->numPoints[0]);
+      LOG(INFO) << buf;
+    }
 
     //- initialize *first frame* by idepth computed by static stereo matching
     for (int i = 0; i < coarseInitializer->numPoints[0]; i++) {
@@ -2207,7 +2362,9 @@ namespace dso {
     }
 
     initialized = true;
-    printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
+    char buf[256];
+    sprintf(buf, "INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
+    LOG(INFO) << buf;
   }
 
 #else

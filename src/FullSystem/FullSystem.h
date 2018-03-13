@@ -141,8 +141,7 @@ namespace dso {
 
     // adds a new frame, and creates point & residual structs.
     void
-    addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight, std::vector<IMUMeasurement> &imuMeasurements,
-                   int id);
+    addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight, int id);
 
     void stereoMatch(ImageAndExposure *image, ImageAndExposure *imageRight, int id, cv::Mat &idepthMap);
 
@@ -174,12 +173,18 @@ namespace dso {
 
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
+    void setIMUData(const std::vector<IMUMeasurement> &imuVector_);
+
+    std::vector<IMUMeasurement> getIMUMeasurements(double timeStart, double timeEnd);
+
   private:
 
     CalibHessian Hcalib;
 
     IMUParameters imuParameters;
-
+    std::vector<IMUMeasurement> imuVector;
+    double lastFrameTimestamp;
+    SpeedAndBiases lastSpeedAndBiases;
 
     // opt single point
     int optimizePoint(PointHessian *point, int minObs, bool flagOOB);
@@ -190,6 +195,8 @@ namespace dso {
     Vec4 trackNewCoarse(FrameHessian *fh);
 
     Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight);
+
+    Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, const SE3 &T_WC0);
 
     void traceNewCoarseKey(FrameHessian *fh);
 
@@ -321,7 +328,6 @@ namespace dso {
     boost::mutex coarseTrackerSwapMutex;      // if tracker sees that there is a new reference, tracker locks [coarseTrackerSwapMutex] and swaps the two.
     CoarseTracker *coarseTracker_forNewKF;      // set as as reference. protected by [coarseTrackerSwapMutex].
     CoarseTracker *coarseTracker;          // always used to track new frames. protected by [trackMutex].
-    IMUPropagation *imuPropagation;
     float minIdJetVisTracker, maxIdJetVisTracker;
     float minIdJetVisDebug, maxIdJetVisDebug;
 

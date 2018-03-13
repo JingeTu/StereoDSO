@@ -389,11 +389,6 @@ namespace dso {
     if (frameHessians.size() < 3) mnumOptIts = 20;
     if (frameHessians.size() < 4) mnumOptIts = 15;
 
-
-
-
-
-
     // get statistics and active residuals.
 
     activeResiduals.clear();
@@ -470,12 +465,6 @@ namespace dso {
 
       bool canbreak = doStepFromBackup(stepsize, stepsize, stepsize, stepsize, stepsize);
 
-
-
-
-
-
-
       // eval new energy!
       Vec3 newEnergy = linearizeAll(false);
       double newEnergyL = calcLEnergy();
@@ -522,7 +511,6 @@ namespace dso {
       if (canbreak && iteration >= setting_minOptIterations) break;
     }
 
-
     Vec10 newStateZero = Vec10::Zero();
     newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
 #if STEREO_MODE
@@ -536,16 +524,13 @@ namespace dso {
     ef->setAdjointsF(&Hcalib);
     setPrecalcValues();
 
-
     lastEnergy = linearizeAll(true);
-
 
     if (!std::isfinite((double) lastEnergy[0]) || !std::isfinite((double) lastEnergy[1]) ||
         !std::isfinite((double) lastEnergy[2])) {
       printf("KF Tracking failed: LOST!\n");
       isLost = true;
     }
-
 
     statistics_lastFineTrackRMSE = sqrtf((float) (lastEnergy[0] / (patternNum * ef->resInA)));
 
@@ -562,14 +547,11 @@ namespace dso {
       for (FrameHessian *fh : frameHessians) {
         fh->shell->T_WC = fh->PRE_T_WC;
         fh->shell->aff_g2l = fh->aff_g2l();
-//        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
-//        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
 #if STEREO_MODE
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
 #endif
       }
     }
-
 
     debugPlotTracking();
 

@@ -16,10 +16,10 @@ namespace dso {
 
     ~IMUPropagation();
 
-    Sophus::Quaterniond initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements);
+    static Sophus::Quaterniond initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements);
 
-    int propagate(const std::vector<IMUMeasurement> &imuMeasurements, SE3 T_WS, SpeedAndBias &speedAndBias,
-                  const double &t_start, const double &t_end, covariance_t *covariance, jacobian_t *jacobian);
+    static int propagate(const std::vector<IMUMeasurement> &imuMeasurements, SE3 T_WS, SpeedAndBiases &speedAndBiases,
+                         const double &t_start, const double &t_end, covariance_t *covariance, jacobian_t *jacobian);
 
   private:
   };

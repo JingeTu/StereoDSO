@@ -43,7 +43,7 @@ namespace dso {
   extern float hM3G;
 
   extern float baseline;
-  extern SE3 T_SC0;
+  extern Sophus::SE3d T_SC0;
   extern IMUParameters imuParameters;
 
   void setGlobalCameraCalib(int w, int h, const Eigen::Matrix3f &K);

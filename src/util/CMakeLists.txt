@@ -19,5 +19,6 @@ add_library(${PROJECT_NAME}
         settings.cpp
         Undistort.cpp
         globalCalib.cpp
-        IMUPropagation.cpp)
+        IMUPropagation.cpp
+        )
 target_link_libraries(${PROJECT_NAME} okvis_kinematics)

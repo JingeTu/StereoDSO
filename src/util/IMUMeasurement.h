@@ -5,6 +5,9 @@
 #ifndef DSO_IMUMEASUREMENT_H
 #define DSO_IMUMEASUREMENT_H
 
+#include <Eigen/Dense>
+#include "NumType.h"
+
 namespace dso {
   struct IMUMeasurement {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
