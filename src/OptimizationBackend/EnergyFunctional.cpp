@@ -47,8 +47,13 @@ namespace dso {
 
     if (adHost != 0) delete[] adHost;
     if (adTarget != 0) delete[] adTarget;
+//#if !INERTIAL_MODE
     adHost = new Mat1010[nFrames * nFrames];
     adTarget = new Mat1010[nFrames * nFrames];
+//#else
+//    adHost = new Mat1919[nFrames * nFrames];
+//    adTarget = new Mat1919[nFrames * nFrames];
+//#endif
 
     for (int h = 0; h < nFrames; h++)
       for (int t = 0; t < nFrames; t++) {
@@ -57,50 +62,84 @@ namespace dso {
 
         SE3 hostToTarget = target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse();
 
+//#if !INERTIAL_MODE
         Mat1010 AH = Mat1010::Identity();
         Mat1010 AT = Mat1010::Identity();
-
+//#else
+//        Mat1919 AH = Mat1919::Identity();
+//        Mat1919 AT = Mat1919::Identity();
+//#endif
         AH.topLeftCorner<6, 6>() = -hostToTarget.Adj().transpose();
         AT.topLeftCorner<6, 6>() = Mat66::Identity();
 
 
         Vec2f affLL = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l_0(),
                                                   target->aff_g2l_0()).cast<float>();
-        //- original
-//        AT(6, 6) = -affLL[0];
-//        AH(6, 6) = affLL[0];
-//        AT(7, 7) = -1;
-//        AH(7, 7) = affLL[0];
 
-#if STEREO_MODE
         if (t == h) {
+          //- AffLight
           AT(6, 6) = 0;
-          AH(6, 6) = affLL[0];
           AT(7, 7) = 0;
-          AH(7, 7) = 0;
-
           AT(8, 8) = -affLL[0];
+          AT(9, 9) = -affLL[0];
+
+          //- AffLight
+          AH(6, 6) = affLL[0];
+          AH(7, 7) = 1;
           AH(8, 8) = 0;
-          AT(9, 9) = -1;
           AH(9, 9) = 0;
+//#if INERTIAL_MODE
+//          //- Velocity
+//          AT(10, 10) = 0;
+//          AT(11, 11) = 0;
+//          AT(12, 12) = 0;
+//          AH(10, 10) = 0;
+//          AH(11, 11) = 0;
+//          AH(12, 12) = 0;
+//          //- Bias Gyro
+//          AT(13, 13) = 0;
+//          AT(14, 14) = 0;
+//          AT(15, 15) = 0;
+//          AH(13, 13) = 0;
+//          AH(14, 14) = 0;
+//          AH(15, 15) = 0;
+//          //- Bias Acc
+//          AT(16, 16) = 0;
+//          AT(17, 17) = 0;
+//          AT(18, 18) = 0;
+//          AH(16, 16) = 0;
+//          AH(17, 17) = 0;
+//          AH(18, 18) = 0;
+//#endif
         }
         else {
-          AT(6, 6) = -affLL[0];
-          AH(6, 6) = affLL[0];
-          AT(7, 7) = -1;
-          AH(7, 7) = 0;
-
+          //- AffLight
+          AT(6, 6) = affLL[0];
+          AT(7, 7) = 1;
           AT(8, 8) = 0;
-          AH(8, 8) = 0;
           AT(9, 9) = 0;
+
+          //- AffLight
+          AH(6, 6) = -affLL[0];
+          AH(7, 7) = -affLL[0];
+          AH(8, 8) = 0;
           AH(9, 9) = 0;
+//#if INERTIAL_MODE
+//          //- Velocity
+//          AH(10, 10) = -1;
+//          AH(11, 11) = -1;
+//          AH(12, 12) = -1;
+//          //- Bias Gyro
+//          AH(13, 13) = -1;
+//          AH(14, 14) = -1;
+//          AH(15, 15) = -1;
+//          //- Bias Acc
+//          AH(16, 16) = -1;
+//          AH(17, 17) = -1;
+//          AH(18, 18) = -1;
+//#endif
         }
-#else
-        AT(6, 6) = -affLL[0];
-        AH(6, 6) = affLL[0];
-        AT(7, 7) = -1;
-        AH(7, 7) = 0;
-#endif
+//#if !INERTIAL_MODE
         AH.block<3, 10>(0, 0) *= SCALE_XI_TRANS;
         AH.block<3, 10>(3, 0) *= SCALE_XI_ROT;
         AH.block<1, 10>(6, 0) *= SCALE_A;
@@ -113,6 +152,20 @@ namespace dso {
         AT.block<1, 10>(7, 0) *= SCALE_B;
         AT.block<1, 10>(8, 0) *= SCALE_A;
         AT.block<1, 10>(9, 0) *= SCALE_B;
+//#else
+//        AH.block<3, 19>(0, 0) *= SCALE_XI_TRANS;
+//        AH.block<3, 19>(3, 0) *= SCALE_XI_ROT;
+//        AH.block<1, 19>(6, 0) *= SCALE_A;
+//        AH.block<1, 19>(7, 0) *= SCALE_B;
+//        AH.block<1, 19>(8, 0) *= SCALE_A;
+//        AH.block<1, 19>(9, 0) *= SCALE_B;
+//        AT.block<3, 19>(0, 0) *= SCALE_XI_TRANS;
+//        AT.block<3, 19>(3, 0) *= SCALE_XI_ROT;
+//        AT.block<1, 19>(6, 0) *= SCALE_A;
+//        AT.block<1, 19>(7, 0) *= SCALE_B;
+//        AT.block<1, 19>(8, 0) *= SCALE_A;
+//        AT.block<1, 19>(9, 0) *= SCALE_B;
+//#endif
 
         adHost[h + t * nFrames] = AH;
         adTarget[h + t * nFrames] = AT;
@@ -122,8 +175,13 @@ namespace dso {
 
     if (adHostF != 0) delete[] adHostF;
     if (adTargetF != 0) delete[] adTargetF;
+//#if !INERTIAL_MODE
     adHostF = new Mat1010f[nFrames * nFrames];
     adTargetF = new Mat1010f[nFrames * nFrames];
+//#else
+//    adHostF = new Mat1919f[nFrames * nFrames];
+//    adTargetF = new Mat1919f[nFrames * nFrames];
+//#endif
 
     for (int h = 0; h < nFrames; h++)
       for (int t = 0; t < nFrames; t++) {
@@ -167,10 +225,10 @@ namespace dso {
 //        AT(7, 7) = -1;
 //        AH(7, 7) = affLL[0];
 
-        AT(6, 6) = -affLL[0];
-        AH(6, 6) = affLL[0];
-        AT(7, 7) = -1;
-        AH(7, 7) = 0;
+        AT(6, 6) = affLL[0];
+        AT(7, 7) = 1;
+        AH(6, 6) = -affLL[0];
+        AH(7, 7) = -affLL[0];
 
         AH.block<3, 8>(0, 0) *= SCALE_XI_TRANS;
         AH.block<3, 8>(3, 0) *= SCALE_XI_ROT;
@@ -273,9 +331,13 @@ namespace dso {
 
     cDeltaF = HCalib->value_minus_value_zero.cast<float>();
     for (EFFrame *f : frames) {
+#if !INERTIAL_MODE
       f->delta = f->data->get_state_minus_stateZero().head<10>();
       f->delta_prior = (f->data->get_state() - f->data->getPriorZero()).head<10>();
-
+#else
+      f->delta = f->data->get_state_minus_stateZero().head<19>();
+      f->delta_prior = (f->data->get_state() - f->data->getPriorZero()).head<19>();
+#endif
       for (EFPoint *p : f->points)
         p->deltaF = p->data->idepth - p->data->idepth_zero;
     }
@@ -315,6 +377,9 @@ namespace dso {
       red->reduce(boost::bind(&AccumulatedTopHessianSSE::addPointsInternal<0>,
                               accSSE_top_A, &allPoints, this, _1, _2, _3, _4), 0, allPoints.size(), 50);
       accSSE_top_A->stitchDoubleMT(red, H, b, this, false, true);
+#if INERTIAL_MODE
+      accSSE_top_A->addFramesIMU<0>(H, b, this);
+#endif
       resInA = accSSE_top_A->nres[0];
     }
     else {
@@ -324,6 +389,9 @@ namespace dso {
           accSSE_top_A->addPoint<0>(p, this); // 0 = active, 1 = linearized, 2=marginalize
       accSSE_top_A->stitchDoubleMT(red, H, b, this, false,
                                    false); // IndexThreadReduce<Vec10>* red, MatXX &H, VecX &b, EnergyFunctional const * const EF, bool usePrior, bool MT
+#if INERTIAL_MODE
+      accSSE_top_A->addFramesIMU<0>(H, b, this);
+#endif
       resInA = accSSE_top_A->nres[0];
     }
   }
@@ -335,6 +403,9 @@ namespace dso {
       red->reduce(boost::bind(&AccumulatedTopHessianSSE::addPointsInternal<1>,
                               accSSE_top_L, &allPoints, this, _1, _2, _3, _4), 0, allPoints.size(), 50);
       accSSE_top_L->stitchDoubleMT(red, H, b, this, true, true);
+#if INERTIAL_MODE
+      accSSE_top_L->addFramesIMU<1>(H, b, this);
+#endif
       resInL = accSSE_top_L->nres[0];
     }
     else {
@@ -343,6 +414,9 @@ namespace dso {
         for (EFPoint *p : f->points)
           accSSE_top_L->addPoint<1>(p, this); // 0 = active, 1 = linearized, 2=marginalize
       accSSE_top_L->stitchDoubleMT(red, H, b, this, true, false);
+#if INERTIAL_MODE
+      accSSE_top_L->addFramesIMU<1>(H, b, this);
+#endif
       resInL = accSSE_top_L->nres[0];
     }
   }
@@ -366,7 +440,13 @@ namespace dso {
 
   void EnergyFunctional::resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT) {
 #if STEREO_MODE
+
+#if !INERTIAL_MODE
     assert(x.size() == CPARS + nFrames * 10);
+#else
+    assert(x.size() == CPARS + nFrames * 19);
+#endif
+
 #else
     assert(x.size() == CPARS + nFrames * 8);
 #endif
@@ -379,8 +459,11 @@ namespace dso {
 #if STEREO_MODE
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
+#if !INERTIAL_MODE
       h->data->step = -x.segment<10>(CPARS + 10 * h->idx);
-
+#else
+      h->data->step = -x.segment<19>(CPARS + 19 * h->idx);
+#endif
       for (EFFrame *t : frames)
         xAd[nFrames * h->idx + t->idx] =
             xF.segment<10>(CPARS + 10 * h->idx).transpose() * adHostF[h->idx + nFrames * t->idx]
@@ -459,7 +542,7 @@ namespace dso {
 
 #else
   void EnergyFunctional::resubstituteFPt(
-      const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid) {
+      const VecCf &xc, Mat18f *xAd, int min, int max, Vec19 *stats, int tid) {
     for (int k = min; k < max; k++) {
       EFPoint *p = allPoints[k];
 
@@ -674,6 +757,13 @@ namespace dso {
     return efr;
   }
 
+  EFIMUResidual *EnergyFunctional::insertIMUResidual(IMUResidual *r) {
+    EFIMUResidual *efr = new EFIMUResidual(r, r->to_->efFrame, r->from_->efFrame);
+    r->to_->efFrame->imuResidualsAll.push_back(efr);
+
+    r->efResidual = efr;
+    return efr;
+  }
 
   EFResidual *EnergyFunctional::insertStaticResidual(PointFrameResidual *r) {
     assert(r->host->rightFrame == r->target);
@@ -767,6 +857,7 @@ namespace dso {
 
 #if STEREO_MODE
 
+#if !INERTIAL_MODE
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
     assert(EFDeltaValid);
@@ -874,6 +965,117 @@ namespace dso {
     makeIDX();
     delete efF;
   }
+#else
+
+  void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
+
+    assert(EFDeltaValid);
+    assert(EFAdjointsValid);
+    assert(EFIndicesValid);
+
+    assert((int) efF->points.size() == 0);
+    int ndim = nFrames * 19 + CPARS - 19;// new dimension
+    int odim = nFrames * 19 + CPARS;// old dimension
+
+//	VecX eigenvaluesPre = HM.eigenvalues().real();
+//	std::sort(eigenvaluesPre.data(), eigenvaluesPre.data()+eigenvaluesPre.size());
+//
+
+//  printf("bM.size(): %ld, %ld\n", bM.rows(), bM.cols());
+//  printf("HM.size(): %ld, %ld\n", HM.rows(), HM.cols());
+
+    if ((int) efF->idx != (int) frames.size() - 1) {
+      int io = efF->idx * 19 + CPARS;  // index of frame to move to end
+      int ntail = 19 * (nFrames - efF->idx - 1);
+      assert((io + 19 + ntail) == nFrames * 19 + CPARS);
+
+      Vec19 bTmp = bM.segment<19>(io);
+      VecX tailTMP = bM.tail(ntail);
+      bM.segment(io, ntail) = tailTMP;
+      bM.tail<19>() = bTmp;
+
+      MatXX HtmpCol = HM.block(0, io, odim, 19);
+      MatXX rightColsTmp = HM.rightCols(ntail);
+      HM.block(0, io, odim, ntail) = rightColsTmp;
+      HM.rightCols(19) = HtmpCol;
+
+      MatXX HtmpRow = HM.block(io, 0, 19, odim);
+      MatXX botRowsTmp = HM.bottomRows(ntail);
+      HM.block(io, 0, ntail, odim) = botRowsTmp;
+      HM.bottomRows(19) = HtmpRow;
+    }
+
+//	// marginalize. First add prior here, instead of to active.
+    HM.bottomRightCorner<19, 19>().diagonal() += efF->prior;
+    bM.tail<19>() += efF->prior.cwiseProduct(efF->delta_prior);
+
+//	std::cout << std::setprecision(16) << "HMPre:\n" << HM << "\n\n";
+
+    VecX SVec = (HM.diagonal().cwiseAbs() + VecX::Constant(HM.cols(), 19)).cwiseSqrt();
+    VecX SVecI = SVec.cwiseInverse();
+//	printf("SVec.size(): %ld, %ld\n", SVec.rows(), SVec.cols());
+
+//	std::cout << std::setprecision(16) << "SVec: " << SVec.transpose() << "\n\n";
+//	std::cout << std::setprecision(16) << "SVecI: " << SVecI.transpose() << "\n\n";
+
+    // scale!
+    MatXX HMScaled = SVecI.asDiagonal() * HM * SVecI.asDiagonal();
+    VecX bMScaled = SVecI.asDiagonal() * bM;
+
+    // invert bottom part!
+    Mat1919 hpi = HMScaled.bottomRightCorner<19, 19>();
+    hpi = 0.5f * (hpi + hpi);
+//    std::cout << "hpi: " << hpi << std::endl;
+    hpi = hpi.inverse();
+//    std::cout << "hpi: " << hpi << std::endl;
+    hpi = 0.5f * (hpi + hpi);
+
+    // schur-complement!
+    MatXX bli = HMScaled.bottomLeftCorner(19, ndim).transpose() * hpi;
+    HMScaled.topLeftCorner(ndim, ndim).noalias() -= bli * HMScaled.bottomLeftCorner(19, ndim);
+    bMScaled.head(ndim).noalias() -= bli * bMScaled.tail<19>();
+
+    //unscale!
+    HMScaled = SVec.asDiagonal() * HMScaled * SVec.asDiagonal();
+    bMScaled = SVec.asDiagonal() * bMScaled;
+
+    // set.
+    HM = 0.5 * (HMScaled.topLeftCorner(ndim, ndim) + HMScaled.topLeftCorner(ndim, ndim).transpose());
+    bM = bMScaled.head(ndim);
+
+//    assert(std::isfinite(bM.norm()));
+
+    // remove from vector, without changing the order!
+    for (unsigned int i = efF->idx; i + 1 < frames.size(); i++) {
+      frames[i] = frames[i + 1];
+      frames[i]->idx = i;
+    }
+    frames.pop_back();
+    nFrames--;
+    efF->data->efFrame = 0;
+
+    assert((int) frames.size() * 19 + CPARS == (int) HM.rows());
+    assert((int) frames.size() * 19 + CPARS == (int) HM.cols());
+    assert((int) frames.size() * 19 + CPARS == (int) bM.size());
+    assert((int) frames.size() == (int) nFrames);
+
+//	VecX eigenvaluesPost = HM.eigenvalues().real();
+//	std::sort(eigenvaluesPost.data(), eigenvaluesPost.data()+eigenvaluesPost.size());
+
+//	std::cout << std::setprecision(16) << "HMPost:\n" << HM << "\n\n";
+
+//	std::cout << "EigPre:: " << eigenvaluesPre.transpose() << "\n";
+//	std::cout << "EigPost: " << eigenvaluesPost.transpose() << "\n";
+
+    EFIndicesValid = false;
+    EFAdjointsValid = false;
+    EFDeltaValid = false;
+
+    makeIDX();
+    delete efF;
+  }
+
+#endif
 
 #else
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
@@ -1195,7 +1397,11 @@ namespace dso {
       lastHS = HFinal_top;
       lastbS = bFinal_top;
 #if STEREO_MODE
+#if !INERTIAL_MODE
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
+#else
+      for (int i = 0; i < 19 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
+#endif
 #else
       for (int i = 0; i < 8 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
@@ -1211,7 +1417,13 @@ namespace dso {
       lastbS = bFinal_top;
 
 #if STEREO_MODE
+
+#if !INERTIAL_MODE
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
+#else
+      for (int i = 0; i < 19 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
+#endif
+
 #else
       for (int i = 0; i < 8 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
@@ -1288,7 +1500,7 @@ namespace dso {
 
     allPoints.clear();
 
-    for (EFFrame *f : frames)
+    for (EFFrame *f : frames) {
       for (EFPoint *p : f->points) {
         allPoints.push_back(p);
         for (EFResidual *r : p->residualsAll) {
@@ -1299,6 +1511,11 @@ namespace dso {
             r->targetIDX = r->target->idx;
         }
       }
+      for (EFIMUResidual *r : f->imuResidualsAll) {
+        r->toIDX = r->to->idx;
+        r->fromIDX = r->from->idx;
+      }
+    }
 
 
     EFIndicesValid = true;
@@ -1307,10 +1524,19 @@ namespace dso {
 
   VecX EnergyFunctional::getStitchedDeltaF() const {
 #if STEREO_MODE
+
+#if !INERTIAL_MODE
     VecX d = VecX(CPARS + nFrames * 10);
     d.head<CPARS>() = cDeltaF.cast<double>();
     for (int h = 0; h < nFrames; h++) d.segment<10>(CPARS + 10 * h) = frames[h]->delta;
     return d;
+#else
+    VecX d = VecX(CPARS + nFrames * 19);
+    d.head<CPARS>() = cDeltaF.cast<double>();
+    for (int h = 0; h < nFrames; h++) d.segment<19>(CPARS + 19 * h) = frames[h]->delta;
+    return d;
+#endif
+
 #else
     VecX d = VecX(CPARS + nFrames * 8);
     d.head<CPARS>() = cDeltaF.cast<double>();

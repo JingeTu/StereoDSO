@@ -34,6 +34,27 @@
 
 namespace dso {
 
+#if STEREO_MODE
+#if INERTIAL_MODE
+
+  void EFIMUResidual::takeDataF() {
+    std::swap<IMURawResidualJacobian *>(J, data->J);
+  }
+
+  void EFIMUResidual::fixLinearizationF(EnergyFunctional *ef) {
+    // set res_toZeroF
+    Vec19 dpTo = ef->frames[toIDX]->delta;
+    Vec19 dpFrom = ef->frames[fromIDX]->delta;
+
+    Vec15 temp = J->resF -
+                 (J->Jxdxi[0] * dpFrom.head<6>() + J->Jxdxi[1] * dpTo.head<6>()
+                  + J->Jxdsb[0] * dpFrom.tail<9>() + J->Jxdsb[1] * dpTo.tail<9>());
+    res_toZeroF = temp.cast<float>();
+    isLinearized = true;
+  }
+
+#endif
+#endif
 
   void EFResidual::takeDataF() {
     std::swap<RawResidualJacobian *>(J, data->J);
@@ -44,14 +65,6 @@ namespace dso {
       JpJdF[i] = J->Jpdxi[0][i] * JI_JI_Jd[0] + J->Jpdxi[1][i] * JI_JI_Jd[1];
 
 #if STEREO_MODE
-//    if (targetIDX == -1) { //- static residual
-//      JpJdF.segment<2>(6).setZero();
-//      JpJdF.segment<2>(8) = J->JabJIdx * J->Jpdd;
-//    }
-//    else { //- temporal residual
-//      JpJdF.segment<2>(6) = J->JabJIdx * J->Jpdd;
-//      JpJdF.segment<2>(8).setZero();
-//    }
     JpJdF.segment<4>(6) = J->JabJIdx * J->Jpdd;
 #else
     JpJdF.segment<2>(6) = J->JabJIdx * J->Jpdd;
@@ -61,9 +74,17 @@ namespace dso {
 
   void EFFrame::takeData() {
 #if STEREO_MODE
+
+#if !INERTIAL_MODE
     prior = data->getPrior().head<10>();
     delta = data->get_state_minus_stateZero().head<10>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<10>();
+#else
+    prior = data->getPrior().head<19>();
+    delta = data->get_state_minus_stateZero().head<19>();
+    delta_prior = (data->get_state() - data->getPriorZero()).head<19>();
+#endif
+
 #else
     prior = data->getPrior().head<8>();
     delta = data->get_state_minus_stateZero().head<8>();

@@ -30,7 +30,7 @@
 #include "vector"
 #include <math.h>
 #include "map"
-
+#include "FullSystem/IMUResiduals.hpp"
 
 namespace dso {
 
@@ -75,6 +75,8 @@ namespace dso {
 
     friend class EFResidual;
 
+    friend class EFIMUResidual;
+
     friend class AccumulatedTopHessian;
 
     friend class AccumulatedTopHessianSSE;
@@ -87,6 +89,7 @@ namespace dso {
 
     ~EnergyFunctional();
 
+    EFIMUResidual *insertIMUResidual(IMUResidual *r);
 
     EFResidual *insertResidual(PointFrameResidual *r);
 
@@ -170,6 +173,7 @@ namespace dso {
     void orthogonalize(VecX *b, MatXX *H);
 
 #if STEREO_MODE
+//#if !INERTIAL_MODE
     Mat110f *adHTdeltaF;
 
     Mat1010 *adHost;
@@ -177,6 +181,15 @@ namespace dso {
 
     Mat1010f *adHostF;
     Mat1010f *adTargetF;
+//#else
+//    Mat119f *adHTdeltaF;
+//
+//    Mat1919 *adHost;
+//    Mat1919 *adTarget;
+//
+//    Mat1919f *adHostF;
+//    Mat1919f *adTargetF;
+//#endif
 #else
     Mat18f *adHTdeltaF;
 

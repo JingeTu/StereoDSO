@@ -30,10 +30,13 @@
 #include <math.h>
 #include "OptimizationBackend/RawResidualJacobian.h"
 #include "util/settings.h"
+#include "FullSystem/IMUResiduals.hpp"
 
 namespace dso {
 
   class PointFrameResidual;
+
+  class IMUResidual;
 
   class CalibHessian;
 
@@ -49,6 +52,41 @@ namespace dso {
 
   class EnergyFunctional;
 
+  class EFIMUResidual {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    inline EFIMUResidual(IMUResidual *org, EFFrame *to_, EFFrame *from_) :
+        data(org), to(to_), from(from_) {
+      isLinearized = false;
+      isActiveAndIsGoodNEW = false;
+      J = new IMURawResidualJacobian();
+    }
+
+    inline ~EFIMUResidual() {
+      delete J;
+    }
+
+    void takeDataF();
+
+    void fixLinearizationF(EnergyFunctional *ef);
+
+    IMUResidual *data;
+    int toIDX, fromIDX;
+    EFFrame *to;
+    EFFrame *from;
+    IMURawResidualJacobian *J;
+
+    Vec15f res_toZeroF;
+
+    // status.
+    bool isLinearized;
+    bool isActiveAndIsGoodNEW;
+
+    Mat199f JpJsbF;
+
+    inline const bool &isActive() const { return isActiveAndIsGoodNEW; }
+  };
 
   class EFResidual {
   public:
@@ -158,9 +196,15 @@ namespace dso {
     void takeData();
 
 #if STEREO_MODE
+#if !INERTIAL_MODE
     Vec10 prior;        // prior hessian (diagonal)
     Vec10 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
     Vec10 delta;        // state - state_zero.
+#else
+    Vec19 prior;        // prior hessian (diagonal)
+    Vec19 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
+    Vec19 delta;        // state - state_zero.
+#endif
 #else
     Vec8 prior;        // prior hessian (diagonal)
     Vec8 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
@@ -171,6 +215,8 @@ namespace dso {
     std::vector<EFPoint *> points;
     FrameHessian *data;
     int idx;  // idx in frames.
+
+    std::vector<EFIMUResidual *> imuResidualsAll;
 
     int frameID;
   };

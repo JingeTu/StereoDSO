@@ -72,5 +72,15 @@ namespace dso {
 #endif
 
   };
+
+  struct IMURawResidualJacobian {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    Eigen::Matrix<double, 15, 1> resF; //- residual
+
+    Eigen::Matrix<double, 15, 6> Jxdxi[2]; //- Derivative with respect to host & target pose
+
+    Eigen::Matrix<double, 15, 9> Jxdsb[2]; //- Derivative with respect to host & target SpeedAndBiases
+  };
 }
 

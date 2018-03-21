@@ -35,6 +35,7 @@
 #include <iostream>
 #include <fstream>
 #include "FullSystem/Residuals.h"
+#include "FullSystem/IMUResiduals.hpp"
 #include "FullSystem/HessianBlocks.h"
 #include "util/FrameShell.h"
 #include "util/IndexThreadReduce.h"
@@ -252,6 +253,8 @@ namespace dso {
 
     void applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
 
+    void applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stat, int tid);
+
     void printOptRes(const Vec3 &res, double resL, double resM, double resPrior, double LExact, float a, float b);
 
     void debugPlotTracking();
@@ -318,6 +321,7 @@ namespace dso {
     std::vector<FrameHessian *> frameHessians;  // ONLY changed in marginalizeFrame and addFrame.
     std::vector<FrameHessian *> frameHessiansRight;
     std::vector<PointFrameResidual *> activeResiduals;
+    std::vector<IMUResidual *> activeIMUResiduals;
     float currentMinActDist;
 
 

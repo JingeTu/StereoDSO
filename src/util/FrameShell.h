@@ -44,6 +44,7 @@ namespace dso {
     // constantly adapted.
     SE3 T_WC;        // Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
     AffLight aff_g2l;
+    SpeedAndBiases speedAndBiases;
     bool poseValid;
 
     // statisitcs

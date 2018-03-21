@@ -82,12 +82,29 @@ namespace dso {
         }
       }
     }
+#if STEREO_MODE
+#if INERTIAL_MODE
+    min = 0;
+    max = activeIMUResiduals.size();
+    for (int k = min; k < max; k++) {
+      IMUResidual *r = activeIMUResiduals[k];
+      (*stats)[0] += r->linearize(&imuParameters);
+      if (fixLinearization)
+        r->applyRes(true);
+    }
+#endif
+#endif
   }
 
 
   void FullSystem::applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++)
       activeResiduals[k]->applyRes(true);
+  }
+
+  void FullSystem::applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stat, int tid) {
+    for (int k = min; k < max; k++)
+      activeIMUResiduals[k]->applyRes(true);
   }
 
   void FullSystem::setNewFrameEnergyTH() {
@@ -204,20 +221,20 @@ namespace dso {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
 
-    Vec10 pstepfac;
+    Vec19 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
     pstepfac.segment<3>(3).setConstant(stepfacR);
     pstepfac.segment<4>(6).setConstant(stepfacA);
-
+    pstepfac.segment<9>(10).setConstant(stepfacA); //- for v, bg, ba
 
     float sumA = 0, sumB = 0, sumT = 0, sumR = 0, sumID = 0, numID = 0;
 
     float sumNID = 0;
 
     if (setting_solverMode & SOLVER_MOMENTUM) {
-//      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
+      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
-        Vec10 step = fh->step;
+        Vec19 step = fh->step;
         step.head<6>() += 0.5f * (fh->step_backup.head<6>());
 
         fh->setState(fh->state_backup + step);
@@ -244,7 +261,6 @@ namespace dso {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         fh->setState(fh->state_backup + pstepfac.cwiseProduct(fh->step));
-//        fh->rightFrame->setState(fh->rightFrame->state_backup + pstepfac.cwiseProduct(fh->rightFrame->step));
 
         sumA += fh->step[6] * fh->step[6];
         sumB += fh->step[7] * fh->step[7];
@@ -408,6 +424,12 @@ namespace dso {
         numPoints++;
       }
 
+    activeIMUResiduals.clear();
+    for (FrameHessian *fh : frameHessians)
+      for (IMUResidual *r : fh->imuResiduals)
+        if (!r->efResidual->isLinearized)
+          activeIMUResiduals.push_back(r);
+
     if (!setting_debugout_runquiet) {
       char buf[256];
       sprintf(buf, "OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int) activeResiduals.size(), numLRes);
@@ -427,6 +449,15 @@ namespace dso {
     else
       applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
+#if STEREO_MODE
+#if INERTIAL_MODE
+    if (multiThreading)
+      treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
+                         activeIMUResiduals.size(), 50);
+    else
+      applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
+#endif
+#endif
 
     if (!setting_debugout_runquiet) {
       LOG(INFO) << "Initial Error       \t";
@@ -440,7 +471,11 @@ namespace dso {
     double lambda = 1e-1;
     float stepsize = 1;
 #if STEREO_MODE
+#if !INERTIAL_MODE
     VecX previousX = VecX::Constant(CPARS + 10 * frameHessians.size(), NAN);
+#else
+    VecX previousX = VecX::Constant(CPARS + 19 * frameHessians.size(), NAN);
+#endif
 #else
     VecX previousX = VecX::Constant(CPARS + 8 * frameHessians.size(), NAN);
 #endif
@@ -494,6 +529,16 @@ namespace dso {
         else
           applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
+#if STEREO_MODE
+#if INERTIAL_MODE
+        if (multiThreading)
+          treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
+                             activeIMUResiduals.size(), 50);
+        else
+          applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
+#endif
+#endif
+
         lastEnergy = newEnergy;
         lastEnergyL = newEnergyL;
         lastEnergyM = newEnergyM;
@@ -511,10 +556,14 @@ namespace dso {
       if (canbreak && iteration >= setting_minOptIterations) break;
     }
 
-    Vec10 newStateZero = Vec10::Zero();
+    Vec19 newStateZero = Vec19::Zero();
     newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
 #if STEREO_MODE
-    newStateZero.segment<2>(8) = frameHessians.back()->get_state().segment<2>(8);
+#if !INERTIAL_MODE
+    newStateZero.segment<4>(6) = frameHessians.back()->get_state().segment<4>(6);
+#else
+    newStateZero.segment<4>(6) = frameHessians.back()->get_state().segment<4>(6);
+#endif
 #endif
 
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
@@ -549,6 +598,10 @@ namespace dso {
         fh->shell->aff_g2l = fh->aff_g2l();
 #if STEREO_MODE
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
+#if INERTIAL_MODE
+        fh->shell->speedAndBiases = fh->speedAndBiases();
+#endif
+
 #endif
       }
     }
@@ -601,7 +654,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
-
+#if !INERTIAL_MODE
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,
       std::vector<VecX> &nullspaces_scale,
@@ -653,7 +706,61 @@ namespace dso {
 
     return nullspaces_x0_pre;
   }
+#else
 
+  std::vector<VecX> FullSystem::getNullspaces(
+      std::vector<VecX> &nullspaces_pose,
+      std::vector<VecX> &nullspaces_scale,
+      std::vector<VecX> &nullspaces_affA,
+      std::vector<VecX> &nullspaces_affB) {
+    nullspaces_pose.clear();
+    nullspaces_scale.clear();
+    nullspaces_affA.clear();
+    nullspaces_affB.clear();
+
+
+    int n = CPARS + frameHessians.size() * 19;
+    std::vector<VecX> nullspaces_x0_pre;
+    for (int i = 0; i < 6; i++) {
+      VecX nullspace_x0(n);
+      nullspace_x0.setZero();
+      for (FrameHessian *fh : frameHessians) {
+        nullspace_x0.segment<6>(CPARS + fh->idx * 19) = fh->nullspaces_pose.col(i);
+        nullspace_x0.segment<3>(CPARS + fh->idx * 19) *= SCALE_XI_TRANS_INVERSE;
+        nullspace_x0.segment<3>(CPARS + fh->idx * 19 + 3) *= SCALE_XI_ROT_INVERSE;
+      }
+      nullspaces_x0_pre.push_back(nullspace_x0);
+      nullspaces_pose.push_back(nullspace_x0);
+    }
+    for (int i = 0; i < 2; i++) {
+      VecX nullspace_x0(n);
+      nullspace_x0.setZero();
+      for (FrameHessian *fh : frameHessians) {
+        nullspace_x0.segment<2>(CPARS + fh->idx * 19 + 6) = fh->nullspaces_affine.col(i).head<2>();
+        nullspace_x0[CPARS + fh->idx * 19 + 6] *= SCALE_A_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 19 + 7] *= SCALE_B_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 19 + 8] *= SCALE_A_INVERSE;
+        nullspace_x0[CPARS + fh->idx * 19 + 9] *= SCALE_B_INVERSE;
+      }
+      nullspaces_x0_pre.push_back(nullspace_x0);
+      if (i == 0) nullspaces_affA.push_back(nullspace_x0);
+      if (i == 1) nullspaces_affB.push_back(nullspace_x0);
+    }
+
+    VecX nullspace_x0(n);
+    nullspace_x0.setZero();
+    for (FrameHessian *fh : frameHessians) {
+      nullspace_x0.segment<6>(CPARS + fh->idx * 19) = fh->nullspaces_scale;
+      nullspace_x0.segment<3>(CPARS + fh->idx * 19) *= SCALE_XI_TRANS_INVERSE;
+      nullspace_x0.segment<3>(CPARS + fh->idx * 19 + 3) *= SCALE_XI_ROT_INVERSE;
+    }
+    nullspaces_x0_pre.push_back(nullspace_x0);
+    nullspaces_scale.push_back(nullspace_x0);
+
+    return nullspaces_x0_pre;
+  }
+
+#endif
 #else
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,

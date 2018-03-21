@@ -1199,34 +1199,34 @@ namespace dso {
 
 
       for (unsigned int i = 0; i < host->immaturePoints.size(); i += 1) {
-        ImmaturePoint *ph = host->immaturePoints[i];
-        ph->idxInImmaturePoints = i;
+        ImmaturePoint *ip = host->immaturePoints[i];
+        ip->idxInImmaturePoints = i;
 
         // delete points that have never been traced successfully, or that are outlier on the last trace.
-        if (!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER) {
+        if (!std::isfinite(ip->idepth_max) || ip->lastTraceStatus == IPS_OUTLIER) {
 //				immature_invalid_deleted++;
           // remove point.
-          delete ph;
+          delete ip;
           host->immaturePoints[i] = 0;
           continue;
         }
 
         // can activate only if this is true.
-        bool canActivate = (ph->lastTraceStatus == IPS_GOOD
-                            || ph->lastTraceStatus == IPS_SKIPPED
-                            || ph->lastTraceStatus == IPS_BADCONDITION
-                            || ph->lastTraceStatus == IPS_OOB)
-                           && ph->lastTracePixelInterval < 8
-                           && ph->quality > setting_minTraceQuality
-                           && (ph->idepth_max + ph->idepth_min) > 0;
+        bool canActivate = (ip->lastTraceStatus == IPS_GOOD
+                            || ip->lastTraceStatus == IPS_SKIPPED
+                            || ip->lastTraceStatus == IPS_BADCONDITION
+                            || ip->lastTraceStatus == IPS_OOB)
+                           && ip->lastTracePixelInterval < 8
+                           && ip->quality > setting_minTraceQuality
+                           && (ip->idepth_max + ip->idepth_min) > 0;
 
 
         // if I cannot activate the point, skip it. Maybe also delete it.
         if (!canActivate) {
           // if point will be out afterwards, delete it instead.
-          if (ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB) {
+          if (ip->host->flaggedForMarginalization || ip->lastTraceStatus == IPS_OOB) {
 //					immature_notReady_deleted++;
-            delete ph;
+            delete ip;
             host->immaturePoints[i] = 0;
           }
 //				immature_notReady_skipped++;
@@ -1235,7 +1235,7 @@ namespace dso {
 
 
         // see if we need to activate point due to distance map.
-        Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt * (0.5f * (ph->idepth_max + ph->idepth_min));
+        Vec3f ptp = KRKi * Vec3f(ip->u, ip->v, 1) + Kt * (0.5f * (ip->idepth_max + ip->idepth_min));
         int u = ptp[0] / ptp[2] + 0.5f;
         int v = ptp[1] / ptp[2] + 0.5f;
 
@@ -1243,13 +1243,13 @@ namespace dso {
 
           float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u + wG[1] * v] + (ptp[0] - floorf((float) (ptp[0])));
 
-          if (dist >= currentMinActDist * ph->my_type) {
+          if (dist >= currentMinActDist * ip->my_type) {
             coarseDistanceMap->addIntoDistFinal(u, v);
-            toOptimize.push_back(ph);
+            toOptimize.push_back(ip);
           }
         }
         else {
-          delete ph;
+          delete ip;
           host->immaturePoints[i] = 0;
         }
       }
@@ -1262,7 +1262,6 @@ namespace dso {
       treadReduce.reduce(
           boost::bind(&FullSystem::activatePointsMT_Reductor, this, &optimized, &toOptimize, _1, _2, _3, _4), 0,
           toOptimize.size(), 50);
-
     else
       activatePointsMT_Reductor(&optimized, &toOptimize, 0, toOptimize.size(), 0, 0);
 
@@ -1449,6 +1448,11 @@ namespace dso {
 
     for (FrameHessian *host : frameHessians)    // go through all active frames
     {
+      if (host->flaggedForMarginalization)
+        for (IMUResidual *r : host->imuResiduals)
+          if (r->efResidual->isActive())
+            r->efResidual->fixLinearizationF(ef);
+
       for (unsigned int i = 0; i < host->pointHessians.size(); i++) {
         PointHessian *ph = host->pointHessians[i];
         if (ph == 0) continue;
@@ -1752,7 +1756,6 @@ namespace dso {
     allFrameHistoryRight.push_back(shellRight);
 
     fh->rightFrame = fhRight;
-    fhRight->leftFrame = fh;
 
     // =========================== make Images / derivatives etc. =========================
     fh->ab_exposure = image->exposure_time;
@@ -1781,10 +1784,19 @@ namespace dso {
         fh->shell->aff_g2l = AffLight(0, 0);
         fh->rightFrame->shell->aff_g2l = AffLight(0, 0);
         fh->shell->T_WC = coarseInitializer->T_WC_ini;
+#if !INERTIAL_MODE
         fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
+#else
+        fh->shell->speedAndBiases.setZero();
+        fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l,
+                             fh->shell->speedAndBiases);
+#endif
 
         fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
         fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+
+        frameHessians.push_back(fh);
+        frameHessiansRight.push_back(fhRight);
       }
       return;
 #else
@@ -1829,11 +1841,22 @@ namespace dso {
       std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
       SE3 T_WC0 = lastFrame->T_WC;
       SE3 T_WS = T_WC0 * T_SC0.inverse();
+      lastSpeedAndBiases = lastFrame->speedAndBiases;
       IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBiases, lastFrame->timestamp, fh->shell->timestamp, 0, 0);
+      fh->shell->speedAndBiases = lastSpeedAndBiases;
+      LOG(INFO) << std::setprecision(32) << lastSpeedAndBiases;
+      LOG(INFO) << "frameHessians.size() : " << frameHessians.size();
+      LOG(INFO) << "T_WS.translation() : " << T_WS.translation();
+      LOG(INFO) << "T_WS.so3().unit_quaternion() : " << T_WS.so3().unit_quaternion();
+      LOG(INFO) << "\n";
       T_WC0 = T_WS * T_SC0;
 
 #if STEREO_MODE
+#if !INERTIAL_MODE
+      Vec4 tres = trackNewCoarseStereo(fh, fhRight);
+#else
       Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
+#endif
 #else
       Vec4 tres = trackNewCoarse(fh);
 #endif
@@ -1958,7 +1981,12 @@ namespace dso {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
             fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+#if !INERTIAL_MODE
             fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
+#else
+            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l,
+                                 fh->shell->speedAndBiases);
+#endif
 
             fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
 //            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
@@ -2013,10 +2041,14 @@ namespace dso {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+#if !INERTIAL_MODE
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
+#else
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l,
+                           fh->shell->speedAndBiases);
+#endif
 
       fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
 #else
     {
@@ -2047,10 +2079,12 @@ namespace dso {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
       fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+#if !INERTIAL_MODE
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
-
-//      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-//            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+#else
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l,
+                           fh->shell->speedAndBiases);
+#endif
     }
 #else
     {
@@ -2102,6 +2136,18 @@ namespace dso {
       }
     }
 
+#if INERTIAL_MODE
+    //- ========================== add IMU connection with the last keyframe ================
+    FrameHessian *lastKeyFrame = frameHessians.back();
+    double imuTimeStart = lastKeyFrame->shell->timestamp - setting_temporal_imu_data_overlap;
+    double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
+    std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+
+    IMUResidual *r = new IMUResidual(imuParameters, imuData, lastKeyFrame, fh);
+    ef->insertIMUResidual(r);
+    fh->imuResiduals.push_back(r);
+#endif
+
 
 
 
@@ -2113,7 +2159,6 @@ namespace dso {
 
 
     // =========================== OPTIMIZE ALL =========================
-
     fh->frameEnergyTH = frameHessians.back()->frameEnergyTH;
     float rmse = optimize(setting_maxOptIterations); // setting_maxOptIterations == 6
 
@@ -2336,9 +2381,16 @@ namespace dso {
       firstFrame->shell->T_WC = coarseInitializer->T_WC_ini; // already used IMU initialize this
       firstFrame->shell->aff_g2l = AffLight(0, 0);
       firstFrame->rightFrame->shell->aff_g2l = AffLight(0, 0);
+#if !INERTIAL_MODE
       firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(),
                                    firstFrame->shell->aff_g2l,
                                    firstFrame->rightFrame->shell->aff_g2l);
+#else
+      firstFrame->setEvalPT_scaled(firstFrame->shell->T_WC.inverse(),
+                                   firstFrame->shell->aff_g2l,
+                                   firstFrame->rightFrame->shell->aff_g2l,
+                                   firstFrame->shell->speedAndBiases);
+#endif
       firstFrame->shell->trackingRef = 0;
       firstFrame->shell->camToTrackingRef = SE3();
 
@@ -2349,9 +2401,16 @@ namespace dso {
       newFrame->shell->T_WC = T_10.inverse();
       newFrame->shell->aff_g2l = AffLight(0, 0);
       newFrame->rightFrame->shell->aff_g2l = AffLight(0, 0);
+#if !INERTIAL_MODE
       newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(),
                                  newFrame->shell->aff_g2l,
                                  newFrame->rightFrame->shell->aff_g2l);
+#else
+      newFrame->setEvalPT_scaled(newFrame->shell->T_WC.inverse(),
+                                 newFrame->shell->aff_g2l,
+                                 newFrame->rightFrame->shell->aff_g2l,
+                                 newFrame->shell->speedAndBiases);
+#endif
       newFrame->shell->trackingRef = firstFrame->shell;
       newFrame->shell->camToTrackingRef = T_10.inverse();
 

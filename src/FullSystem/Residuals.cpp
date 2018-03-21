@@ -1036,7 +1036,6 @@ namespace dso {
     }
   }
 
-
   void PointFrameResidual::applyRes(bool copyJacobians) {
     if (copyJacobians) {
       if (state_state == ResState::OOB) {

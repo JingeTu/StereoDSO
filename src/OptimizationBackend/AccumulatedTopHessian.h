@@ -36,6 +36,8 @@ namespace dso {
 
   class EFPoint;
 
+  class EFFrame;
+
   class EnergyFunctional;
 
 
@@ -86,7 +88,7 @@ namespace dso {
     void addPoint(EFPoint *p, EnergyFunctional const *const ef, int tid = 0);
 
 #if STEREO_MODE
-
+#if !INERTIAL_MODE
     void
     stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                    bool MT) {
@@ -131,7 +133,57 @@ namespace dso {
         }
       }
     }
+#else
 
+    void
+    stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
+                   bool MT) {
+      // sum up, splitting by bock in square.
+      if (MT) {
+        MatXX Hs[NUM_THREADS];
+        VecX bs[NUM_THREADS];
+        for (int i = 0; i < NUM_THREADS; i++) {
+          assert(nframes[0] == nframes[i]);
+          Hs[i] = MatXX::Zero(nframes[0] * 19 + CPARS, nframes[0] * 19 + CPARS);
+          bs[i] = VecX::Zero(nframes[0] * 19 + CPARS);
+        }
+
+        red->reduce(boost::bind(&AccumulatedTopHessianSSE::stitchDoubleInternal,
+                                this, Hs, bs, EF, usePrior, _1, _2, _3, _4), 0, nframes[0] * nframes[0], 0);
+
+        // sum up results
+        H = Hs[0];
+        b = bs[0];
+
+        for (int i = 1; i < NUM_THREADS; i++) {
+          H.noalias() += Hs[i];
+          b.noalias() += bs[i];
+          nres[0] += nres[i];
+        }
+      }
+      else {
+        H = MatXX::Zero(nframes[0] * 19 + CPARS, nframes[0] * 19 + CPARS);
+        b = VecX::Zero(nframes[0] * 19 + CPARS);
+        stitchDoubleInternal(&H, &b, EF, usePrior, 0, nframes[0] * nframes[0], 0, -1);
+      }
+
+      // make diagonal by copying over parts.
+      for (int h = 0; h < nframes[0]; h++) {
+        int hIdx = CPARS + h * 19;
+        H.block<CPARS, 10>(0, hIdx).noalias() = H.block<10, CPARS>(hIdx, 0).transpose();
+
+        for (int t = h + 1; t < nframes[0]; t++) {
+          int tIdx = CPARS + t * 19;
+          H.block<10, 10>(hIdx, tIdx).noalias() += H.block<10, 10>(tIdx, hIdx).transpose();
+          H.block<10, 10>(tIdx, hIdx).noalias() = H.block<10, 10>(hIdx, tIdx).transpose();
+        }
+      }
+    }
+
+    template<int mode>
+    void addFramesIMU(MatXX &H, VecX &b, EnergyFunctional const *const EF);
+
+#endif
 #else
     void
     stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
