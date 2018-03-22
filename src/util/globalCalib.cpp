@@ -40,6 +40,7 @@ namespace dso {
   float baseline;
   SE3 T_SC0;
   IMUParameters imuParameters;
+  Mat66 d_xi_d_xi_c;
 
   float wM3G;
   float hM3G;
@@ -111,7 +112,7 @@ namespace dso {
     T_SC0.setRotationMatrix(T.topLeftCorner(3, 3));
     T_SC0.translation() = T.topRightCorner(3, 1);
 
-    d_xi_sc0_d_xi_c0 = -T_SC0.Adj();
+    d_xi_d_xi_c = T_SC0.Adj();
 
     imuParameters.a_max = 176.0; // # acceleration saturation [m/s^2]
     imuParameters.g_max = 7.8; // # gyro saturation [rad/s]

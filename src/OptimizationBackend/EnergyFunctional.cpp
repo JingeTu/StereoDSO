@@ -785,12 +785,23 @@ namespace dso {
     fh->efFrame = eff;
 
 #if STEREO_MODE
+
+#if !INERTIAL_MODE
     assert(HM.cols() == 10 * nFrames + CPARS - 10);
     bM.conservativeResize(10 * nFrames + CPARS);
     HM.conservativeResize(10 * nFrames + CPARS, 10 * nFrames + CPARS);
     bM.tail<10>().setZero();
     HM.rightCols<10>().setZero();
     HM.bottomRows<10>().setZero();
+#else
+    assert(HM.cols() == 19 * nFrames + CPARS - 19);
+    bM.conservativeResize(19 * nFrames + CPARS);
+    HM.conservativeResize(19 * nFrames + CPARS, 19 * nFrames + CPARS);
+    bM.tail<19>().setZero();
+    HM.rightCols<19>().setZero();
+    HM.bottomRows<19>().setZero();
+#endif
+
 #else
     assert(HM.cols() == 8 * nFrames + CPARS - 8);
     bM.conservativeResize(8 * nFrames + CPARS);

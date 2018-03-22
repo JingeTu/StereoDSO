@@ -70,32 +70,39 @@ namespace dso {
         }
         int fromIDX = CPARS + 19 * r->fromIDX, toIDX = CPARS + 19 * r->toIDX;
         // from [0], to [1]
-        H.block<6, 6>(fromIDX, fromIDX).noalias() += rJ->Jxdxi[0].transpose() * rJ->Jxdxi[0];
-        H.block<6, 6>(toIDX, toIDX).noalias() += rJ->Jxdxi[1].transpose() * rJ->Jxdxi[1];
+        H.block<6, 6>(fromIDX, fromIDX).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
+        H.block<6, 6>(toIDX, toIDX).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
         H.block<9, 9>(fromIDX + 10, fromIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdsb[0];
         H.block<9, 9>(toIDX + 10, toIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdsb[1];
 
-        H.block<6, 6>(fromIDX, toIDX).noalias() += rJ->Jxdxi[0].transpose() * rJ->Jxdxi[1];
-        H.block<6, 6>(toIDX, fromIDX).noalias() += rJ->Jxdxi[1].transpose() * rJ->Jxdxi[0];
+        H.block<6, 6>(fromIDX, toIDX).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
+        H.block<6, 6>(toIDX, fromIDX).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
 
         H.block<9, 9>(fromIDX + 10, toIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdsb[1];
         H.block<9, 9>(toIDX + 10, fromIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdsb[0];
 
-        H.block<6, 9>(fromIDX, fromIDX + 10).noalias() += rJ->Jxdxi[0].transpose() * rJ->Jxdsb[0];
-        H.block<9, 6>(fromIDX + 10, fromIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[0];
+        H.block<6, 9>(fromIDX, fromIDX + 10).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdsb[0];
+        H.block<9, 6>(fromIDX + 10, fromIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
 
-        H.block<6, 9>(fromIDX, toIDX + 10).noalias() += rJ->Jxdxi[0].transpose() * rJ->Jxdsb[1];
-        H.block<9, 6>(toIDX + 10, fromIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[0];
+        H.block<6, 9>(fromIDX, toIDX + 10).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdsb[1];
+        H.block<9, 6>(toIDX + 10, fromIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
 
-        H.block<9, 6>(fromIDX + 10, toIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[1];
-        H.block<6, 9>(toIDX, fromIDX + 10).noalias() += rJ->Jxdxi[1].transpose() * rJ->Jxdsb[0];
+        H.block<9, 6>(fromIDX + 10, toIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
+        H.block<6, 9>(toIDX, fromIDX + 10).noalias() +=
+            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdsb[0];
 
-        H.block<6, 9>(toIDX, toIDX + 10).noalias() += rJ->Jxdxi[1].transpose() * rJ->Jxdsb[1];
-        H.block<9, 6>(toIDX + 10, toIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[1];
+        H.block<6, 9>(toIDX, toIDX + 10).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdsb[1];
+        H.block<9, 6>(toIDX + 10, toIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
 
-        b.segment<6>(fromIDX).noalias() += rJ->Jxdxi[0].transpose() * resApprox;
+        b.segment<6>(fromIDX).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * resApprox;
         b.segment<9>(fromIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * resApprox;
-        b.segment<6>(toIDX).noalias() += rJ->Jxdxi[1].transpose() * resApprox;
+        b.segment<6>(toIDX).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * resApprox;
         b.segment<9>(toIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * resApprox;
       }
     }

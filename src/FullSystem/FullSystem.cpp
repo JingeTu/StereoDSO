@@ -152,7 +152,6 @@ namespace dso {
 
     currentMinActDist = 2;
     initialized = false;
-    lastFrameTimestamp = 0.0;
 
     ef = new EnergyFunctional();
     ef->red = &this->treadReduce;
@@ -523,22 +522,24 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-        printf(
-            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
-                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
-            i,
-            i, pyrLevelsUsed - 1,
-            aff_g2l_this.a, aff_g2l_this.b,
-            achievedRes[0],
-            achievedRes[1],
-            achievedRes[2],
-            achievedRes[3],
-            achievedRes[4],
-            coarseTracker->lastResiduals[0],
-            coarseTracker->lastResiduals[1],
-            coarseTracker->lastResiduals[2],
-            coarseTracker->lastResiduals[3],
-            coarseTracker->lastResiduals[4]);
+        char buf[256];
+        sprintf(buf,
+                "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                    "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+                i,
+                i, pyrLevelsUsed - 1,
+                aff_g2l_this.a, aff_g2l_this.b,
+                achievedRes[0],
+                achievedRes[1],
+                achievedRes[2],
+                achievedRes[3],
+                achievedRes[4],
+                coarseTracker->lastResiduals[0],
+                coarseTracker->lastResiduals[1],
+                coarseTracker->lastResiduals[2],
+                coarseTracker->lastResiduals[3],
+                coarseTracker->lastResiduals[4]);
+        LOG(INFO) << buf;
       }
 
 
@@ -634,22 +635,32 @@ namespace dso {
 
       initializeFromInitializerStereo(fh);
 
+//      lastF_2_fh_tries.push_back(SE3(Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 1>::Zero()));
+
       coarseTracker->makeK(&Hcalib);
       coarseTracker->setCTRefForFirstFrame(frameHessians);
       lastF = coarseTracker->lastRef;
     }
     else {
-      FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
-      FrameShell *slastRight = allFrameHistoryRight[allFrameHistoryRight.size() - 2];
-      {  // lock on global pose consistency!
-        boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-        aff_last_2_l = slast->aff_g2l;
-        aff_last_2_l_r = slastRight->aff_g2l;
-      }
+//      FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
+//      {  // lock on global pose consistency!
+//        boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+//      }
+
+//      if (!slast->poseValid || !lastF->shell->poseValid) {
+//        lastF_2_fh_tries.clear();
+//        lastF_2_fh_tries.push_back(SE3());
+//      }
     }
 
-    SE3 fh_2_slast = lastF->shell->T_WC.inverse() * T_WC0;
-    //- use only one
+    FrameShell *slast = allFrameHistory[allFrameHistory.size() - 2];
+    FrameShell *slastRight = allFrameHistoryRight[allFrameHistoryRight.size() - 2];
+    {
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      aff_last_2_l = slast->aff_g2l;
+      aff_last_2_l_r = slastRight->aff_g2l;
+    }
+    SE3 fh_2_slast = T_WC0.inverse() * lastF->shell->T_WC;
     lastF_2_fh_tries.push_back(fh_2_slast);
 
     Vec3 flowVecs = Vec3(100, 100, 100);
@@ -674,22 +685,24 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-        printf(
-            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
-                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
-            i,
-            i, pyrLevelsUsed - 1,
-            aff_g2l_this.a, aff_g2l_this.b,
-            achievedRes[0],
-            achievedRes[1],
-            achievedRes[2],
-            achievedRes[3],
-            achievedRes[4],
-            coarseTracker->lastResiduals[0],
-            coarseTracker->lastResiduals[1],
-            coarseTracker->lastResiduals[2],
-            coarseTracker->lastResiduals[3],
-            coarseTracker->lastResiduals[4]);
+        char buf[256];
+        sprintf(buf,
+                "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                    "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+                i,
+                i, pyrLevelsUsed - 1,
+                aff_g2l_this.a, aff_g2l_this.b,
+                achievedRes[0],
+                achievedRes[1],
+                achievedRes[2],
+                achievedRes[3],
+                achievedRes[4],
+                coarseTracker->lastResiduals[0],
+                coarseTracker->lastResiduals[1],
+                coarseTracker->lastResiduals[2],
+                coarseTracker->lastResiduals[3],
+                coarseTracker->lastResiduals[4]);
+        LOG(INFO) << buf;
       }
 
 
@@ -920,7 +933,8 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-        printf(
+        char buf[256];
+        sprintf(buf,
             "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
             i,
             i, pyrLevelsUsed - 1,
@@ -935,6 +949,7 @@ namespace dso {
             coarseTracker->lastResiduals[2],
             coarseTracker->lastResiduals[3],
             coarseTracker->lastResiduals[4]);
+        LOG(INFO) << buf;
       }
 
 
@@ -1763,18 +1778,16 @@ namespace dso {
     fhRight->ab_exposure = imageRight->exposure_time;
     fhRight->makeImages(imageRight->image, &Hcalib);
 
-    double imuTimeStart = lastFrameTimestamp - setting_temporal_imu_data_overlap;
-    double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-    std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
-
-    lastFrameTimestamp = fh->shell->timestamp;
-
     if (!initialized) {
 #if STEREO_MODE
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
+        double imuTimeStart = 0.0 - setting_temporal_imu_data_overlap;
+        double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
+        std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
         Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuData);
+        LOG(INFO) << "q_WS: " << q_WS.w() << ", " << q_WS.x() << ", " << q_WS.y() << ", " << q_WS.z();
         coarseInitializer->T_WC_ini = Sophus::SE3d(q_WS, Vec3(0, 0, 0)) * T_SC0;
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
@@ -1794,9 +1807,6 @@ namespace dso {
 
         fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
         fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-
-        frameHessians.push_back(fh);
-        frameHessiansRight.push_back(fhRight);
       }
       return;
 #else
@@ -1838,17 +1848,15 @@ namespace dso {
 
       FrameShell *lastFrame = allFrameHistory[allFrameHistory.size() - 2];
 
+      double imuTimeStart = lastFrame->timestamp - setting_temporal_imu_data_overlap;
+      double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
       std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
       SE3 T_WC0 = lastFrame->T_WC;
       SE3 T_WS = T_WC0 * T_SC0.inverse();
       lastSpeedAndBiases = lastFrame->speedAndBiases;
       IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBiases, lastFrame->timestamp, fh->shell->timestamp, 0, 0);
       fh->shell->speedAndBiases = lastSpeedAndBiases;
-      LOG(INFO) << std::setprecision(32) << lastSpeedAndBiases;
-      LOG(INFO) << "frameHessians.size() : " << frameHessians.size();
-      LOG(INFO) << "T_WS.translation() : " << T_WS.translation();
-      LOG(INFO) << "T_WS.so3().unit_quaternion() : " << T_WS.so3().unit_quaternion();
-      LOG(INFO) << "\n";
+//      LOG(INFO) << std::setprecision(32) << fh->shell->timestamp << "\tlastSpeed: \n" << lastSpeedAndBiases.head<3>();
       T_WC0 = T_WS * T_SC0;
 
 #if STEREO_MODE
@@ -1856,6 +1864,11 @@ namespace dso {
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
 #else
       Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
+      //- rectify speed
+      SE3 T_WS_1 = fh->shell->T_WC * T_SC0.inverse();
+      fh->shell->speedAndBiases.head<3>() =
+          ((-T_WS_1.translation()) - (-T_WS.translation())) / (fh->shell->timestamp - lastFrame->timestamp);
+
 #endif
 #else
       Vec4 tres = trackNewCoarse(fh);

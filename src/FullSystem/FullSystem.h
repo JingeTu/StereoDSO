@@ -184,7 +184,6 @@ namespace dso {
 
     IMUParameters imuParameters;
     std::vector<IMUMeasurement> imuVector;
-    double lastFrameTimestamp;
     SpeedAndBiases lastSpeedAndBiases;
 
     // opt single point

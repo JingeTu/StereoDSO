@@ -38,26 +38,51 @@ namespace dso {
   Sophus::Quaterniond
   IMUPropagation::initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements) {
 
-    Vec3 gravity;
-    gravity[0] = 0;
-    gravity[1] = 0;
-    gravity[2] = -1;
-
-    Vec3 omegaAvg;
-
+    Eigen::Vector3d acc_B = Eigen::Vector3d::Zero();
     for (IMUMeasurement mes : imuMeasurements) {
-      omegaAvg += mes.gyr;
+      acc_B += mes.acc;
     }
-    omegaAvg.normalize();
+    acc_B /= double(imuMeasurements.size());
+    Eigen::Vector3d e_acc = acc_B.normalized();
 
-    double theta = abs(acosh(omegaAvg.dot(gravity)));
-    Vec3 a = omegaAvg.cross(gravity);
+    Eigen::Vector3d ez_W(0.0, 0.0, 1.0);
+    Eigen::Matrix<double, 6, 1> poseIncrement;
+    poseIncrement.head<3>() = Eigen::Vector3d::Zero();
+    poseIncrement.tail<3>() = ez_W.cross(e_acc).normalized();
+    double angle = std::acos(ez_W.transpose() * e_acc);
+    poseIncrement.tail<3>() *= angle;
+    poseIncrement *= -1;
+//    Eigen::MatrixBase<double> delta =  -1 * poseIncrement;
 
-    a *= sin(theta / 2);
-    double cosThetaOver2 = cos(theta / 2);
+    Eigen::Vector4d dq;
+    double halfnorm = 0.5 * poseIncrement.template tail<3>().norm();
+    dq.template head<3>() = sinc(halfnorm) * 0.5 * poseIncrement.template tail<3>();
+    dq[3] = cos(halfnorm);
+    LOG(INFO) << dq[3];
+//    Eigen::Quaterniond q(dq);
 
-    // R_WS
-    return Sophus::Quaterniond(cosThetaOver2, a[0], a[1], a[2]);
+    return Sophus::Quaterniond(dq);
+
+//    Vec3 gravity;
+//    gravity[0] = 0;
+//    gravity[1] = 0;
+//    gravity[2] = -1;
+//
+//    Vec3 omegaAvg;
+//
+//    for (IMUMeasurement mes : imuMeasurements) {
+//      omegaAvg += mes.gyr;
+//    }
+//    omegaAvg.normalize();
+//
+//    double theta = abs(acosh(omegaAvg.dot(gravity)));
+//    Vec3 a = omegaAvg.cross(gravity);
+//
+//    a *= sin(theta / 2);
+//    double cosThetaOver2 = cos(theta / 2);
+//
+//    // R_WS
+//    return Sophus::Quaterniond(cosThetaOver2, a[0], a[1], a[2]);
   }
 
   int IMUPropagation::propagate(const std::vector<IMUMeasurement> &imuMeasurements,
@@ -103,6 +128,9 @@ namespace dso {
       Eigen::Vector3d acc_S_0 = it->acc;
       Eigen::Vector3d omega_S_1 = (it + 1)->gyr;
       Eigen::Vector3d acc_S_1 = (it + 1)->acc;
+
+//      LOG(INFO) << "acc_S_0: " << acc_S_0;
+//      LOG(INFO) << "acc_S_1: " << acc_S_1;
 
       double nexttime;
       if ((it + 1) == imuMeasurements.end())

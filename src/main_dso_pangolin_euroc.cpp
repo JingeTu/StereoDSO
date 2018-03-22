@@ -425,7 +425,7 @@ int main(int argc, char **argv) {
     double sInitializerOffset = 0;
 
 
-    for (int ii = 0; ii < (int) idsToPlay.size(); ii++) {
+    for (int ii = 1; ii < (int) idsToPlay.size(); ii++) {
       if (!fullSystem->initialized)  // if not initialized: reset start time.
       {
         gettimeofday(&tv_start, NULL);
@@ -514,6 +514,7 @@ int main(int argc, char **argv) {
           for (IOWrap::Output3DWrapper *ow : wraps) ow->reset();
 
           fullSystem = new FullSystem();
+          fullSystem->setIMUData(reader_imu->vec_imu_);
           fullSystem->setGammaFunction(reader->getPhotometricGamma());
           fullSystem->linearizeOperation = (playbackSpeed == 0);
 

@@ -12,8 +12,8 @@ namespace dso {
   struct IMUMeasurement {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     double timestamp;
-    Vec3 gyr;
-    Vec3 acc;
+    Eigen::Vector3d gyr;
+    Eigen::Vector3d acc;
   };
 
   struct IMUParameters {
