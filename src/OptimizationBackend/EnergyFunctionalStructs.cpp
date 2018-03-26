@@ -89,6 +89,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec10f dp;
     if (targetIDX == -1) { //- static stereo residual
@@ -124,8 +125,10 @@ namespace dso {
 
     isLinearized = true;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec8f dp;
     if (targetIDX == -1) { //- static stereo residual
@@ -157,5 +160,6 @@ namespace dso {
 
     isLinearized = true;
   }
+
 #endif
 }

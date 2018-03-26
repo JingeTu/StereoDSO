@@ -42,6 +42,7 @@ namespace dso {
   bool EFDeltaValid = false;
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::setAdjointsF(CalibHessian *Hcalib) {
 
     if (adHost != 0) delete[] adHost;
@@ -129,8 +130,10 @@ namespace dso {
 
     EFAdjointsValid = true;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::setAdjointsF(CalibHessian *Hcalib) {
 
     if (adHost != 0) delete[] adHost;
@@ -196,6 +199,7 @@ namespace dso {
 
     EFAdjointsValid = true;
   }
+
 #endif
 
   EnergyFunctional::EnergyFunctional() {
@@ -252,6 +256,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::setDeltaF(CalibHessian *HCalib) {
     if (adHTdeltaF != 0) delete[] adHTdeltaF;
     adHTdeltaF = new Mat110f[nFrames * nFrames];
@@ -274,8 +279,10 @@ namespace dso {
 
     EFDeltaValid = true;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::setDeltaF(CalibHessian *HCalib) {
     if (adHTdeltaF != 0) delete[] adHTdeltaF;
     adHTdeltaF = new Mat18f[nFrames * nFrames];
@@ -298,6 +305,7 @@ namespace dso {
 
     EFDeltaValid = true;
   }
+
 #endif
 
 // accumulates & shifts L.
@@ -402,6 +410,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::resubstituteFPt(
       const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++) {
@@ -444,8 +453,10 @@ namespace dso {
       assert(std::isfinite(p->data->step));
     }
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::resubstituteFPt(
       const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++) {
@@ -486,6 +497,7 @@ namespace dso {
 //      assert(std::isfinite(p->data->step));
     }
   }
+
 #endif
 
   double EnergyFunctional::calcMEnergyF() {
@@ -499,6 +511,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
     Accumulator1 E;
@@ -566,8 +579,10 @@ namespace dso {
     E.finish();
     (*stats)[0] += E.A;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
     Accumulator1 E;
@@ -630,6 +645,7 @@ namespace dso {
     E.finish();
     (*stats)[0] += E.A;
   }
+
 #endif
 
   double EnergyFunctional::calcLEnergyF_MT() {
@@ -754,6 +770,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
     assert(EFDeltaValid);
@@ -850,6 +867,7 @@ namespace dso {
 
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
     assert(EFDeltaValid);
@@ -943,6 +961,7 @@ namespace dso {
     makeIDX();
     delete efF;
   }
+
 #endif
 
   void EnergyFunctional::marginalizePointsF() {
@@ -1111,30 +1130,13 @@ namespace dso {
     // active
     accumulateAF_MT(HA_top, bA_top, multiThreading);
 
-//	printf("HA_top.size(): %ld, %ld\n", HA_top.rows(), HA_top.cols());
-//	printf("bA_top.size(): %ld, %ld\n", bA_top.rows(), bA_top.cols());
-
     // linearized
     accumulateLF_MT(HL_top, bL_top, multiThreading);
-
-//	printf("HL_top.size(): %ld, %ld\n", HL_top.rows(), HL_top.cols());
-//	printf("bL_top.size(): %ld, %ld\n", bL_top.rows(), bL_top.cols());
 
     // schur complement
     accumulateSCF_MT(H_sc, b_sc, multiThreading);
 
-//	printf("H_sc.size(): %ld, %ld\n", H_sc.rows(), H_sc.cols());
-//	printf("b_sc.size(): %ld, %ld\n", b_sc.rows(), b_sc.cols());
-
     bM_top = (bM + HM * getStitchedDeltaF());
-
-
-//    std::cout << "bA_top: " << bA_top << std::endl;
-//    std::cout << "bL_top: " << bL_top << std::endl;
-//    std::cout << "b_sc: " << b_sc << std::endl;
-//    std::cout << "bM: " << bM << std::endl;
-//    std::cout << "HM: " << HM << std::endl;
-
 
     MatXX HFinal_top;
     VecX bFinal_top;

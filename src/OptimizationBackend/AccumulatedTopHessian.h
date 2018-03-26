@@ -89,6 +89,7 @@ namespace dso {
     void addPoint(EFPoint *p, EnergyFunctional const *const ef, int tid = 0);
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     void
     stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                    bool MT) {
@@ -133,8 +134,10 @@ namespace dso {
         }
       }
     }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
     void
     stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                    bool MT) {
@@ -179,6 +182,7 @@ namespace dso {
         }
       }
     }
+
 #endif
 
     int nframes[NUM_THREADS];

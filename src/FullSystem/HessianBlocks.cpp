@@ -69,6 +69,7 @@ namespace dso {
     residuals.clear();
   }
 
+#if STEREO_MODE & !INERTIAL_MODE
 
   void FrameHessian::setStateZero(const Vec10 &state_zero) {
     assert(state_zero.head<6>().squaredNorm() < 1e-20);
@@ -103,8 +104,47 @@ namespace dso {
     nullspaces_affine.topLeftCorner<2, 1>() = Vec2(1, 0);
     assert(ab_exposure > 0);
     nullspaces_affine.topRightCorner<2, 1>() = Vec2(0, expf(aff_g2l_0().a) * ab_exposure);
-  };
+  }
 
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+
+  void FrameHessian::setStateZero(const Vec8 &state_zero) {
+    assert(state_zero.head<6>().squaredNorm() < 1e-20);
+
+    this->state_zero = state_zero;
+
+
+    for (int i = 0; i < 6; i++) {
+      Vec6 eps;
+      eps.setZero();
+      eps[i] = 1e-3;
+      SE3 EepsP = Sophus::SE3::exp(eps);
+      SE3 EepsM = Sophus::SE3::exp(-eps);
+      SE3 w2c_leftEps_P_x0 = (get_worldToCam_evalPT() * EepsP) * get_worldToCam_evalPT().inverse();
+      SE3 w2c_leftEps_M_x0 = (get_worldToCam_evalPT() * EepsM) * get_worldToCam_evalPT().inverse();
+      nullspaces_pose.col(i) = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log()) / (2e-3);
+    }
+    //nullspaces_pose.topRows<3>() *= SCALE_XI_TRANS_INVERSE;
+    //nullspaces_pose.bottomRows<3>() *= SCALE_XI_ROT_INVERSE;
+
+    // scale change
+    SE3 w2c_leftEps_P_x0 = (get_worldToCam_evalPT());
+    w2c_leftEps_P_x0.translation() *= 1.00001;
+    w2c_leftEps_P_x0 = w2c_leftEps_P_x0 * get_worldToCam_evalPT().inverse();
+    SE3 w2c_leftEps_M_x0 = (get_worldToCam_evalPT());
+    w2c_leftEps_M_x0.translation() /= 1.00001;
+    w2c_leftEps_M_x0 = w2c_leftEps_M_x0 * get_worldToCam_evalPT().inverse();
+    nullspaces_scale = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log()) / (2e-3);
+
+
+    nullspaces_affine.setZero();
+    nullspaces_affine.topLeftCorner<2, 1>() = Vec2(1, 0);
+    assert(ab_exposure > 0);
+    nullspaces_affine.topRightCorner<2, 1>() = Vec2(0, expf(aff_g2l_0().a) * ab_exposure);
+  }
+
+#endif
 
   void FrameHessian::release() {
     // DELETE POINT
@@ -201,10 +241,6 @@ namespace dso {
     PRE_RTll_0 = (leftToLeft_0.rotationMatrix()).cast<float>();
     PRE_tTll_0 = (leftToLeft_0.translation()).cast<float>();
 
-//    std::cout << "target->get_worldToCam_evalPT(): \n" << target->get_worldToCam_evalPT().matrix3x4() << std::endl;
-//    std::cout << "host->get_worldToCam_evalPT(): \n" << host->get_worldToCam_evalPT().matrix3x4() << std::endl;
-//    std::cout << "PRE_RTll_0: \n" << leftToLeft_0.matrix3x4() << std::endl;
-
     SE3 leftToLeft = target->PRE_T_CW * host->PRE_T_WC;
     PRE_RTll = (leftToLeft.rotationMatrix()).cast<float>();
     PRE_tTll = (leftToLeft.translation()).cast<float>();
@@ -228,6 +264,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
+
   void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
     this->host = host;
     this->target = target;
@@ -255,6 +292,7 @@ namespace dso {
                                                host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
   }
+
 #endif
 }
 

@@ -85,6 +85,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,
       int min, int max, Vec10 *stats, int tid) {
@@ -219,8 +220,10 @@ namespace dso {
       H.block<CPARS, 10>(0, hIdx).noalias() = H.block<10, CPARS>(hIdx, 0).transpose();
     }
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,
       int min, int max, Vec10 *stats, int tid) {
@@ -355,5 +358,6 @@ namespace dso {
       H.block<CPARS, 8>(0, hIdx).noalias() = H.block<8, CPARS>(hIdx, 0).transpose();
     }
   }
+
 #endif
 }

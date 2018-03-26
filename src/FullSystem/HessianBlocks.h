@@ -144,6 +144,7 @@ namespace dso {
     Mat42 nullspaces_affine;
     Vec6 nullspaces_scale;
 
+#if STEREO_MODE & !INERTIAL_MODE
     // variable info.
     SE3 worldToCam_evalPT;
     Vec10 state_zero;
@@ -152,7 +153,6 @@ namespace dso {
     Vec10 step;
     Vec10 step_backup;
     Vec10 state_backup;
-
 
     EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const { return worldToCam_evalPT; }
 
@@ -164,6 +164,28 @@ namespace dso {
 
     EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
 
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+    // variable info.
+    SE3 worldToCam_evalPT;
+    Vec8 state_zero;
+    Vec8 state_scaled;
+    Vec8 state;  // [0-5: worldToCam-leftEps. 6-7: a,b. 8-9: a_r,b_r.]
+    Vec8 step;
+    Vec8 step_backup;
+    Vec8 state_backup;
+
+    EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const { return worldToCam_evalPT; }
+
+    EIGEN_STRONG_INLINE const Vec8 &get_state_zero() const { return state_zero; }
+
+    EIGEN_STRONG_INLINE const Vec8 &get_state() const { return state; }
+
+    EIGEN_STRONG_INLINE const Vec8 &get_state_scaled() const { return state_scaled; }
+
+    EIGEN_STRONG_INLINE const Vec8 get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
+
+#endif
 
     // precalc values
     SE3 PRE_T_CW;
@@ -187,6 +209,8 @@ namespace dso {
     }
 
 #endif
+
+#if STEREO_MODE & !INERTIAL_MODE
 
     void setStateZero(const Vec10 &state_zero);
 
@@ -227,7 +251,6 @@ namespace dso {
       setStateZero(state);
     };
 
-#if STEREO_MODE & !INERTIAL_MODE
     inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r) {
       Vec10 initial_state = Vec10::Zero();
       initial_state[6] = aff_g2l.a;
@@ -240,8 +263,44 @@ namespace dso {
     };
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
+    void setStateZero(const Vec8 &state_zero);
+
+    inline void setState(const Vec8 &state) {
+
+      this->state = state;
+      state_scaled.segment<3>(0) = SCALE_XI_TRANS * state.segment<3>(0);
+      state_scaled.segment<3>(3) = SCALE_XI_ROT * state.segment<3>(3);
+      state_scaled[6] = SCALE_A * state[6];
+      state_scaled[7] = SCALE_B * state[7];
+
+      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+      PRE_T_WC = PRE_T_CW.inverse();
+      //setCurrentNullspace();
+    };
+
+    inline void setStateScaled(const Vec8 &state_scaled) {
+
+      this->state_scaled = state_scaled;
+      state.segment<3>(0) = SCALE_XI_TRANS_INVERSE * state_scaled.segment<3>(0);
+      state.segment<3>(3) = SCALE_XI_ROT_INVERSE * state_scaled.segment<3>(3);
+      state[6] = SCALE_A_INVERSE * state_scaled[6];
+      state[7] = SCALE_B_INVERSE * state_scaled[7];
+
+      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+      PRE_T_WC = PRE_T_CW.inverse();
+      //setCurrentNullspace();
+    };
+
+    inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec8 &state) {
+
+      this->worldToCam_evalPT = worldToCam_evalPT;
+      setState(state);
+      setStateZero(state);
+    };
+
     inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l) {
-      Vec10 initial_state = Vec10::Zero();
+      Vec8 initial_state = Vec8::Zero();
       initial_state[6] = aff_g2l.a;
       initial_state[7] = aff_g2l.b;
       this->worldToCam_evalPT = worldToCam_evalPT;
@@ -282,6 +341,7 @@ namespace dso {
     void makeImages(float *color, CalibHessian *HCalib);
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     inline Vec10 getPrior() {
       Vec10 p = Vec10::Zero();
       if (frameID == 0) {
@@ -315,10 +375,16 @@ namespace dso {
       }
       return p;
     }
+
+    inline Vec10 getPriorZero() {
+      return Vec10::Zero();
+    }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
-    inline Vec10 getPrior() {
-      Vec10 p = Vec10::Zero();
+
+    inline Vec8 getPrior() {
+      Vec8 p = Vec8::Zero();
       if (frameID == 0) {
         p.head<3>() = Vec3::Constant(setting_initialTransPrior);
         p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
@@ -338,15 +404,15 @@ namespace dso {
         else
           p[7] = setting_affineOptModeB;
       }
-      p[8] = setting_initialAffAPrior;
-      p[9] = setting_initialAffBPrior;
       return p;
     }
+
+    inline Vec8 getPriorZero() {
+      return Vec8::Zero();
+    }
+
 #endif
 
-    inline Vec10 getPriorZero() {
-      return Vec10::Zero();
-    }
 
   };
 

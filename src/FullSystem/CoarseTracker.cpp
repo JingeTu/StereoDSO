@@ -311,6 +311,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
                                       AffLight aff_g2l_r) {
     acc.initialize();
@@ -590,8 +591,10 @@ namespace dso {
 
     return rs;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
     acc.initialize();
 
@@ -801,6 +804,7 @@ namespace dso {
 
     return rs;
   }
+
 #endif
 
 
@@ -1190,6 +1194,7 @@ namespace dso {
 
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   bool CoarseTracker::trackNewestCoarse(
       FrameHessian *newFrameHessian,
       SE3 &lastToNew_out, AffLight &aff_g2l_out,
@@ -1224,8 +1229,12 @@ namespace dso {
         levelCutoffRepeat *= 2;
         resOld = calcRes(lvl, refToNew_current, aff_g2l_current, setting_coarseCutoffTH * levelCutoffRepeat);
 
-        if (!setting_debugout_runquiet)
-          printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
+        if (!setting_debugout_runquiet) {
+          char buf[256];
+          sprintf(buf, "INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat,
+                  resOld[5]);
+          LOG(INFO) << buf;
+        }
       }
 
       calcGSSSE(lvl, H, b, refToNew_current, aff_g2l_current);
@@ -1340,7 +1349,7 @@ namespace dso {
       if (levelCutoffRepeat > 1 && !haveRepeated) {
         lvl++;
         haveRepeated = true;
-        printf("REPEAT LEVEL!\n");
+        LOG(INFO) << "REPEAT LEVEL!\n";
       }
     }
 
@@ -1366,6 +1375,7 @@ namespace dso {
 
     return true;
   }
+
 #endif
 
   void

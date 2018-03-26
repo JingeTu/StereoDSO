@@ -80,6 +80,7 @@ namespace dso {
   }
 
 #if STEREO_MODE
+
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
 
@@ -601,8 +602,10 @@ namespace dso {
     state_NewEnergy = energyLeft;
     return energyLeft;
   }
+
 #endif
 #if !STEREO_MODE
+
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
 
@@ -1009,6 +1012,7 @@ namespace dso {
     state_NewEnergy = energyLeft;
     return energyLeft;
   }
+
 #endif
 
   void PointFrameResidual::debugPlot() {

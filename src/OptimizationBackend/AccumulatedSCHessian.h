@@ -60,6 +60,7 @@ namespace dso {
     };
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     inline void setZero(int n, int min = 0, int max = 1, Vec10 *stats = 0, int tid = 0) {
       if (n != nframes[tid]) {
         if (accE[tid] != 0) delete[] accE[tid];
@@ -117,8 +118,10 @@ namespace dso {
         H.block<CPARS, 10>(0, hIdx).noalias() = H.block<10, CPARS>(hIdx, 0).transpose();
       }
     }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
     inline void setZero(int n, int min = 0, int max = 1, Vec10 *stats = 0, int tid = 0) {
       if (n != nframes[tid]) {
         if (accE[tid] != 0) delete[] accE[tid];
@@ -176,6 +179,7 @@ namespace dso {
         H.block<CPARS, 8>(0, hIdx).noalias() = H.block<8, CPARS>(hIdx, 0).transpose();
       }
     }
+
 #endif
 
     void stitchDouble(MatXX &H_sc, VecX &b_sc, EnergyFunctional const *const EF, int tid = 0);

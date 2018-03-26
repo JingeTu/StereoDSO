@@ -203,8 +203,10 @@ namespace dso {
     }
 
   }
+
 #endif
 #if !STEREO_MODE
+
   template<int mode>
   void AccumulatedTopHessianSSE::addPoint(EFPoint *p, EnergyFunctional const *const ef,
                                           int tid)  // 0 = active, 1 = linearized, 2=marginalize
@@ -316,6 +318,7 @@ namespace dso {
     }
 
   }
+
 #endif
 
   template void AccumulatedTopHessianSSE::addPoint<0>(EFPoint *p, EnergyFunctional const *const ef, int tid);
@@ -458,6 +461,7 @@ namespace dso {
   }
 
 #else
+
   void AccumulatedTopHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                                               bool useDelta, int tid) {
     H = MatXX::Zero(nframes[tid] * 8 + CPARS, nframes[tid] * 8 + CPARS);
@@ -589,6 +593,7 @@ namespace dso {
       }
     }
   }
+
 #endif
 
 }

@@ -152,10 +152,14 @@ namespace dso {
     void resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT);
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     void resubstituteFPt(const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid);
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
     void resubstituteFPt(const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid);
+
 #endif
 
     void accumulateAF_MT(MatXX &H, VecX &b, bool MT);

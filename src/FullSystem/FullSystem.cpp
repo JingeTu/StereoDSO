@@ -490,22 +490,24 @@ namespace dso {
       tryIterations++;
 
       if (i != 0) {
-        printf(
-            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
-                "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
-            i,
-            i, pyrLevelsUsed - 1,
-            aff_g2l_this.a, aff_g2l_this.b,
-            achievedRes[0],
-            achievedRes[1],
-            achievedRes[2],
-            achievedRes[3],
-            achievedRes[4],
-            coarseTracker->lastResiduals[0],
-            coarseTracker->lastResiduals[1],
-            coarseTracker->lastResiduals[2],
-            coarseTracker->lastResiduals[3],
-            coarseTracker->lastResiduals[4]);
+        char buf[256];
+        sprintf(buf,
+                "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                    "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+                i,
+                i, pyrLevelsUsed - 1,
+                aff_g2l_this.a, aff_g2l_this.b,
+                achievedRes[0],
+                achievedRes[1],
+                achievedRes[2],
+                achievedRes[3],
+                achievedRes[4],
+                coarseTracker->lastResiduals[0],
+                coarseTracker->lastResiduals[1],
+                coarseTracker->lastResiduals[2],
+                coarseTracker->lastResiduals[3],
+                coarseTracker->lastResiduals[4]);
+        LOG(INFO) << buf;
       }
 
 
@@ -536,7 +538,7 @@ namespace dso {
     }
 
     if (!haveOneGood) {
-      printf("BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.\n");
+      LOG(INFO) << "BIG ERROR! tracking failed entirely. Take predicted pose and hope we may somehow recover.";
       flowVecs = Vec3(0, 0, 0);
       aff_g2l = aff_last_2_l;
       aff_g2l_r = aff_last_2_l_r;
@@ -559,7 +561,7 @@ namespace dso {
 
     if (!setting_debugout_runquiet) {
       char buf[256];
-      sprintf(buf, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
+      sprintf(buf, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
               achievedRes[0]);
       LOG(INFO) << buf;
     }
@@ -580,9 +582,11 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
+
 #endif
 
 #if !STEREO_MODE & !INERTIAL_MODE
+
   Vec4 FullSystem::trackNewCoarse(FrameHessian *fh) {
 
     assert(allFrameHistory.size() > 0);
@@ -735,22 +739,26 @@ namespace dso {
           achievedRes);  // in each level has to be at least as good as the last try.
       tryIterations++;
 
+
       if (i != 0) {
-        printf(
-            "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
-            i,
-            i, pyrLevelsUsed - 1,
-            aff_g2l_this.a, aff_g2l_this.b,
-            achievedRes[0],
-            achievedRes[1],
-            achievedRes[2],
-            achievedRes[3],
-            achievedRes[4],
-            coarseTracker->lastResiduals[0],
-            coarseTracker->lastResiduals[1],
-            coarseTracker->lastResiduals[2],
-            coarseTracker->lastResiduals[3],
-            coarseTracker->lastResiduals[4]);
+        char buf[256];
+        sprintf(buf,
+                "RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f), "
+                    "\naverage pixel photometric error for each level: %f %f %f %f %f -> %f %f %f %f %f \n",
+                i,
+                i, pyrLevelsUsed - 1,
+                aff_g2l_this.a, aff_g2l_this.b,
+                achievedRes[0],
+                achievedRes[1],
+                achievedRes[2],
+                achievedRes[3],
+                achievedRes[4],
+                coarseTracker->lastResiduals[0],
+                coarseTracker->lastResiduals[1],
+                coarseTracker->lastResiduals[2],
+                coarseTracker->lastResiduals[3],
+                coarseTracker->lastResiduals[4]);
+        LOG(INFO) << buf;
       }
 
 
@@ -780,7 +788,7 @@ namespace dso {
     }
 
     if (!haveOneGood) {
-      printf("BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.\n");
+      LOG(INFO) << "BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.";
       flowVecs = Vec3(0, 0, 0);
       aff_g2l = aff_last_2_l;
       lastF_2_fh = lastF_2_fh_tries[0];
@@ -798,9 +806,12 @@ namespace dso {
     if (coarseTracker->firstCoarseRMSE < 0)
       coarseTracker->firstCoarseRMSE = achievedRes[0];
 
-    if (!setting_debugout_runquiet)
-      printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
-             achievedRes[0]);
+    if (!setting_debugout_runquiet) {
+      char buf[256];
+      sprintf(buf, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure,
+              achievedRes[0]);
+      LOG(INFO) << buf;
+    }
 
 
     if (setting_logStuff) {
@@ -818,6 +829,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
+
 #endif
 
   void FullSystem::traceNewCoarseNonKey(FrameHessian *fh, FrameHessian *fhRight) {
@@ -1848,14 +1860,14 @@ namespace dso {
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
     {
-            boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-            assert(fh->shell->trackingRef != 0);
-            fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
-            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      assert(fh->shell->trackingRef != 0);
+      fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
-            fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
-          }
+      fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
+      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
+    }
 #endif
 
 #if STEREO_MODE & !INERTIAL_MODE
@@ -1880,10 +1892,10 @@ namespace dso {
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
     {
-            boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-            assert(fh->shell->trackingRef != 0);
-            fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
-            fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
+      boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+      assert(fh->shell->trackingRef != 0);
+      fh->shell->T_WC = fh->shell->trackingRef->T_WC * fh->shell->camToTrackingRef;
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
     }
 #endif
 
@@ -1947,15 +1959,15 @@ namespace dso {
     // =========================== Figure Out if INITIALIZATION FAILED =========================
     if (allKeyFramesHistory.size() <= 4) {
       if (allKeyFramesHistory.size() == 2 && rmse > 20 * benchmark_initializerSlackFactor) {
-        printf("I THINK INITIALIZATION FAILED! Resetting.\n");
+        LOG(INFO) << "I THINK INITIALIZATION FAILED! Resetting.\n";
         initFailed = true;
       }
       if (allKeyFramesHistory.size() == 3 && rmse > 13 * benchmark_initializerSlackFactor) {
-        printf("I THINK INITIALIZATION FAILED! Resetting.\n");
+        LOG(INFO) << "I THINK INITIALIZATION FAILED! Resetting.\n";
         initFailed = true;
       }
       if (allKeyFramesHistory.size() == 4 && rmse > 9 * benchmark_initializerSlackFactor) {
-        printf("I THINK INITIALIZATION FAILED! Resetting.\n");
+        LOG(INFO) << "I THINK INITIALIZATION FAILED! Resetting.\n";
         initFailed = true;
       }
     }
@@ -2187,6 +2199,7 @@ namespace dso {
 
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   void FullSystem::initializeFromInitializer(FrameHessian *newFrame) {
 
     boost::unique_lock<boost::mutex> lock(mapMutex);
@@ -2277,6 +2290,7 @@ namespace dso {
     initialized = true;
     printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int) firstFrame->pointHessians.size());
   }
+
 #endif
 
   void FullSystem::makeNewTraces(FrameHessian *newFrame, float *gtDepth) {
@@ -2316,6 +2330,7 @@ namespace dso {
   }
 
 #else
+
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
       fh->targetPrecalc.resize(frameHessians.size());
@@ -2324,6 +2339,7 @@ namespace dso {
     }
     ef->setDeltaF(&Hcalib);
   }
+
 #endif
 
 

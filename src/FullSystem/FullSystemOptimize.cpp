@@ -203,12 +203,18 @@ namespace dso {
   bool FullSystem::doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD) {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
-
+#if STEREO_MODE & !INERTIAL_MODE
     Vec10 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
     pstepfac.segment<3>(3).setConstant(stepfacR);
     pstepfac.segment<4>(6).setConstant(stepfacA);
-
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+    Vec8 pstepfac;
+    pstepfac.segment<3>(0).setConstant(stepfacT);
+    pstepfac.segment<3>(3).setConstant(stepfacR);
+    pstepfac.segment<2>(6).setConstant(stepfacA);
+#endif
 
     float sumA = 0, sumB = 0, sumT = 0, sumR = 0, sumID = 0, numID = 0;
 
@@ -217,7 +223,12 @@ namespace dso {
     if (setting_solverMode & SOLVER_MOMENTUM) {
 //      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
+#if STEREO_MODE & !INERTIAL_MODE
         Vec10 step = fh->step;
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+        Vec8 step = fh->step;
+#endif
         step.head<6>() += 0.5f * (fh->step_backup.head<6>());
 
         fh->setState(fh->state_backup + step);
@@ -389,11 +400,6 @@ namespace dso {
     if (frameHessians.size() < 3) mnumOptIts = 20;
     if (frameHessians.size() < 4) mnumOptIts = 15;
 
-
-
-
-
-
     // get statistics and active residuals.
 
     activeResiduals.clear();
@@ -471,12 +477,6 @@ namespace dso {
 
       bool canbreak = doStepFromBackup(stepsize, stepsize, stepsize, stepsize, stepsize);
 
-
-
-
-
-
-
       // eval new energy!
       Vec3 newEnergy = linearizeAll(false);
       double newEnergyL = calcLEnergy();
@@ -524,10 +524,13 @@ namespace dso {
     }
 
 
+#if STEREO_MODE & !INERTIAL_MODE
     Vec10 newStateZero = Vec10::Zero();
+    newStateZero.segment<4>(6) = frameHessians.back()->get_state().segment<4>(6);
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+    Vec8 newStateZero = Vec8::Zero();
     newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
-#if STEREO_MODE
-    newStateZero.segment<2>(8) = frameHessians.back()->get_state().segment<2>(8);
 #endif
 
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
@@ -620,6 +623,7 @@ namespace dso {
   }
 
 #if STEREO_MODE & !INERTIAL_MODE
+
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,
       std::vector<VecX> &nullspaces_scale,
@@ -671,8 +675,10 @@ namespace dso {
 
     return nullspaces_x0_pre;
   }
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,
       std::vector<VecX> &nullspaces_scale,
@@ -722,5 +728,6 @@ namespace dso {
 
     return nullspaces_x0_pre;
   }
+
 #endif
 }

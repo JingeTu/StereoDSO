@@ -47,6 +47,7 @@ namespace dso {
     ~CoarseTracker();
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     bool trackNewestCoarseStereo(
         FrameHessian *newFrameHessian,
         FrameHessian *newFrameHessianRight,
@@ -54,13 +55,16 @@ namespace dso {
         AffLight &aff_g2l_out, AffLight &aff_g2l_r_out,
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper *wrap = 0);
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
     bool trackNewestCoarse(
         FrameHessian *newFrameHessian,
         SE3 &lastToNew_out, AffLight &aff_g2l_out,
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper *wrap = 0);
+
 #endif
 
     void setCTRefForFirstFrame(std::vector<FrameHessian *> frameHessians);
@@ -121,15 +125,19 @@ namespace dso {
     Vec6 calcResAndGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
 #if STEREO_MODE & !INERTIAL_MODE
+
     Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH);
 
     void
     calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r);
+
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
+
     Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
     void calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
+
 #endif
 
     void calcGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l);
