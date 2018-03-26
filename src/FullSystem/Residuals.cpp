@@ -80,7 +80,6 @@ namespace dso {
   }
 
 #if STEREO_MODE
-
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
 
@@ -602,8 +601,8 @@ namespace dso {
     state_NewEnergy = energyLeft;
     return energyLeft;
   }
-
-#else
+#endif
+#if !STEREO_MODE
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
 
@@ -1035,6 +1034,7 @@ namespace dso {
         target->debugImage->setPixel1((float) projectedTo[i][0], (float) projectedTo[i][1], cT);
     }
   }
+
 
   void PointFrameResidual::applyRes(bool copyJacobians) {
     if (copyJacobians) {

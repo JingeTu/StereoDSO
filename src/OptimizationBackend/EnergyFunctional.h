@@ -30,7 +30,7 @@
 #include "vector"
 #include <math.h>
 #include "map"
-#include "FullSystem/IMUResiduals.hpp"
+
 
 namespace dso {
 
@@ -75,8 +75,6 @@ namespace dso {
 
     friend class EFResidual;
 
-    friend class EFIMUResidual;
-
     friend class AccumulatedTopHessian;
 
     friend class AccumulatedTopHessianSSE;
@@ -89,7 +87,6 @@ namespace dso {
 
     ~EnergyFunctional();
 
-    EFIMUResidual *insertIMUResidual(IMUResidual *r);
 
     EFResidual *insertResidual(PointFrameResidual *r);
 
@@ -154,11 +151,10 @@ namespace dso {
 
     void resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT);
 
-#if STEREO_MODE
-
+#if STEREO_MODE & !INERTIAL_MODE
     void resubstituteFPt(const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid);
-
-#else
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
     void resubstituteFPt(const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid);
 #endif
 
@@ -172,8 +168,7 @@ namespace dso {
 
     void orthogonalize(VecX *b, MatXX *H);
 
-#if STEREO_MODE
-//#if !INERTIAL_MODE
+#if STEREO_MODE & !INERTIAL_MODE
     Mat110f *adHTdeltaF;
 
     Mat1010 *adHost;
@@ -181,16 +176,8 @@ namespace dso {
 
     Mat1010f *adHostF;
     Mat1010f *adTargetF;
-//#else
-//    Mat119f *adHTdeltaF;
-//
-//    Mat1919 *adHost;
-//    Mat1919 *adTarget;
-//
-//    Mat1919f *adHostF;
-//    Mat1919f *adTargetF;
-//#endif
-#else
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
     Mat18f *adHTdeltaF;
 
     Mat88 *adHost;

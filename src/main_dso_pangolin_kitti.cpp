@@ -477,7 +477,12 @@ int main(int argc, char **argv) {
       bool MODE_STEREOMATCH = false;
 
       if (MODE_SLAM) {
-        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, i);
+        // Add IMU measurements.
+        std::vector<IMUMeasurement> imuMeasurements;
+//        reader_imu->getIMUMeasurementsBetween(lastImuEndTimestamp, img_left->timestamp, imuMeasurements);
+        lastImuEndTimestamp = img_left->timestamp;
+//        std::cout << imuMeasurements.size() << std::endl;
+        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, imuMeasurements, i);
       }
 
       if (MODE_STEREOMATCH) {

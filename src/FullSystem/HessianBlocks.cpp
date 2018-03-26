@@ -70,7 +70,7 @@ namespace dso {
   }
 
 
-  void FrameHessian::setStateZero(const Vec19 &state_zero) {
+  void FrameHessian::setStateZero(const Vec10 &state_zero) {
     assert(state_zero.head<6>().squaredNorm() < 1e-20);
 
     this->state_zero = state_zero;
@@ -113,14 +113,12 @@ namespace dso {
     for (unsigned int i = 0; i < pointHessiansMarginalized.size(); i++) delete pointHessiansMarginalized[i];
     for (unsigned int i = 0; i < pointHessiansOut.size(); i++) delete pointHessiansOut[i];
     for (unsigned int i = 0; i < immaturePoints.size(); i++) delete immaturePoints[i];
-    for (unsigned int i = 0; i < imuResiduals.size(); i++) delete imuResiduals[i];
 
 
     pointHessians.clear();
     pointHessiansMarginalized.clear();
     pointHessiansOut.clear();
     immaturePoints.clear();
-    imuResiduals.clear();
   }
 
 
@@ -230,7 +228,6 @@ namespace dso {
   }
 
 #if STEREO_MODE
-
   void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
     this->host = host;
     this->target = target;
@@ -258,7 +255,6 @@ namespace dso {
                                                host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
   }
-
 #endif
 }
 

@@ -33,7 +33,6 @@
 #include <fstream>
 #include "util/NumType.h"
 #include "FullSystem/Residuals.h"
-#include "FullSystem/IMUResiduals.hpp"
 #include "util/ImageAndExposure.h"
 
 
@@ -65,9 +64,6 @@ namespace dso {
 #define SCALE_W 1.0f
 #define SCALE_A 10.0f
 #define SCALE_B 1000.0f
-#define SCALE_S 1.0f
-#define SCALE_B_A 1.0f
-#define SCALE_B_G 1.0f
 
 #define SCALE_IDEPTH_INVERSE (1.0f / SCALE_IDEPTH)
 #define SCALE_XI_ROT_INVERSE (1.0f / SCALE_XI_ROT)
@@ -77,9 +73,6 @@ namespace dso {
 #define SCALE_W_INVERSE (1.0f / SCALE_W)
 #define SCALE_A_INVERSE (1.0f / SCALE_A)
 #define SCALE_B_INVERSE (1.0f / SCALE_B)
-#define SCALE_S_INVERSE (1.0f / SCALE_S)
-#define SCALE_B_A_INVERSE (1.0f / SCALE_B_A)
-#define SCALE_B_G_INVERSE (1.0f / SCALE_B_G)
 
 
   struct FrameFramePrecalc //- Precalculate reporjection(from host to target) parameters.
@@ -128,6 +121,8 @@ namespace dso {
     Eigen::Vector3f *dIp[PYR_LEVELS];   // coarse tracking / coarse initializer. NAN in [0] only.
     float *absSquaredGrad[PYR_LEVELS];  // only used for pixel select (histograms etc.). no NAN.
     FrameHessian *rightFrame; //- Point to right frame, NULL indicates this is a right frame.
+    FrameHessian *leftFrame;
+
 
     int frameID;            // incremental ID for keyframes only!
     static int instanceCounter;
@@ -143,34 +138,31 @@ namespace dso {
     std::vector<PointHessian *> pointHessiansMarginalized;  // contains all MARGINALIZED points (= fully marginalized, usually because point went OOB.)
     std::vector<PointHessian *> pointHessiansOut;    // contains all OUTLIER points (= discarded.).
     std::vector<ImmaturePoint *> immaturePoints;    // contains all OUTLIER points (= discarded.).
-    std::vector<IMUResidual *> imuResiduals;
 
     //- Currently for stereo mode, do not take nullspaces into account.
     Mat66 nullspaces_pose;
     Mat42 nullspaces_affine;
     Vec6 nullspaces_scale;
-    Vec3 nullspaces_velocity;
-    Vec3 nullspaces_biases;
 
     // variable info.
     SE3 worldToCam_evalPT;
-    Vec19 state_zero;
-    Vec19 state_scaled;
-    Vec19 state;  // [0-5: worldToCam-leftEps. 6-7: a,b. 8-9: a_r,b_r.]
-    Vec19 step;
-    Vec19 step_backup;
-    Vec19 state_backup;
+    Vec10 state_zero;
+    Vec10 state_scaled;
+    Vec10 state;  // [0-5: worldToCam-leftEps. 6-7: a,b. 8-9: a_r,b_r.]
+    Vec10 step;
+    Vec10 step_backup;
+    Vec10 state_backup;
 
 
     EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const { return worldToCam_evalPT; }
 
-    EIGEN_STRONG_INLINE const Vec19 &get_state_zero() const { return state_zero; }
+    EIGEN_STRONG_INLINE const Vec10 &get_state_zero() const { return state_zero; }
 
-    EIGEN_STRONG_INLINE const Vec19 &get_state() const { return state; }
+    EIGEN_STRONG_INLINE const Vec10 &get_state() const { return state; }
 
-    EIGEN_STRONG_INLINE const Vec19 &get_state_scaled() const { return state_scaled; }
+    EIGEN_STRONG_INLINE const Vec10 &get_state_scaled() const { return state_scaled; }
 
-    EIGEN_STRONG_INLINE const Vec19 get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
+    EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
 
 
     // precalc values
@@ -194,17 +186,11 @@ namespace dso {
       return AffLight(get_state_zero()[8] * SCALE_A, get_state_zero()[9] * SCALE_B);
     }
 
-#if INERTIAL_MODE
-
-    inline SpeedAndBiases speedAndBiases() const { return get_state_scaled().tail<9>(); }
-
 #endif
 
-#endif
+    void setStateZero(const Vec10 &state_zero);
 
-    void setStateZero(const Vec19 &state_zero);
-
-    inline void setState(const Vec19 &state) {
+    inline void setState(const Vec10 &state) {
 
       this->state = state;
       state_scaled.segment<3>(0) = SCALE_XI_TRANS * state.segment<3>(0);
@@ -213,16 +199,13 @@ namespace dso {
       state_scaled[7] = SCALE_B * state[7];
       state_scaled[8] = SCALE_A * state[8];
       state_scaled[9] = SCALE_B * state[9];
-      state_scaled.segment<3>(10) = SCALE_S * state.segment<3>(10);
-      state_scaled.segment<3>(13) = SCALE_B_G * state.segment<3>(13);
-      state_scaled.segment<3>(16) = SCALE_B_A * state.segment<3>(16);
 
       PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
       PRE_T_WC = PRE_T_CW.inverse();
       //setCurrentNullspace();
     };
 
-    inline void setStateScaled(const Vec19 &state_scaled) {
+    inline void setStateScaled(const Vec10 &state_scaled) {
 
       this->state_scaled = state_scaled;
       state.segment<3>(0) = SCALE_XI_TRANS_INVERSE * state_scaled.segment<3>(0);
@@ -231,52 +214,34 @@ namespace dso {
       state[7] = SCALE_B_INVERSE * state_scaled[7];
       state[8] = SCALE_A_INVERSE * state_scaled[8];
       state[9] = SCALE_B_INVERSE * state_scaled[9];
-      state.segment<3>(10) = SCALE_S_INVERSE * state_scaled.segment<3>(10);
-      state.segment<3>(13) = SCALE_B_G_INVERSE * state_scaled.segment<3>(13);
-      state.segment<3>(16) = SCALE_B_A_INVERSE * state_scaled.segment<3>(16);
 
       PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
       PRE_T_WC = PRE_T_CW.inverse();
       //setCurrentNullspace();
     };
 
-    inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec19 &state) {
+    inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec10 &state) {
 
       this->worldToCam_evalPT = worldToCam_evalPT;
       setState(state);
       setStateZero(state);
     };
 
-#if STEREO_MODE
-#if !INERTIAL_MODE
+#if STEREO_MODE & !INERTIAL_MODE
     inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r) {
-      Vec19 initial_state = Vec19::Zero();
+      Vec10 initial_state = Vec10::Zero();
       initial_state[6] = aff_g2l.a;
       initial_state[7] = aff_g2l.b;
       initial_state[8] = aff_g2l_r.a;
       initial_state[9] = aff_g2l_r.b;
-      this->worldToCam_evalPT = worldToCam_evalPT;
-      setStateScaled(initial_state);
-      setStateZero(this->get_state());
-    };
-#else
-
-    inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r,
-                                 const SpeedAndBiases &speedAndBiases) {
-      Vec19 initial_state = Vec19::Zero();
-      initial_state[6] = aff_g2l.a;
-      initial_state[7] = aff_g2l.b;
-      initial_state[8] = aff_g2l_r.a;
-      initial_state[9] = aff_g2l_r.b;
-      initial_state.segment<9>(10) = speedAndBiases;
       this->worldToCam_evalPT = worldToCam_evalPT;
       setStateScaled(initial_state);
       setStateZero(this->get_state());
     };
 #endif
-#else
+#if !STEREO_MODE & !INERTIAL_MODE
     inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l) {
-      Vec19 initial_state = Vec19::Zero();
+      Vec10 initial_state = Vec10::Zero();
       initial_state[6] = aff_g2l.a;
       initial_state[7] = aff_g2l.b;
       this->worldToCam_evalPT = worldToCam_evalPT;
@@ -308,6 +273,7 @@ namespace dso {
       efFrame = 0;
       frameEnergyTH = 8 * 8 * patternNum;
       rightFrame = 0;
+      leftFrame = 0;
 
       debugImage = 0;
     };
@@ -315,10 +281,9 @@ namespace dso {
 
     void makeImages(float *color, CalibHessian *HCalib);
 
-#if STEREO_MODE
-
-    inline Vec19 getPrior() {
-      Vec19 p = Vec19::Zero();
+#if STEREO_MODE & !INERTIAL_MODE
+    inline Vec10 getPrior() {
+      Vec10 p = Vec10::Zero();
       if (frameID == 0) {
         p.head<3>() = Vec3::Constant(setting_initialTransPrior);
         p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
@@ -350,10 +315,10 @@ namespace dso {
       }
       return p;
     }
-
-#else
-    inline Vec19 getPrior() {
-      Vec19 p = Vec19::Zero();
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
+    inline Vec10 getPrior() {
+      Vec10 p = Vec10::Zero();
       if (frameID == 0) {
         p.head<3>() = Vec3::Constant(setting_initialTransPrior);
         p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);
@@ -379,8 +344,8 @@ namespace dso {
     }
 #endif
 
-    inline Vec19 getPriorZero() {
-      return Vec19::Zero();
+    inline Vec10 getPriorZero() {
+      return Vec10::Zero();
     }
 
   };

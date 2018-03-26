@@ -84,8 +84,7 @@ namespace dso {
     }
   }
 
-#if STEREO_MODE
-#if !INERTIAL_MODE
+#if STEREO_MODE & !INERTIAL_MODE
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,
       int min, int max, Vec10 *stats, int tid) {
@@ -220,145 +219,8 @@ namespace dso {
       H.block<CPARS, 10>(0, hIdx).noalias() = H.block<10, CPARS>(hIdx, 0).transpose();
     }
   }
-#else
-
-  void AccumulatedSCHessianSSE::stitchDoubleInternal(
-      MatXX *H, VecX *b, EnergyFunctional const *const EF,
-      int min, int max, Vec10 *stats, int tid) {
-    int toAggregate = NUM_THREADS;
-    if (tid == -1) {
-      toAggregate = 1;
-      tid = 0;
-    }  // special case: if we dont do multithreading, dont aggregate.
-    if (min == max) return;
-
-
-    int nf = nframes[0];
-    int nframes2 = nf * nf;
-
-    for (int k = min; k < max; k++) {
-      int i = k % nf;
-      int j = k / nf;
-
-      int iIdx = CPARS + i * 19;
-      int jIdx = CPARS + j * 19;
-      int ijIdx = i + nf * j;
-
-      Mat10C Hpc = Mat10C::Zero();
-      Vec10 bp = Vec10::Zero();
-
-      for (int tid2 = 0; tid2 < toAggregate; tid2++) {
-        accE[tid2][ijIdx].finish();
-        accEB[tid2][ijIdx].finish();
-        Hpc += accE[tid2][ijIdx].A1m.cast<double>();
-        bp += accEB[tid2][ijIdx].A1m.cast<double>();
-      }
-
-      H[tid].block<10, CPARS>(iIdx, 0) += EF->adHost[ijIdx] * Hpc;
-      H[tid].block<10, CPARS>(jIdx, 0) += EF->adTarget[ijIdx] * Hpc;
-      b[tid].segment<10>(iIdx) += EF->adHost[ijIdx] * bp;
-      b[tid].segment<10>(jIdx) += EF->adTarget[ijIdx] * bp;
-
-
-      for (int k = 0; k < nf; k++) {
-        int kIdx = CPARS + k * 19;
-        int ijkIdx = ijIdx + k * nframes2;
-        int ikIdx = i + nf * k;
-
-        Mat1010 accDM = Mat1010::Zero();
-
-        for (int tid2 = 0; tid2 < toAggregate; tid2++) {
-          accD[tid2][ijkIdx].finish();
-          if (accD[tid2][ijkIdx].num == 0) continue;
-          accDM +=
-              accD[tid2][ijkIdx].A1m.cast<double>();
-        }
-
-        H[tid].block<10, 10>(iIdx, iIdx) += EF->adHost[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
-        H[tid].block<10, 10>(jIdx, kIdx) += EF->adTarget[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
-        H[tid].block<10, 10>(jIdx, iIdx) += EF->adTarget[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
-        H[tid].block<10, 10>(iIdx, kIdx) += EF->adHost[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
-      }
-    }
-
-    if (min == 0) {
-      for (int tid2 = 0; tid2 < toAggregate; tid2++) {
-        accHcc[tid2].finish();
-        accbc[tid2].finish();
-        H[tid].topLeftCorner<CPARS, CPARS>() += accHcc[tid2].A1m.cast<double>();
-        b[tid].head<CPARS>() += accbc[tid2].A1m.cast<double>();
-      }
-    }
-
-
-//	// ----- new: copy transposed parts for calibration only.
-//	for(int h=0;h<nf;h++)
-//	{
-//		int hIdx = 4+h*10;
-//		H.block<4,10>(0,hIdx).noalias() = H.block<10,4>(hIdx,0).transpose();
-//	}
-  }
-
-  void AccumulatedSCHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, int tid) {
-
-    int nf = nframes[0];
-    int nframes2 = nf * nf;
-
-    H = MatXX::Zero(nf * 19 + CPARS, nf * 19 + CPARS);
-    b = VecX::Zero(nf * 19 + CPARS);
-
-
-    for (int i = 0; i < nf; i++)
-      for (int j = 0; j < nf; j++) {
-        int iIdx = CPARS + i * 19;
-        int jIdx = CPARS + j * 19;
-        int ijIdx = i + nf * j;
-
-        accE[tid][ijIdx].finish();
-        accEB[tid][ijIdx].finish();
-
-        Mat10C accEM = accE[tid][ijIdx].A1m.cast<double>();
-        Vec10 accEBV = accEB[tid][ijIdx].A1m.cast<double>();
-
-        H.block<10, CPARS>(iIdx, 0) += EF->adHost[ijIdx] * accEM;
-        H.block<10, CPARS>(jIdx, 0) += EF->adTarget[ijIdx] * accEM;
-
-        b.segment<10>(iIdx) += EF->adHost[ijIdx] * accEBV;
-        b.segment<10>(jIdx) += EF->adTarget[ijIdx] * accEBV;
-
-        for (int k = 0; k < nf; k++) {
-          int kIdx = CPARS + k * 19;
-          int ijkIdx = ijIdx + k * nframes2;
-          int ikIdx = i + nf * k;
-
-          accD[tid][ijkIdx].finish();
-          if (accD[tid][ijkIdx].num == 0) continue;
-          Mat1010 accDM = accD[tid][ijkIdx].A1m.cast<double>();
-
-          H.block<10, 10>(iIdx, iIdx) += EF->adHost[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
-
-          H.block<10, 10>(jIdx, kIdx) += EF->adTarget[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
-
-          H.block<10, 10>(jIdx, iIdx) += EF->adTarget[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
-
-          H.block<10, 10>(iIdx, kIdx) += EF->adHost[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
-        }
-      }
-
-    accHcc[tid].finish();
-    accbc[tid].finish();
-    H.topLeftCorner<CPARS, CPARS>() = accHcc[tid].A1m.cast<double>();
-    b.head<CPARS>() = accbc[tid].A1m.cast<double>();
-
-    // ----- new: copy transposed parts for calibration only.
-    for (int h = 0; h < nf; h++) {
-      int hIdx = CPARS + h * 19;
-      H.block<CPARS, 19>(0, hIdx).noalias() = H.block<19, CPARS>(hIdx, 0).transpose();
-    }
-  }
-
 #endif
-#else
+#if !STEREO_MODE & !INERTIAL_MODE
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,
       int min, int max, Vec10 *stats, int tid) {

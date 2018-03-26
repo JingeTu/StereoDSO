@@ -11,22 +11,6 @@
 #include <iostream>
 
 namespace dso {
-
-  static __inline__ double sinc(double x) {
-    if (fabs(x) > 1e-6) {
-      return sin(x) / x;
-    }
-    else {
-      static const double c_2 = 1.0 / 6.0;
-      static const double c_4 = 1.0 / 120.0;
-      static const double c_6 = 1.0 / 5040.0;
-      const double x_2 = x * x;
-      const double x_4 = x_2 * x_2;
-      const double x_6 = x_2 * x_2 * x_2;
-      return 1.0 - c_2 * x_2 + c_4 * x_4 - c_6 * x_6;
-    }
-  }
-
   IMUPropagation::IMUPropagation() {
 
   }
@@ -38,55 +22,30 @@ namespace dso {
   Sophus::Quaterniond
   IMUPropagation::initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements) {
 
-    Eigen::Vector3d acc_B = Eigen::Vector3d::Zero();
+    Vec3 gravity;
+    gravity[0] = 0;
+    gravity[1] = 0;
+    gravity[2] = -1;
+
+    Vec3 omegaAvg;
+
     for (IMUMeasurement mes : imuMeasurements) {
-      acc_B += mes.acc;
+      omegaAvg += mes.gyr;
     }
-    acc_B /= double(imuMeasurements.size());
-    Eigen::Vector3d e_acc = acc_B.normalized();
+    omegaAvg.normalize();
 
-    Eigen::Vector3d ez_W(0.0, 0.0, 1.0);
-    Eigen::Matrix<double, 6, 1> poseIncrement;
-    poseIncrement.head<3>() = Eigen::Vector3d::Zero();
-    poseIncrement.tail<3>() = ez_W.cross(e_acc).normalized();
-    double angle = std::acos(ez_W.transpose() * e_acc);
-    poseIncrement.tail<3>() *= angle;
-    poseIncrement *= -1;
-//    Eigen::MatrixBase<double> delta =  -1 * poseIncrement;
+    double theta = abs(acosh(omegaAvg.dot(gravity)));
+    Vec3 a = omegaAvg.cross(gravity);
 
-    Eigen::Vector4d dq;
-    double halfnorm = 0.5 * poseIncrement.template tail<3>().norm();
-    dq.template head<3>() = sinc(halfnorm) * 0.5 * poseIncrement.template tail<3>();
-    dq[3] = cos(halfnorm);
-    LOG(INFO) << dq[3];
-//    Eigen::Quaterniond q(dq);
+    a *= sin(theta / 2);
+    double cosThetaOver2 = cos(theta / 2);
 
-    return Sophus::Quaterniond(dq);
-
-//    Vec3 gravity;
-//    gravity[0] = 0;
-//    gravity[1] = 0;
-//    gravity[2] = -1;
-//
-//    Vec3 omegaAvg;
-//
-//    for (IMUMeasurement mes : imuMeasurements) {
-//      omegaAvg += mes.gyr;
-//    }
-//    omegaAvg.normalize();
-//
-//    double theta = abs(acosh(omegaAvg.dot(gravity)));
-//    Vec3 a = omegaAvg.cross(gravity);
-//
-//    a *= sin(theta / 2);
-//    double cosThetaOver2 = cos(theta / 2);
-//
-//    // R_WS
-//    return Sophus::Quaterniond(cosThetaOver2, a[0], a[1], a[2]);
+    // R_WS
+    return Sophus::Quaterniond(cosThetaOver2, a[0], a[1], a[2]);
   }
 
   int IMUPropagation::propagate(const std::vector<IMUMeasurement> &imuMeasurements,
-                                SE3 T_WS, SpeedAndBiases &speedAndBiases,
+                                SE3 T_WS, SpeedAndBias &speedAndBias,
                                 const double &t_start, const double &t_end,
                                 covariance_t *covariance, jacobian_t *jacobian) {
     double time = t_start;
@@ -128,9 +87,6 @@ namespace dso {
       Eigen::Vector3d acc_S_0 = it->acc;
       Eigen::Vector3d omega_S_1 = (it + 1)->gyr;
       Eigen::Vector3d acc_S_1 = (it + 1)->acc;
-
-//      LOG(INFO) << "acc_S_0: " << acc_S_0;
-//      LOG(INFO) << "acc_S_1: " << acc_S_1;
 
       double nexttime;
       if ((it + 1) == imuMeasurements.end())
@@ -184,9 +140,9 @@ namespace dso {
 
       // orientation
       Eigen::Quaterniond dq;
-      const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1) - speedAndBiases.segment<3>(3));
+      const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1) - speedAndBias.segment<3>(3));
       const double theta_half = omega_S_true.norm() * 0.5 * dt;
-      const double sinc_theta_half = sinc(theta_half);
+      const double sinc_theta_half = sin(theta_half) / theta_half; // TODO: can be more specific
       const double cos_theta_half = cos(theta_half);
       dq.vec() = sinc_theta_half * omega_S_true * 0.5 * dt;
       dq.w() = cos_theta_half;
@@ -194,7 +150,7 @@ namespace dso {
       // rotation matrix integral
       const Eigen::Matrix3d C = Delta_q.toRotationMatrix();
       const Eigen::Matrix3d C_1 = Delta_q_1.toRotationMatrix();
-      const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1) - speedAndBiases.segment<3>(6));
+      const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1) - speedAndBias.segment<3>(6));
       const Eigen::Matrix3d C_integral_1 = C_integral + 0.5 * (C + C_1) * dt;
       const Eigen::Vector3d acc_integral_1 = acc_integral + 0.5 * (C + C_1) * acc_S_true * dt;
       // rotation matrix double integral
@@ -267,10 +223,10 @@ namespace dso {
 //             - 0.5*g_W*Delta_t*Delta_t,
 //             q_WS_0*Delta_q);
     T_WS.setQuaternion(q_WS_0 * Delta_q);
-    T_WS.translation() = r_0 + speedAndBiases.head<3>() * Delta_t
+    T_WS.translation() = r_0 + speedAndBias.head<3>() * Delta_t
                          + C_WS_0 * (acc_doubleintegral/*-C_doubleintegral*speedAndBiases.segment<3>(6)*/)
                          - 0.5 * g_W * Delta_t * Delta_t;
-    speedAndBiases.head<3>() += C_WS_0 * (acc_integral/*-C_integral*speedAndBiases.segment<3>(6)*/) - g_W * Delta_t;
+    speedAndBias.head<3>() += C_WS_0 * (acc_integral/*-C_integral*speedAndBiases.segment<3>(6)*/) - g_W * Delta_t;
 
     // assign Jacobian, if requested
     if (jacobian) {

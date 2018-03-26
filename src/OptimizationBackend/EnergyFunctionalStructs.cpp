@@ -34,27 +34,6 @@
 
 namespace dso {
 
-#if STEREO_MODE
-#if INERTIAL_MODE
-
-  void EFIMUResidual::takeDataF() {
-    std::swap<IMURawResidualJacobian *>(J, data->J);
-  }
-
-  void EFIMUResidual::fixLinearizationF(EnergyFunctional *ef) {
-    // set res_toZeroF
-    Vec19 dpTo = ef->frames[toIDX]->delta;
-    Vec19 dpFrom = ef->frames[fromIDX]->delta;
-
-    Vec15 temp = J->resF -
-                 (J->Jxdxi[0] * dpFrom.head<6>() + J->Jxdxi[1] * dpTo.head<6>()
-                  + J->Jxdsb[0] * dpFrom.tail<9>() + J->Jxdsb[1] * dpTo.tail<9>());
-    res_toZeroF = temp.cast<float>();
-    isLinearized = true;
-  }
-
-#endif
-#endif
 
   void EFResidual::takeDataF() {
     std::swap<RawResidualJacobian *>(J, data->J);
@@ -73,19 +52,12 @@ namespace dso {
 
 
   void EFFrame::takeData() {
-#if STEREO_MODE
-
-#if !INERTIAL_MODE
+#if STEREO_MODE & !INERTIAL_MODE
     prior = data->getPrior().head<10>();
     delta = data->get_state_minus_stateZero().head<10>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<10>();
-#else
-    prior = data->getPrior().head<19>();
-    delta = data->get_state_minus_stateZero().head<19>();
-    delta_prior = (data->get_state() - data->getPriorZero()).head<19>();
 #endif
-
-#else
+#if !STEREO_MODE & !INERTIAL_MODE
     prior = data->getPrior().head<8>();
     delta = data->get_state_minus_stateZero().head<8>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<8>();
@@ -116,8 +88,7 @@ namespace dso {
     deltaF = data->idepth - data->idepth_zero;
   }
 
-#if STEREO_MODE
-
+#if STEREO_MODE & !INERTIAL_MODE
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec10f dp;
     if (targetIDX == -1) { //- static stereo residual
@@ -153,8 +124,8 @@ namespace dso {
 
     isLinearized = true;
   }
-
-#else
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec8f dp;
     if (targetIDX == -1) { //- static stereo residual

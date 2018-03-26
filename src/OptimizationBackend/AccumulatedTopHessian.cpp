@@ -37,85 +37,6 @@ namespace dso {
 
 #if STEREO_MODE
 
-#if INERTIAL_MODE
-
-  template<int mode>
-  void AccumulatedTopHessianSSE::addFramesIMU(MatXX &H, VecX &b, EnergyFunctional const *const EF) {
-    assert(mode == 0 || mode == 1 || mode == 2);
-
-    for (EFFrame *f : EF->frames) {
-      for (EFIMUResidual *r : f->imuResidualsAll) {
-        if (mode == 0)
-          if (r->isLinearized || !r->isActive()) continue;
-        if (mode == 1)
-          if (!r->isLinearized || !r->isActive()) continue;
-        if (mode == 2) {
-          if (!r->isActive()) continue;
-          assert(r->isLinearized);
-        }
-
-        IMURawResidualJacobian *rJ = r->J;
-        Eigen::Matrix<double, 15, 1> resApprox;
-
-        if (mode == 0)
-          resApprox = rJ->resF;
-        if (mode == 2)
-          resApprox = r->res_toZeroF.cast<double>();
-        if (mode == 1) {
-          Vec19 dpTo = EF->frames[r->toIDX]->delta;
-          Vec19 dpFrom = EF->frames[r->fromIDX]->delta;
-          Vec15 temp = (rJ->Jxdxi[0] * dpFrom.head<6>() + rJ->Jxdxi[1] * dpTo.head<6>()
-                        + rJ->Jxdsb[0] * dpFrom.tail<9>() + rJ->Jxdsb[1] * dpTo.tail<9>());
-          resApprox = r->res_toZeroF.cast<double>() + temp;
-        }
-        int fromIDX = CPARS + 19 * r->fromIDX, toIDX = CPARS + 19 * r->toIDX;
-        // from [0], to [1]
-        H.block<6, 6>(fromIDX, fromIDX).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
-        H.block<6, 6>(toIDX, toIDX).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
-        H.block<9, 9>(fromIDX + 10, fromIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdsb[0];
-        H.block<9, 9>(toIDX + 10, toIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdsb[1];
-
-        H.block<6, 6>(fromIDX, toIDX).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
-        H.block<6, 6>(toIDX, fromIDX).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
-
-        H.block<9, 9>(fromIDX + 10, toIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdsb[1];
-        H.block<9, 9>(toIDX + 10, fromIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdsb[0];
-
-        H.block<6, 9>(fromIDX, fromIDX + 10).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdsb[0];
-        H.block<9, 6>(fromIDX + 10, fromIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
-
-        H.block<6, 9>(fromIDX, toIDX + 10).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * rJ->Jxdsb[1];
-        H.block<9, 6>(toIDX + 10, fromIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[0] * d_xi_d_xi_c;
-
-        H.block<9, 6>(fromIDX + 10, toIDX).noalias() += rJ->Jxdsb[0].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
-        H.block<6, 9>(toIDX, fromIDX + 10).noalias() +=
-            d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdsb[0];
-
-        H.block<6, 9>(toIDX, toIDX + 10).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * rJ->Jxdsb[1];
-        H.block<9, 6>(toIDX + 10, toIDX).noalias() += rJ->Jxdsb[1].transpose() * rJ->Jxdxi[1] * d_xi_d_xi_c;
-
-        b.segment<6>(fromIDX).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[0].transpose() * resApprox;
-        b.segment<9>(fromIDX + 10).noalias() += rJ->Jxdsb[0].transpose() * resApprox;
-        b.segment<6>(toIDX).noalias() += d_xi_d_xi_c.transpose() * rJ->Jxdxi[1].transpose() * resApprox;
-        b.segment<9>(toIDX + 10).noalias() += rJ->Jxdsb[1].transpose() * resApprox;
-      }
-    }
-  }
-
-  template void AccumulatedTopHessianSSE::addFramesIMU<0>(MatXX &H, VecX &b, EnergyFunctional const *const EF);
-
-  template void AccumulatedTopHessianSSE::addFramesIMU<1>(MatXX &H, VecX &b, EnergyFunctional const *const EF);
-
-  template void AccumulatedTopHessianSSE::addFramesIMU<2>(MatXX &H, VecX &b, EnergyFunctional const *const EF);
-
-#endif
-
   template<int mode>
   void AccumulatedTopHessianSSE::addPoint(EFPoint *p, EnergyFunctional const *const ef,
                                           int tid)  // 0 = active, 1 = linearized, 2=marginalize
@@ -282,8 +203,8 @@ namespace dso {
     }
 
   }
-
-#else
+#endif
+#if !STEREO_MODE
   template<int mode>
   void AccumulatedTopHessianSSE::addPoint(EFPoint *p, EnergyFunctional const *const ef,
                                           int tid)  // 0 = active, 1 = linearized, 2=marginalize
@@ -404,7 +325,7 @@ namespace dso {
   template void AccumulatedTopHessianSSE::addPoint<2>(EFPoint *p, EnergyFunctional const *const ef, int tid);
 
 #if STEREO_MODE
-#if !INERTIAL_MODE
+
   void AccumulatedTopHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                                               bool useDelta, int tid) {
     H = MatXX::Zero(nframes[tid] * 10 + CPARS, nframes[tid] * 10 + CPARS);
@@ -535,138 +456,7 @@ namespace dso {
       }
     }
   }
-#else
 
-  void AccumulatedTopHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
-                                              bool useDelta, int tid) {
-    H = MatXX::Zero(nframes[tid] * 19 + CPARS, nframes[tid] * 19 + CPARS);
-    b = VecX::Zero(nframes[tid] * 19 + CPARS);
-
-
-    for (int h = 0; h < nframes[tid]; h++)
-      for (int t = 0; t < nframes[tid]; t++) {
-        int hIdx = CPARS + h * 19;
-        int tIdx = CPARS + t * 19;
-        int aidx = h + nframes[tid] * t;
-
-
-        acc[tid][aidx].finish();
-        if (acc[tid][aidx].num == 0) continue;
-
-        MatPCPC15 accH = acc[tid][aidx].H.cast<double>();
-
-        H.block<10, 10>(hIdx, hIdx).noalias() +=
-            EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adHost[aidx].transpose();
-
-        H.block<10, 10>(tIdx, tIdx).noalias() +=
-            EF->adTarget[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-
-        H.block<10, 10>(hIdx, tIdx).noalias() +=
-            EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-
-        H.block<10, CPARS>(hIdx, 0).noalias() += EF->adHost[aidx] * accH.block<10, CPARS>(CPARS, 0);
-
-        H.block<10, CPARS>(tIdx, 0).noalias() += EF->adTarget[aidx] * accH.block<10, CPARS>(CPARS, 0);
-
-        H.topLeftCorner<CPARS, CPARS>().noalias() += accH.block<CPARS, CPARS>(0, 0);
-
-        b.segment<10>(hIdx).noalias() += EF->adHost[aidx] * accH.block<10, 1>(CPARS, 10 + CPARS);
-
-        b.segment<10>(tIdx).noalias() += EF->adTarget[aidx] * accH.block<10, 1>(CPARS, 10 + CPARS);
-
-        b.head<CPARS>().noalias() += accH.block<CPARS, 1>(0, 10 + CPARS);
-      }
-
-    // ----- new: copy transposed parts.
-    for (int h = 0; h < nframes[tid]; h++) {
-      int hIdx = CPARS + h * 19;
-      H.block<CPARS, 19>(0, hIdx).noalias() = H.block<19, CPARS>(hIdx, 0).transpose();
-
-      for (int t = h + 1; t < nframes[tid]; t++) {
-        int tIdx = CPARS + t * 19;
-        H.block<19, 19>(hIdx, tIdx).noalias() += H.block<19, 19>(tIdx, hIdx).transpose();
-        H.block<19, 19>(tIdx, hIdx).noalias() = H.block<19, 19>(hIdx, tIdx).transpose();
-      }
-    }
-
-
-    if (usePrior) {
-      assert(useDelta);
-      H.diagonal().head<CPARS>() += EF->cPrior;
-      b.head<CPARS>() += EF->cPrior.cwiseProduct(EF->cDeltaF.cast<double>());
-      for (int h = 0; h < nframes[tid]; h++) {
-        H.diagonal().segment<19>(CPARS + h * 19) += EF->frames[h]->prior;
-        b.segment<19>(CPARS + h * 19) += EF->frames[h]->prior.cwiseProduct(EF->frames[h]->delta_prior);
-      }
-    }
-  }
-
-  void AccumulatedTopHessianSSE::stitchDoubleInternal(
-      MatXX *H, VecX *b, EnergyFunctional const *const EF, bool usePrior,
-      int min, int max, Vec10 *stats, int tid) {
-    int toAggregate = NUM_THREADS;
-    if (tid == -1) {
-      toAggregate = 1;
-      tid = 0;
-    }  // special case: if we dont do multithreading, dont aggregate.
-    if (min == max) return;
-
-
-    for (int k = min; k < max; k++) {
-      int h = k % nframes[0];
-      int t = k / nframes[0];
-
-      int hIdx = CPARS + h * 19;
-      int tIdx = CPARS + t * 19;
-      int aidx = h + nframes[0] * t;
-
-      assert(aidx == k);
-
-      MatPCPC15 accH = MatPCPC15::Zero();
-
-      for (int tid2 = 0; tid2 < toAggregate; tid2++) {
-        acc[tid2][aidx].finish();
-        if (acc[tid2][aidx].num == 0) continue;
-        accH += acc[tid2][aidx].H.cast<double>();
-      }
-
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial \xi_i}
-      H[tid].block<10, 10>(hIdx, hIdx).noalias() +=
-          EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adHost[aidx].transpose();
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T {\partial r_{(k)} \over \partial \xi_j}
-      H[tid].block<10, 10>(tIdx, tIdx).noalias() +=
-          EF->adTarget[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial \xi_j}
-      H[tid].block<10, 10>(hIdx, tIdx).noalias() +=
-          EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T {\partial r_{(k)} \over \partial C}
-      H[tid].block<10, CPARS>(hIdx, 0).noalias() += EF->adHost[aidx] * accH.block<10, CPARS>(CPARS, 0);
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T {\partial r_{(k)} \over \partial C}
-      H[tid].block<10, CPARS>(tIdx, 0).noalias() += EF->adTarget[aidx] * accH.block<10, CPARS>(CPARS, 0);
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial C}^T {\partial r_{(k)} \over \partial C}
-      H[tid].topLeftCorner<CPARS, CPARS>().noalias() += accH.block<CPARS, CPARS>(0, 0);
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_i}^T r_{(k)}
-      b[tid].segment<10>(hIdx).noalias() += EF->adHost[aidx] * accH.block<10, 1>(CPARS, CPARS + 10);
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial \xi_j}^T r_{(k)}
-      b[tid].segment<10>(tIdx).noalias() += EF->adTarget[aidx] * accH.block<10, 1>(CPARS, CPARS + 10);
-      //- \sum_{k=1}^N {\partial r_{(k)} \over \partial C}^T r_{(k)}
-      b[tid].head<CPARS>().noalias() += accH.block<CPARS, 1>(0, CPARS + 10);
-
-    }
-
-
-    // only do this on one thread.
-    if (min == 0 && usePrior) {
-      H[tid].diagonal().head<CPARS>() += EF->cPrior;
-      b[tid].head<CPARS>() += EF->cPrior.cwiseProduct(EF->cDeltaF.cast<double>());
-      for (int h = 0; h < nframes[tid]; h++) {
-        H[tid].diagonal().segment<19>(CPARS + h * 19) += EF->frames[h]->prior;
-        b[tid].segment<19>(CPARS + h * 19) += EF->frames[h]->prior.cwiseProduct(EF->frames[h]->delta_prior);
-      }
-    }
-  }
-
-#endif
 #else
   void AccumulatedTopHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                                               bool useDelta, int tid) {

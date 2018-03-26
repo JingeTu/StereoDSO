@@ -164,6 +164,7 @@ public:
     }
   }
 
+private:
   std::vector<IMUMeasurement> vec_imu_;
 };
 

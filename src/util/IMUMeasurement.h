@@ -5,15 +5,12 @@
 #ifndef DSO_IMUMEASUREMENT_H
 #define DSO_IMUMEASUREMENT_H
 
-#include <Eigen/Dense>
-#include "NumType.h"
-
 namespace dso {
   struct IMUMeasurement {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     double timestamp;
-    Eigen::Vector3d gyr;
-    Eigen::Vector3d acc;
+    Vec3 gyr;
+    Vec3 acc;
   };
 
   struct IMUParameters {

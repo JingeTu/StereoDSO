@@ -310,8 +310,7 @@ namespace dso {
 
   }
 
-#if STEREO_MODE
-
+#if STEREO_MODE & !INERTIAL_MODE
   void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
                                       AffLight aff_g2l_r) {
     acc.initialize();
@@ -410,8 +409,6 @@ namespace dso {
   Vec6
   CoarseTracker::calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH) {
     float E = 0;
-//    float Et = 0;
-//    float Es = 0;
     int numTermsInE = 0;
     int numTermsInWarped = 0;
     int numSaturated = 0;
@@ -433,9 +430,6 @@ namespace dso {
     Vec2f affLL_r = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrameRight->ab_exposure, lastRef_aff_g2l,
                                                 aff_g2l_r).cast<float>();
 
-//    std::cout << "newFrameRight->ab_exposure: " << newFrameRight->ab_exposure << std::endl;
-//    std::cout << "aff_g2l_r.a: " << aff_g2l_r.a << std::endl;
-//    std::cout << "aff_g2l_r.b: " << aff_g2l_r.b << std::endl;
     assert(std::isfinite(affLL[0]));
 
     //- Static stereo reprojection
@@ -528,13 +522,10 @@ namespace dso {
       float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
       float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
 
-//      assert(std::isfinite(residual) && std::isfinite(residual_r));
       if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
         if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
         E += maxEnergy;
         E += maxEnergy;
-//        Et += maxEnergy;
-//        Es += maxEnergy;
         numTermsInE++;
         numSaturated++;
       }
@@ -543,8 +534,6 @@ namespace dso {
 
         E += hw * residual * residual * (2 - hw);
         E += hw_r * residual_r * residual_r * (2 - hw_r);
-//        Et += hw * residual * residual * (2 - hw);
-//        Es += hw_r * residual_r * residual_r * (2 - hw_r);
         numTermsInE++;
 
         buf_warped_idepth[numTermsInWarped] = new_idepth;
@@ -591,10 +580,6 @@ namespace dso {
       delete resImage;
     }
 
-//    printf("nl: %d\t numTermsInE: %d\t saturatedRatio: %f\n", nl, numTermsInE, numSaturated / (float) numTermsInE);
-//    printf("Et: %f\t Es: %f\n", Et, Es);
-
-//    assert(std::isfinite(E) && std::isfinite(numTermsInE));
     Vec6 rs;
     rs[0] = E;
     rs[1] = numTermsInE;
@@ -605,8 +590,8 @@ namespace dso {
 
     return rs;
   }
-
-#else
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
   void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
     acc.initialize();
 
@@ -816,7 +801,6 @@ namespace dso {
 
     return rs;
   }
-
 #endif
 
 
@@ -1003,7 +987,7 @@ namespace dso {
 
   }
 
-#if STEREO_MODE
+#if STEREO_MODE & !INERTIAL_MODE
 
   bool CoarseTracker::trackNewestCoarseStereo(
       FrameHessian *newFrameHessian,
@@ -1204,7 +1188,8 @@ namespace dso {
     return true;
   }
 
-#else
+#endif
+#if !STEREO_MODE & !INERTIAL_MODE
   bool CoarseTracker::trackNewestCoarse(
       FrameHessian *newFrameHessian,
       SE3 &lastToNew_out, AffLight &aff_g2l_out,

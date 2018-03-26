@@ -121,7 +121,6 @@ namespace dso {
   float setting_staticLambda = 0.5; //- For temporal stereo and static stereo combination.
 
   float setting_acceptStaticDepthFactor = 50;
-  float setting_temporal_imu_data_overlap = 0.02;
 
 // parameters controlling adaptive energy threshold computation.
   float setting_frameEnergyTHConstWeight = 0.5;
@@ -178,7 +177,7 @@ namespace dso {
   bool setting_logStuff = true;
 
 
-  bool goStepByStep = true;
+  bool goStepByStep = false;
 
 
   bool setting_render_displayCoarseTrackingFull = false;

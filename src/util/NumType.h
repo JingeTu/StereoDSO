@@ -49,6 +49,7 @@ namespace dso {
   typedef Sophus::Sim3d Sim3;
   typedef Sophus::SO3d SO3;
 
+
 #define CPARS 4 //-- Calibration Parameters
 
 
@@ -60,7 +61,6 @@ namespace dso {
   typedef Eigen::Matrix<double, CPARS, 10> MatC10;
   typedef Eigen::Matrix<double, 10, 10> Mat1010;
   typedef Eigen::Matrix<double, 13, 13> Mat1313;
-  typedef Eigen::Matrix<double, 19, 19> Mat1919;
 
   typedef Eigen::Matrix<double, 8, 10> Mat810;
   typedef Eigen::Matrix<double, 8, 3> Mat83;
@@ -85,8 +85,6 @@ namespace dso {
 
   typedef Eigen::Matrix<double, CPARS, 1> VecC;
   typedef Eigen::Matrix<float, CPARS, 1> VecCf;
-  typedef Eigen::Matrix<double, 19, 1> Vec19;
-  typedef Eigen::Matrix<double, 15, 1> Vec15;
   typedef Eigen::Matrix<double, 13, 1> Vec13;
   typedef Eigen::Matrix<double, 10, 1> Vec10;
   typedef Eigen::Matrix<double, 9, 1> Vec9;
@@ -108,7 +106,7 @@ namespace dso {
   typedef Eigen::Matrix<float, 6, 1> Vec6f;
 
   typedef Eigen::AngleAxisd AngleAxis;
-  typedef Eigen::Matrix<double, 9, 1> SpeedAndBiases;
+  typedef Eigen::Matrix<double, 9, 1> SpeedAndBias;
   typedef Eigen::Matrix<double, 15, 15> covariance_t;
   typedef Eigen::Matrix<double, 15, 15> jacobian_t;
 
@@ -133,13 +131,11 @@ namespace dso {
   typedef Eigen::Matrix<float, 12, 1> Vec12f;
   typedef Eigen::Matrix<float, 1, 8> Mat18f;
   typedef Eigen::Matrix<float, 1, 10> Mat110f;
-  typedef Eigen::Matrix<float, 1, 19> Mat119f;
   typedef Eigen::Matrix<float, 6, 6> Mat66f;
   typedef Eigen::Matrix<float, 8, 8> Mat88f;
   typedef Eigen::Matrix<float, 8, 4> Mat84f;
   typedef Eigen::Matrix<float, 8, 1> Vec8f;
   typedef Eigen::Matrix<float, 10, 1> Vec10f;
-  typedef Eigen::Matrix<float, 19, 1> Vec19f;
   typedef Eigen::Matrix<float, 6, 6> Mat66f;
   typedef Eigen::Matrix<float, 4, 1> Vec4f;
   typedef Eigen::Matrix<float, 4, 4> Mat44f;
@@ -151,9 +147,6 @@ namespace dso {
   typedef Eigen::Matrix<float, 13, 13> Mat1313f;
   typedef Eigen::Matrix<float, 15, 15> Mat1515f;
   typedef Eigen::Matrix<float, 10, 10> Mat1010f;
-  typedef Eigen::Matrix<float, 19, 19> Mat1919f;
-  typedef Eigen::Matrix<float, 31, 31> Mat3131f;
-  typedef Eigen::Matrix<float, 19, 9> Mat199f;
   typedef Eigen::Matrix<float, 13, 1> Vec13f;
   typedef Eigen::Matrix<float, 9, 9> Mat99f;
   typedef Eigen::Matrix<float, 9, 1> Vec9f;
