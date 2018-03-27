@@ -259,9 +259,9 @@ namespace dso {
         J->JIdx[0][idx] = hitColor[1];
         J->JIdx[1][idx] = hitColor[2];
         //- {\partial r_{21}} \over {\partial a_{21}}
-        J->JabF[0][idx] = drdA * hw;
+        J->JabF[0][idx] = -drdA * hw;
         //- {\partial r_{21}} \over {\partial b_{21}}
-        J->JabF[1][idx] = hw;
+        J->JabF[1][idx] = -hw;
         //- Right frame ab.
         J->JabF[2][idx] = 0;
         J->JabF[3][idx] = 0;
@@ -481,8 +481,11 @@ namespace dso {
       Vec3f hitColor = (getInterpolatedElement33(dIl, Ku, Kv, wG[0]));
       float residual = hitColor[0] - (float) (affLL[0] * color[idx] + affLL[1]);
 
-      assert(std::isfinite(affLL[0]));
-      assert(std::isfinite(affLL[1]));
+      if (!std::isfinite(affLL[0])) {
+        LOG(INFO) << "host->aff_g2l() " << host->aff_g2l().a << ", " << host->aff_g2l().b;
+        LOG(INFO) << "host->aff_g2l_r() " << host->aff_g2l_r().a << ", " << host->aff_g2l_r().b;
+        assert(std::isfinite(affLL[0]));
+      }
 
       float drdA = (color[idx] - b0);
       if (!std::isfinite((float) hitColor[0])) {
@@ -499,14 +502,6 @@ namespace dso {
       float hw = fabsf(residual) < setting_huberTH ? 1 : setting_huberTH / fabsf(residual);
       energyLeft += w * w * hw * residual * residual * (2 - hw);
 
-//      if (point->idx == 1048857839) {
-//        std::cout << "hitColor[1] " << hitColor[1] << std::endl;
-//        std::cout << "hitColor[2] " << hitColor[2] << std::endl;
-//        std::cout << "hw " << hw << std::endl;
-//        std::cout << "affLL[0] " << affLL[0] << std::endl;
-//        std::cout << "affLL[1] " << affLL[1] << std::endl;
-//      }
-
       {
         if (hw < 1) hw = sqrtf(hw);
         hw = hw * w;
@@ -522,9 +517,9 @@ namespace dso {
         J->JabF[1][idx] = 0;
         //- Right frame ab.
         //- {\partial r_{21}} \over {\partial a_{21}}
-        J->JabF[2][idx] = drdA * hw;
+        J->JabF[2][idx] = -drdA * hw;
         //- {\partial r_{21}} \over {\partial b_{21}}
-        J->JabF[3][idx] = hw;
+        J->JabF[3][idx] = -hw;
 
         JIdxJIdx_00 += hitColor[1] * hitColor[1];
         JIdxJIdx_11 += hitColor[2] * hitColor[2];
@@ -555,8 +550,14 @@ namespace dso {
 
         wJI2_sum += hw * hw * (hitColor[1] * hitColor[1] + hitColor[2] * hitColor[2]);
 
-        if (setting_affineOptModeA < 0) J->JabF[0][idx] = 0;
-        if (setting_affineOptModeB < 0) J->JabF[1][idx] = 0;
+        if (setting_affineOptModeA < 0) {
+          J->JabF[0][idx] = 0;
+          J->JabF[2][idx] = 0;
+        }
+        if (setting_affineOptModeB < 0) {
+          J->JabF[1][idx] = 0;
+          J->JabF[3][idx] = 0;
+        }
 
       }
     }
@@ -583,13 +584,6 @@ namespace dso {
     J->Jab2(2, 2) = JabJab_22;
     J->Jab2(2, 3) = J->Jab2(3, 2) = JabJab_23;
     J->Jab2(3, 3) = JabJab_33;
-
-    if (point->idx == 1048857839) {
-      std::cout << "J->Jpdd " << J->Jpdd << std::endl;
-      std::cout << "J->JIdx2 " << J->JIdx2 << std::endl;
-      std::cout << "host->idx " << host->idx << std::endl;
-      std::cout << "J->JIdx2 " << J->JIdx2 << std::endl;
-    }
 
     if (energyLeft > std::max<float>(host->frameEnergyTH, target->frameEnergyTH) || wJI2_sum < 2) {
       energyLeft = std::max<float>(host->frameEnergyTH, target->frameEnergyTH);

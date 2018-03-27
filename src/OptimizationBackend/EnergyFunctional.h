@@ -87,6 +87,7 @@ namespace dso {
 
     ~EnergyFunctional();
 
+    int marginalizeCountforDebug;
 
     EFResidual *insertResidual(PointFrameResidual *r);
 

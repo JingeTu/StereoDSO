@@ -77,6 +77,12 @@ namespace dso {
         else {
           accD[tid][r1ht + r2->targetIDX * nFrames2].update(r1->JpJdF, r2->JpJdF, p->HdiF);
         }
+//        if (r1->targetIDX == -1 && r1 == r2) {
+//          LOG(INFO) << "r1 == r2";
+//          LOG(INFO) << "accD: "<< p->HdiF * r1->JpJdF * r1->JpJdF.transpose();
+//          LOG(INFO) << "r1->JpJdF: " << r1->JpJdF;
+//          LOG(INFO) << "r1 == r2";
+//        }
       }
 
       accE[tid][r1ht].update(r1->JpJdF, Hcd, p->HdiF);
@@ -138,12 +144,28 @@ namespace dso {
               accD[tid2][ijkIdx].A1m.cast<double>();
         }
 
+//        if(i == j && j == k) {
+//          LOG(INFO) << "i == j\t" << i;
+////          LOG(INFO) << "adHost[" << j << ", " << i << "]: " << EF->adHost[ijIdx];
+////          LOG(INFO) << "adTarget[" << j << ", " << i << "]: " << EF->adTarget[ijIdx];
+////          LOG(INFO) << "accDM[" << j << ", " << i << "]: " << accDM;
+//          LOG(INFO) << "adHost accDM[" << j << ", " << i << "] adTarget: " << EF->adHost[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
+//          LOG(INFO) << "k\t" << k;
+//          LOG(INFO) << "i == j\t" << i;
+//        }
+
         H[tid].block<10, 10>(iIdx, iIdx) += EF->adHost[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
         H[tid].block<10, 10>(jIdx, kIdx) += EF->adTarget[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
         H[tid].block<10, 10>(jIdx, iIdx) += EF->adTarget[ijIdx] * accDM * EF->adHost[ikIdx].transpose();
         H[tid].block<10, 10>(iIdx, kIdx) += EF->adHost[ijIdx] * accDM * EF->adTarget[ikIdx].transpose();
       }
     }
+
+//    for (int i = 0; i < nf; i++) {
+//      LOG(INFO) << "i == j\t" << i;
+//      LOG(INFO) << "H[tid].block<10, 10>(iIdx, iIdx)" << H[tid].block<10, 10>(CPARS + i * 10, CPARS + i * 10);
+//      LOG(INFO) << "i == j END \t" << i;
+//    }
 
     if (min == 0) {
       for (int tid2 = 0; tid2 < toAggregate; tid2++) {

@@ -432,8 +432,6 @@ int main(int argc, char **argv) {
 
       int i = idsToPlay[ii];
 
-      printf("main image i: %d\n", i);
-
       ImageAndExposure *img_left;
       ImageAndExposure *img_right;
       if (preload) {

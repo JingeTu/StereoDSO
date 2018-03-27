@@ -30,6 +30,7 @@
 #include <math.h>
 #include "OptimizationBackend/RawResidualJacobian.h"
 #include "util/settings.h"
+#include <boost/thread.hpp>
 
 namespace dso {
 

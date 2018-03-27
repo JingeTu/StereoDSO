@@ -896,7 +896,7 @@ namespace dso {
             float u_stereo_delta = abs(phNonKey->u_stereo - phNonKeyRight->lastTraceUV(0));
             float disparity = phNonKey->u_stereo - phNonKey->lastTraceUV[0];
 
-            if (u_stereo_delta > 1 && disparity < 10) {
+            if (u_stereo_delta > 1) {
               ph->lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER;
             }
             else {
@@ -1580,6 +1580,8 @@ namespace dso {
     if (isLost) return;
     boost::unique_lock<boost::mutex> lock(trackMutex);
 
+    LOG(INFO) << "addActiveFrame id: " << id;
+
     // =========================== add into allFrameHistory =========================
     FrameHessian *fh = new FrameHessian();
     FrameShell *shell = new FrameShell();
@@ -1629,7 +1631,6 @@ namespace dso {
         fh->shell->T_WC = coarseInitializer->T_WC_ini;
         fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
 
-        fhRight->shell->aff_g2l = fhRight->shell->aff_g2l;
         fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
       }
       return;
@@ -1722,7 +1723,7 @@ namespace dso {
 
     if (linearizeOperation) {
       if (goStepByStep && lastRefStopID != coarseTracker->refFrameID) {
-        printf("allFrameHistory.size() == %d\n", (int) allFrameHistory.size());
+        LOG(INFO) << "allFrameHistory.size() == " << allFrameHistory.size();
         MinimalImageF3 img(wG[0], hG[0], fh->dI);
         IOWrap::displayImage("frameToTrack", &img);
         while (true) {
@@ -1857,6 +1858,8 @@ namespace dso {
 
       fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
     }
+    traceNewCoarseNonKey(fh, fhRight);
+//    traceNewCoarseKey(fh);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
     {
@@ -1868,14 +1871,9 @@ namespace dso {
       fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
       fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
-#endif
-
-#if STEREO_MODE & !INERTIAL_MODE
-    traceNewCoarseNonKey(fh, fhRight);
-#endif
-#if !STEREO_MODE & !INERTIAL_MODE
     traceNewCoarseKey(fh);
 #endif
+
     delete fh;
     delete fhRight;
   }
@@ -2174,10 +2172,6 @@ namespace dso {
       firstFrame->shell->trackingRef = 0;
       firstFrame->shell->camToTrackingRef = SE3();
 
-//      firstFrameRight->shell->aff_g2l = firstFrame->shell->aff_g2l;
-//      firstFrameRight->shell->T_WC = firstFrame->shell->T_WC * leftToRight_SE3.inverse();
-//      firstFrameRight->setEvalPT_scaled(firstFrameRight->shell->T_WC.inverse(), firstFrameRight->shell->aff_g2l);
-
       newFrame->shell->T_WC = T_10.inverse();
       newFrame->shell->aff_g2l = AffLight(0, 0);
       newFrame->rightFrame->shell->aff_g2l = AffLight(0, 0);
@@ -2186,11 +2180,6 @@ namespace dso {
                                  newFrame->rightFrame->shell->aff_g2l);
       newFrame->shell->trackingRef = firstFrame->shell;
       newFrame->shell->camToTrackingRef = T_10.inverse();
-
-//      newFrame->rightFrame->shell->aff_g2l = newFrame->shell->aff_g2l;
-//      newFrame->rightFrame->shell->T_WC = newFrame->shell->T_WC * leftToRight_SE3.inverse();
-//      newFrame->rightFrame->setEvalPT_scaled(newFrame->rightFrame->shell->T_WC.inverse(),
-//                                             newFrame->rightFrame->shell->aff_g2l);
     }
 
     initialized = true;

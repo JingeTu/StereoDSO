@@ -120,7 +120,7 @@ namespace dso {
 
   float setting_staticLambda = 0.5; //- For temporal stereo and static stereo combination.
 
-  float setting_acceptStaticDepthFactor = 50;
+  float setting_acceptStaticDepthFactor = 200;
 
 // parameters controlling adaptive energy threshold computation.
   float setting_frameEnergyTHConstWeight = 0.5;

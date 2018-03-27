@@ -1480,7 +1480,6 @@ namespace dso {
       if (debugSaveImages) {
         char buf[1000];
         snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
-//        snprintf(buf, 1000, "images_out/predicted_%05d_%d.png", lastRef->shell->id, (int)count);
         IOWrap::writeImage(buf, &mf);
       }
 

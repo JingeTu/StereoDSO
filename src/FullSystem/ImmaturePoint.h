@@ -24,7 +24,7 @@
 
 #pragma once
 
-#define USE_NCC 1
+#define USE_NCC 0
 
 #include "util/NumType.h"
 

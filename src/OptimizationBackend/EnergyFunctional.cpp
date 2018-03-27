@@ -66,28 +66,62 @@ namespace dso {
 
         Vec2f affLL = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l_0(),
                                                   target->aff_g2l_0()).cast<float>();
+
+        if (t == h) {
+          affLL = AffLight::fromToVecExposure(host->ab_exposure, host->rightFrame->ab_exposure, host->aff_g2l_0(),
+                                              host->aff_g2l_r_0()).cast<float>();
+        }
         //- original
 //        AT(6, 6) = -affLL[0];
 //        AH(6, 6) = affLL[0];
 //        AT(7, 7) = -1;
 //        AH(7, 7) = affLL[0];
 
-        if (t == h) {
-          AT(6, 6) = 0;
-          AH(6, 6) = affLL[0];
-          AT(7, 7) = 0;
-          AH(7, 7) = 0;
+        //- same as engel
+//        if (t == h) {
+//          AH(6, 8) = affLL[0];
+//          AH(7, 9) = affLL[0];
+//          AH(6, 6) = 0;
+//          AH(7, 7) = 0;
+//          AH(8, 8) = 0;
+//          AH(9, 9) = 0;
+//
+//          AT(6, 6) = 0;
+//          AT(7, 7) = 0;
+//          AT(8, 8) = -affLL[0];
+//          AT(9, 9) = -1;
+//        }
+//        else {
+//          AT(6, 6) = -affLL[0];
+//          AH(6, 6) = affLL[0];
+//          AT(7, 7) = -1;
+//          AH(7, 7) = affLL[0];
+//
+//          AT(8, 8) = 0;
+//          AH(8, 8) = 0;
+//          AT(9, 9) = 0;
+//          AH(9, 9) = 0;
+//        }
 
-          AT(8, 8) = -affLL[0];
+        //- opposite to engel
+        if (t == h) {
+          AH(6, 8) = -affLL[0];
+          AH(7, 9) = -affLL[0];
+          AH(6, 6) = 0;
+          AH(7, 7) = 0;
           AH(8, 8) = 0;
-          AT(9, 9) = -1;
           AH(9, 9) = 0;
+
+          AT(6, 6) = 0;
+          AT(7, 7) = 0;
+          AT(8, 8) = affLL[0];
+          AT(9, 9) = 1;
         }
         else {
-          AT(6, 6) = -affLL[0];
-          AH(6, 6) = affLL[0];
-          AT(7, 7) = -1;
-          AH(7, 7) = 0;
+          AT(6, 6) = affLL[0];
+          AH(6, 6) = -affLL[0];
+          AT(7, 7) = 1;
+          AH(7, 7) = -affLL[0];
 
           AT(8, 8) = 0;
           AH(8, 8) = 0;
@@ -163,10 +197,10 @@ namespace dso {
 //        AT(7, 7) = -1;
 //        AH(7, 7) = affLL[0];
 
-        AT(6, 6) = -affLL[0];
-        AH(6, 6) = affLL[0];
-        AT(7, 7) = -1;
-        AH(7, 7) = 0;
+        AT(6, 6) = affLL[0];
+        AH(6, 6) = -affLL[0];
+        AT(7, 7) = 1;
+        AH(7, 7) = -affLL[0];
 
         AH.block<3, 8>(0, 0) *= SCALE_XI_TRANS;
         AH.block<3, 8>(3, 0) *= SCALE_XI_ROT;
@@ -205,7 +239,7 @@ namespace dso {
   EnergyFunctional::EnergyFunctional() {
     adHost = 0;
     adTarget = 0;
-
+    marginalizeCountforDebug = 0;
 
     red = 0;
 
@@ -374,9 +408,8 @@ namespace dso {
     VecXf xF = x.cast<float>();
     HCalib->step = -x.head<CPARS>();
 
-//    std::cout << "xF: " << xF << std::endl;
-
     VecCf cstep = xF.head<CPARS>();
+    if (!std::isfinite(cstep.norm())) cstep.setZero();
 #if STEREO_MODE & !INERTIAL_MODE
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
@@ -777,9 +810,14 @@ namespace dso {
     assert(EFAdjointsValid);
     assert(EFIndicesValid);
 
+    LOG(INFO) << "marginalize times: " << marginalizeCountforDebug;
+
     assert((int) efF->points.size() == 0);
     int ndim = nFrames * 10 + CPARS - 10;// new dimension
     int odim = nFrames * 10 + CPARS;// old dimension
+
+    MatXX HM_temp = HM;
+    VecX bM_temp = bM;
 
     if ((int) efF->idx != (int) frames.size() - 1) {
       int io = efF->idx * 10 + CPARS;  // index of frame to move to end
@@ -802,13 +840,17 @@ namespace dso {
       HM.bottomRows(10) = HtmpRow;
     }
 
-//	// marginalize. First add prior here, instead of to active.
+    // marginalize. First add prior here, instead of to active.
     HM.bottomRightCorner<10, 10>().diagonal() += efF->prior;
     bM.tail<10>() += efF->prior.cwiseProduct(efF->delta_prior);
 
-
     VecX SVec = (HM.diagonal().cwiseAbs() + VecX::Constant(HM.cols(), 10)).cwiseSqrt();
     VecX SVecI = SVec.cwiseInverse();
+
+    if (!std::isfinite(SVecI.norm())) {
+      LOG(INFO) << "SVecI: " << SVecI;
+      LOG(INFO) << "SVec: " << SVec;
+    }
 
     // scale!
     MatXX HMScaled = SVecI.asDiagonal() * HM * SVecI.asDiagonal();
@@ -819,6 +861,19 @@ namespace dso {
     hpi = 0.5f * (hpi + hpi);
     hpi = hpi.inverse();
     hpi = 0.5f * (hpi + hpi);
+    if (!std::isfinite(hpi.norm())) {
+      LOG(INFO) << "hpi.norm() infinite";
+      LOG(INFO) << "efF l_l : " << efF->data->aff_g2l().a << efF->data->aff_g2l().b;
+      LOG(INFO) << "efF l_r : " << efF->data->aff_g2l_r().a << efF->data->aff_g2l_r().b;
+      Mat88 botRht88;
+      hpi = Mat1010::Identity();
+      botRht88 = HMScaled.bottomRightCorner<10, 10>().topLeftCorner<8, 8>();
+      botRht88 = 0.5f * (botRht88 + botRht88);
+      botRht88 = botRht88.inverse();
+      botRht88 = 0.5f * (botRht88 + botRht88);
+      hpi.block<8, 8>(0, 0) = botRht88;
+      LOG(INFO) << HMScaled.bottomRightCorner<10, 10>();
+    }
 
     // schur-complement!
     MatXX bli = HMScaled.bottomLeftCorner(10, ndim).transpose() * hpi;
@@ -832,8 +887,6 @@ namespace dso {
     // set.
     HM = 0.5 * (HMScaled.topLeftCorner(ndim, ndim) + HMScaled.topLeftCorner(ndim, ndim).transpose());
     bM = bMScaled.head(ndim);
-
-//    assert(std::isfinite(bM.norm()));
 
     // remove from vector, without changing the order!
     for (unsigned int i = efF->idx; i + 1 < frames.size(); i++) {
@@ -863,6 +916,7 @@ namespace dso {
 
     makeIDX();
     delete efF;
+    marginalizeCountforDebug++;
   }
 
 #endif
@@ -984,6 +1038,22 @@ namespace dso {
       }
     }
 
+    LOG(INFO) << "allPointsToMarg.size(): " << allPointsToMarg.size();
+    //-- checkout if there is points with static residaul in allPointsToMarg
+    int countIDX = 0;
+    int countIDX1 = 0;
+    for (EFPoint *p : allPointsToMarg) {
+      for (EFResidual *r : p->residualsAll) {
+        if (r->isActive()) {
+          if (r->targetIDX == -1) {
+            countIDX++;
+            if (r->point->host->data->flaggedForMarginalization) countIDX1++;
+          }
+        }
+      }
+    }
+    LOG(INFO) << "EnergyFunctional::marginalizePointsF countIDX " << countIDX1 << " / " << countIDX;
+
     accSSE_bot->setZero(nFrames);
     accSSE_top_A->setZero(nFrames);
     for (EFPoint *p : allPointsToMarg) {
@@ -1018,6 +1088,12 @@ namespace dso {
 
     if (setting_solverMode & SOLVER_ORTHOGONALIZE_FULL)
       orthogonalize(&bM, &HM);
+
+
+//    LOG(INFO) << "HM: " << HM;
+//    LOG(INFO) << "M: " << M;
+//    LOG(INFO) << "Msc: " << Msc;
+//    LOG(INFO) << HM.cols() << ", " << HM.rows();
 
     EFIndicesValid = false;
     makeIDX();
@@ -1067,11 +1143,11 @@ namespace dso {
     // decide to which nullspaces to orthogonalize.
     std::vector<VecX> ns;
     ns.insert(ns.end(), lastNullspaces_pose.begin(), lastNullspaces_pose.end());
-    ns.insert(ns.end(), lastNullspaces_scale.begin(), lastNullspaces_scale.end());
-//	if(setting_affineOptModeA <= 0)
-//		ns.insert(ns.end(), lastNullspaces_affA.begin(), lastNullspaces_affA.end());
-//	if(setting_affineOptModeB <= 0)
-//		ns.insert(ns.end(), lastNullspaces_affB.begin(), lastNullspaces_affB.end());
+//    ns.insert(ns.end(), lastNullspaces_scale.begin(), lastNullspaces_scale.end());
+    if (setting_affineOptModeA <= 0)
+      ns.insert(ns.end(), lastNullspaces_affA.begin(), lastNullspaces_affA.end());
+    if (setting_affineOptModeB <= 0)
+      ns.insert(ns.end(), lastNullspaces_affB.begin(), lastNullspaces_affB.end());
 
 
 
@@ -1173,7 +1249,6 @@ namespace dso {
       HFinal_top = HL_top + HM + HA_top;
       bFinal_top = bL_top + bM_top + bA_top - b_sc;
 
-//      std::cout << "bFinal_top: " << bFinal_top << std::endl;
       lastHS = HFinal_top - H_sc;
       lastbS = bFinal_top;
 
@@ -1223,25 +1298,43 @@ namespace dso {
       MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
       x = SVecI.asDiagonal() *
           HFinalScaled.ldlt().solve(SVecI.asDiagonal() * bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
+      if (!std::isfinite(x.norm())) {
+//        LOG(INFO) << "HFinal_top: " << HFinal_top;
+//        LOG(INFO) << "bFinal_top: " << bFinal_top;
+//        LOG(INFO) << "HL_top: " << HL_top;
+//        LOG(INFO) << "bL_top: " << bL_top;
+//        LOG(INFO) << "bM_top: " << bM_top;
+//        LOG(INFO) << "HA_top: " << HA_top;
+//        LOG(INFO) << "bA_top: " << bA_top;
+//        LOG(INFO) << "H_sc: " << H_sc;
+//        LOG(INFO) << "b_sc: " << b_sc;
+//        LOG(INFO) << "bM_top: " << bM_top;
+//        LOG(INFO) << "bM: " << bM;
+//        LOG(INFO) << "HM: " << HM;
+//        LOG(INFO) << "getStitchedDeltaF(): " << getStitchedDeltaF();
+
+//        bM_top = (bM + HM * getStitchedDeltaF());
+//        HFinal_top = HL_top + HM + HA_top;
+//        bFinal_top = bL_top + bM_top + bA_top - b_sc;
+      }
 //      std::cout << "HFinal_top: " << HFinal_top << std::endl;
 //      std::cout << "bFinal_top: " << bFinal_top << std::endl;
     }
+
+//    LOG(INFO) << "HA_top: " << HA_top;
+//    LOG(INFO) << "HFinal_top: " << HFinal_top;
+//    LOG(INFO) << "HFinal_top" << HFinal_top.size();
 
 
     if ((setting_solverMode & SOLVER_ORTHOGONALIZE_X) ||
         (iteration >= 2 && (setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER))) {
       VecX xOld = x;
       orthogonalize(&x, 0);
-//      std::cout << "xOld: " << xOld << std::endl;
     }
 
 
     lastX = x;
 
-//    std::cout << "x: " << x << std::endl;
-
-//	printf("x.size(): %ld, %ld\n", x.rows(), x.cols());
-//    resubstituteF(x, HCalib);
     currentLambda = lambda;
     //- Modify step.
     resubstituteF_MT(x, HCalib, multiThreading);

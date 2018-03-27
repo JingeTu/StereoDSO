@@ -43,6 +43,12 @@ namespace dso {
     for (int i = 0; i < 6; i++)
       JpJdF[i] = J->Jpdxi[0][i] * JI_JI_Jd[0] + J->Jpdxi[1][i] * JI_JI_Jd[1];
 
+//    if (targetIDX == -1) { //-- checkout static residual
+//      LOG(INFO) << "J->JabJIdx: " << J->JabJIdx;
+//      LOG(INFO) << "J->Jpdd: " << J->Jpdd;
+//      LOG(INFO) << "\t";
+//    }
+
 #if STEREO_MODE
     JpJdF.segment<4>(6) = J->JabJIdx * J->Jpdd;
 #else

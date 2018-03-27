@@ -50,6 +50,11 @@ namespace dso {
     float Hdd_acc = 0;
     VecCf Hcd_acc = VecCf::Zero();
 
+//    if (mode == 2) {
+//      LOG(INFO) << "mode == 2";
+//      LOG(INFO) << "mode == 2";
+//    }
+
     for (EFResidual *r : p->residualsAll) {
       if (mode == 0) // active
       {
@@ -346,6 +351,11 @@ namespace dso {
         if (acc[tid][aidx].num == 0) continue;
 
         MatPCPC15 accH = acc[tid][aidx].H.cast<double>();
+
+//        if (h == t) {
+//          LOG(INFO) << "AccumulatedTopHessian h == t\t" << EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adHost[aidx].transpose();
+//          LOG(INFO) << "h == t";
+//        }
 
         H.block<10, 10>(hIdx, hIdx).noalias() +=
             EF->adHost[aidx] * accH.block<10, 10>(CPARS, CPARS) * EF->adHost[aidx].transpose();

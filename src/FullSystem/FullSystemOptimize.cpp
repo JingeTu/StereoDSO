@@ -49,36 +49,36 @@ namespace dso {
                                          int max, Vec10 *stats, int tid) {//- fixLinearization == false
     for (int k = min; k < max; k++) {
       PointFrameResidual *r = activeResiduals[k];
-      if (r->staticStereo) {
+      if (r->staticStereo)
         (*stats)[0] += r->linearizeStatic(&Hcalib);
-        continue;
-      }
       else
         (*stats)[0] += r->linearize(&Hcalib);
 
       if (fixLinearization) {
         r->applyRes(true);
 
-        if (r->efResidual->isActive()) {
-          if (r->isNew) // NO USE: this is just calculate for display
-          {
-            PointHessian *p = r->point;
-            Vec3f ptp_inf = r->host->targetPrecalc[r->target->idx].PRE_KRKiTll *
-                            Vec3f(p->u, p->v, 1);  // projected point assuming infinite depth.
-            Vec3f ptp = ptp_inf + r->host->targetPrecalc[r->target->idx].PRE_KtTll *
-                                  p->idepth_scaled;  // projected point with real depth.
-            float relBS =
-                0.01 * ((ptp_inf.head<2>() / ptp_inf[2]) - (ptp.head<2>() / ptp[2])).norm();  // 0.01 = one pixel.
+        if (!r->staticStereo) {
+          if (r->efResidual->isActive()) {
+            if (r->isNew) // NO USE: this is just calculate for display
+            {
+              PointHessian *p = r->point;
+              Vec3f ptp_inf = r->host->targetPrecalc[r->target->idx].PRE_KRKiTll *
+                              Vec3f(p->u, p->v, 1);  // projected point assuming infinite depth.
+              Vec3f ptp = ptp_inf + r->host->targetPrecalc[r->target->idx].PRE_KtTll *
+                                    p->idepth_scaled;  // projected point with real depth.
+              float relBS =
+                  0.01 * ((ptp_inf.head<2>() / ptp_inf[2]) - (ptp.head<2>() / ptp[2])).norm();  // 0.01 = one pixel.
 
 
-            if (relBS > p->maxRelBaseline)
-              p->maxRelBaseline = relBS;
+              if (relBS > p->maxRelBaseline)
+                p->maxRelBaseline = relBS;
 
-            p->numGoodResiduals++;
+              p->numGoodResiduals++;
+            }
           }
-        }
-        else {
-          toRemove[tid].push_back(activeResiduals[k]); // tid: thread id for different thread
+          else {
+            toRemove[tid].push_back(activeResiduals[k]); // tid: thread id for different thread
+          }
         }
       }
     }
@@ -152,6 +152,7 @@ namespace dso {
     }
     else {
       Vec10 stats;
+      stats.setZero();
       linearizeAll_Reductor(fixLinearization, toRemove, 0, activeResiduals.size(), &stats, 0);
       lastEnergyP = stats[0];
     }
@@ -221,7 +222,7 @@ namespace dso {
     float sumNID = 0;
 
     if (setting_solverMode & SOLVER_MOMENTUM) {
-//      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
+      Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
 #if STEREO_MODE & !INERTIAL_MODE
         Vec10 step = fh->step;
@@ -246,16 +247,12 @@ namespace dso {
 
           ph->setIdepthZero(ph->idepth_backup + step);
         }
-
-//        assert(fh->rightFrame != 0);
-//        fh->rightFrame->setState(fh->rightFrame->state_backup + step);
       }
     }
     else {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
         fh->setState(fh->state_backup + pstepfac.cwiseProduct(fh->step));
-//        fh->rightFrame->setState(fh->rightFrame->state_backup + pstepfac.cwiseProduct(fh->rightFrame->step));
 
         sumA += fh->step[6] * fh->step[6];
         sumB += fh->step[7] * fh->step[7];
@@ -390,7 +387,6 @@ namespace dso {
             b
     );
     LOG(INFO) << buf;
-
   }
 
 
@@ -465,7 +461,6 @@ namespace dso {
       double incDirChange = (1e-20 + previousX.dot(ef->lastX)) / (1e-20 + previousX.norm() * ef->lastX.norm());
       previousX = ef->lastX;
 
-
       if (std::isfinite(incDirChange) && (setting_solverMode & SOLVER_STEPMOMENTUM)) {
         float newStepsize = exp(incDirChange * 1.4);
         if (incDirChange < 0 && stepsize > 1) stepsize = 1;
@@ -492,7 +487,6 @@ namespace dso {
                 log10(lambda),
                 incDirChange,
                 stepsize);
-        LOG(INFO) << buf;
         printOptRes(newEnergy, newEnergyL, newEnergyM, 0, 0, frameHessians.back()->aff_g2l().a,
                     frameHessians.back()->aff_g2l().b);
       }
@@ -608,7 +602,6 @@ namespace dso {
       for (unsigned int i = 0; i < fh->pointHessians.size(); i++) {
         PointHessian *ph = fh->pointHessians[i];
         if (ph == 0) continue;
-
         if (ph->residuals.size() == 0) {
           fh->pointHessiansOut.push_back(ph);
           ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
