@@ -1639,12 +1639,6 @@ namespace dso {
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
-        //- Initialize IMU
-        Sophus::Quaterniond q_WS = imuPropagation->initializeRollPitchFromMeasurements(imuMeasurements);
-        q_WS.setIdentity();
-        // T_WS * T_SC0 = T_WC0
-//        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond::Identity(), Vec3(0, 0, 0)) * T_SC0;
-        coarseInitializer->T_WC_ini = SE3();
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirst(&Hcalib, fh);
       }

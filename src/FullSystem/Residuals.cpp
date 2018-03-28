@@ -755,23 +755,27 @@ namespace dso {
         J->JIdx[0][idx] = hitColor[1];
         J->JIdx[1][idx] = hitColor[2];
         //- {\partial r_{21}} \over {\partial a_{21}}
-        J->JabF[0][idx] = drdA * hw;
+        J->JabF[0][idx] = -drdA * hw;
         //- {\partial r_{21}} \over {\partial b_{21}}
-        J->JabF[1][idx] = hw;
+        J->JabF[1][idx] = -hw;
 
         JIdxJIdx_00 += hitColor[1] * hitColor[1];
         JIdxJIdx_11 += hitColor[2] * hitColor[2];
         JIdxJIdx_10 += hitColor[1] * hitColor[2];
 
-        JabJIdx_00 += drdA * hw * hitColor[1];
-        JabJIdx_01 += drdA * hw * hitColor[2];
-        JabJIdx_10 += hw * hitColor[1];
-        JabJIdx_11 += hw * hitColor[2];
+//        JabJIdx_00 += drdA * hw * hitColor[1];
+//        JabJIdx_01 += drdA * hw * hitColor[2];
+        JabJIdx_00 += J->JabF[0][idx] * hitColor[1];
+        JabJIdx_01 += J->JabF[0][idx] * hitColor[2];
+        JabJIdx_10 += J->JabF[1][idx] * hitColor[1];
+        JabJIdx_11 += J->JabF[1][idx] * hitColor[2];
 
-        JabJab_00 += drdA * drdA * hw * hw;
-        JabJab_01 += drdA * hw * hw;
-        JabJab_11 += hw * hw;
-
+//        JabJab_00 += drdA * drdA * hw * hw;
+//        JabJab_01 += drdA * hw * hw;
+//        JabJab_11 += hw * hw;
+        JabJab_00 += J->JabF[0][idx] * J->JabF[0][idx];
+        JabJab_01 += J->JabF[0][idx] * J->JabF[1][idx];
+        JabJab_11 += J->JabF[1][idx] * J->JabF[1][idx];
 
         wJI2_sum += hw * hw * (hitColor[1] * hitColor[1] + hitColor[2] * hitColor[2]);
 
@@ -809,6 +813,7 @@ namespace dso {
   }
 
   double PointFrameResidual::linearizeStatic(CalibHessian *HCalib) {
+    assert(false); //-- for MONO, no static residual
     assert(host->rightFrame == target);
     state_NewEnergyWithOutlier = -1;
 
@@ -952,22 +957,22 @@ namespace dso {
         J->JIdx[0][idx] = hitColor[1];
         J->JIdx[1][idx] = hitColor[2];
         //- {\partial r_{21}} \over {\partial a_{21}}
-        J->JabF[0][idx] = drdA * hw;
+        J->JabF[0][idx] = -drdA * hw;
         //- {\partial r_{21}} \over {\partial b_{21}}
-        J->JabF[1][idx] = hw;
+        J->JabF[1][idx] = -hw;
 
         JIdxJIdx_00 += hitColor[1] * hitColor[1];
         JIdxJIdx_11 += hitColor[2] * hitColor[2];
         JIdxJIdx_10 += hitColor[1] * hitColor[2];
 
-        JabJIdx_00 += drdA * hw * hitColor[1];
-        JabJIdx_01 += drdA * hw * hitColor[2];
-        JabJIdx_10 += hw * hitColor[1];
-        JabJIdx_11 += hw * hitColor[2];
+        JabJIdx_00 += J->JabF[0][idx] * hitColor[1];
+        JabJIdx_01 += J->JabF[0][idx] * hitColor[2];
+        JabJIdx_10 += J->JabF[1][idx] * hitColor[1];
+        JabJIdx_11 += J->JabF[1][idx] * hitColor[2];
 
-        JabJab_00 += drdA * drdA * hw * hw;
-        JabJab_01 += drdA * hw * hw;
-        JabJab_11 += hw * hw;
+        JabJab_00 += J->JabF[0][idx] * J->JabF[0][idx];
+        JabJab_01 += J->JabF[0][idx] * J->JabF[1][idx];
+        JabJab_11 += J->JabF[1][idx] * J->JabF[1][idx];
 
 
         wJI2_sum += hw * hw * (hitColor[1] * hitColor[1] + hitColor[2] * hitColor[2]);
