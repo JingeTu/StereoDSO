@@ -424,7 +424,7 @@ namespace dso {
 #if !STEREO_MODE & !INERTIAL_MODE
     Mat18f *xAd = new Mat18f[nFrames * nFrames];
     for (EFFrame *h : frames) {
-      h->data->step.head<8>() = -x.segment<8>(CPARS + 8 * h->idx);
+      h->data->step.head<8>() = x.segment<8>(CPARS + 8 * h->idx);
       h->data->step.tail<2>().setZero();
 
       for (EFFrame *t : frames)
