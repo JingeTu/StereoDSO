@@ -46,7 +46,7 @@ namespace dso {
 
     ~CoarseTracker();
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
     bool trackNewestCoarseStereo(
         FrameHessian *newFrameHessian,
@@ -124,7 +124,7 @@ namespace dso {
 
     Vec6 calcResAndGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
     Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH);
 
@@ -169,7 +169,7 @@ namespace dso {
 
     std::vector<float *> ptrToDelete;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Accumulator11 acc;
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE

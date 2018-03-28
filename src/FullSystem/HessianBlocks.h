@@ -144,7 +144,7 @@ namespace dso {
     Mat42 nullspaces_affine;
     Vec6 nullspaces_scale;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     // variable info.
     SE3 worldToCam_evalPT;
     Vec10 state_zero;
@@ -210,7 +210,7 @@ namespace dso {
 
 #endif
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
     void setStateZero(const Vec10 &state_zero);
 
@@ -340,7 +340,7 @@ namespace dso {
 
     void makeImages(float *color, CalibHessian *HCalib);
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
     inline Vec10 getPrior() {
       Vec10 p = Vec10::Zero();

@@ -66,7 +66,7 @@ namespace dso {
         acc[tid] = new Accumulator14[nFrames*nFrames];
 #else
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
         acc[tid] = new AccumulatorApprox1515[nFrames * nFrames];
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -88,7 +88,7 @@ namespace dso {
     template<int mode>
     void addPoint(EFPoint *p, EnergyFunctional const *const ef, int tid = 0);
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
     void
     stitchDoubleMT(IndexThreadReduce<Vec10> *red, MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
@@ -187,7 +187,7 @@ namespace dso {
 
     int nframes[NUM_THREADS];
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     EIGEN_ALIGN16 AccumulatorApprox1515 *acc[NUM_THREADS];
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE

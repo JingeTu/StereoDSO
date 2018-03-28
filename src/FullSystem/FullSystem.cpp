@@ -268,7 +268,7 @@ namespace dso {
     myfile.close();
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight) {
 
@@ -1612,7 +1612,7 @@ namespace dso {
     //- FrameHessian::makeImages() just calculate some image gradient.
 
     if (!initialized) {
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -1666,7 +1666,7 @@ namespace dso {
         coarseTracker_forNewKF = tmp;
       }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -1788,7 +1788,7 @@ namespace dso {
           unmappedTrackedFrames.pop_front();
           FrameHessian *fhRight = unmappedTrackedFramesRight.front();
           unmappedTrackedFramesRight.pop_front();
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
           {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
@@ -1843,7 +1843,7 @@ namespace dso {
 
   void FullSystem::makeNonKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread. no lock required since we are in mapping thread.
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -1874,7 +1874,7 @@ namespace dso {
 
   void FullSystem::makeKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -2030,7 +2030,7 @@ namespace dso {
   }
 
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void FullSystem::initializeFromInitializerStereo(FrameHessian *newFrame) {
     boost::unique_lock<boost::mutex> lock(mapMutex);

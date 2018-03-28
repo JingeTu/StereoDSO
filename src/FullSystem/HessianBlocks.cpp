@@ -69,7 +69,7 @@ namespace dso {
     residuals.clear();
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void FrameHessian::setStateZero(const Vec10 &state_zero) {
     assert(state_zero.head<6>().squaredNorm() < 1e-20);

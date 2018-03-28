@@ -87,7 +87,7 @@ namespace dso {
 
     VecNRf res_toZeroF;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Vec10f JpJdF;
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -159,7 +159,7 @@ namespace dso {
 
     void takeData();
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Vec10 prior;        // prior hessian (diagonal)
     Vec10 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
     Vec10 delta;        // state - state_zero.

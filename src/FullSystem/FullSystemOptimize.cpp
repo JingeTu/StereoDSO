@@ -204,7 +204,7 @@ namespace dso {
   bool FullSystem::doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD) {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Vec10 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
     pstepfac.segment<3>(3).setConstant(stepfacR);
@@ -224,7 +224,7 @@ namespace dso {
     if (setting_solverMode & SOLVER_MOMENTUM) {
       Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
         Vec10 step = fh->step;
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -446,7 +446,7 @@ namespace dso {
 
     double lambda = 1e-1;
     float stepsize = 1;
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     VecX previousX = VecX::Constant(CPARS + 10 * frameHessians.size(), NAN);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -518,7 +518,7 @@ namespace dso {
     }
 
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Vec10 newStateZero = Vec10::Zero();
     newStateZero.segment<4>(6) = frameHessians.back()->get_state().segment<4>(6);
 #endif
@@ -615,7 +615,7 @@ namespace dso {
     ef->dropPointsF();
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,

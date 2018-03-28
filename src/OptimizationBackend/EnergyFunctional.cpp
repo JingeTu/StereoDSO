@@ -41,7 +41,7 @@ namespace dso {
   bool EFIndicesValid = false;
   bool EFDeltaValid = false;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EnergyFunctional::setAdjointsF(CalibHessian *Hcalib) {
 
@@ -289,7 +289,7 @@ namespace dso {
     delete accSSE_bot;
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EnergyFunctional::setDeltaF(CalibHessian *HCalib) {
     if (adHTdeltaF != 0) delete[] adHTdeltaF;
@@ -399,7 +399,7 @@ namespace dso {
   }
 
   void EnergyFunctional::resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT) {
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     assert(x.size() == CPARS + nFrames * 10);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -410,7 +410,7 @@ namespace dso {
 
     VecCf cstep = xF.head<CPARS>();
     if (!std::isfinite(cstep.norm())) cstep.setZero();
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
       h->data->step = x.segment<10>(CPARS + 10 * h->idx);
@@ -442,7 +442,7 @@ namespace dso {
     delete[] xAd;
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EnergyFunctional::resubstituteFPt(
       const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid) {
@@ -543,7 +543,7 @@ namespace dso {
     return delta.dot(2 * bM + HM * delta);
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
@@ -730,7 +730,7 @@ namespace dso {
     nFrames++;
     fh->efFrame = eff;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     assert(HM.cols() == 10 * nFrames + CPARS - 10);
     bM.conservativeResize(10 * nFrames + CPARS);
     HM.conservativeResize(10 * nFrames + CPARS, 10 * nFrames + CPARS);
@@ -802,7 +802,7 @@ namespace dso {
     delete r;
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
@@ -1233,7 +1233,7 @@ namespace dso {
 
       lastHS = HFinal_top;
       lastbS = bFinal_top;
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -1249,7 +1249,7 @@ namespace dso {
       lastHS = HFinal_top - H_sc;
       lastbS = bFinal_top;
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
 #if !STEREO_MODE & !INERTIAL_MODE
@@ -1364,7 +1364,7 @@ namespace dso {
 
 
   VecX EnergyFunctional::getStitchedDeltaF() const {
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     VecX d = VecX(CPARS + nFrames * 10);
     d.head<CPARS>() = cDeltaF.cast<double>();
     for (int h = 0; h < nFrames; h++) d.segment<10>(CPARS + 10 * h) = frames[h]->delta;

@@ -58,7 +58,7 @@ namespace dso {
 
 
   void EFFrame::takeData() {
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
     prior = data->getPrior().head<10>();
     delta = data->get_state_minus_stateZero().head<10>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<10>();
@@ -94,7 +94,7 @@ namespace dso {
     deltaF = data->idepth - data->idepth_zero;
   }
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if STEREO_MODE
 
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec10f dp;
