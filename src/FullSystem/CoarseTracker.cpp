@@ -351,10 +351,10 @@ namespace dso {
               _mm_mul_ps(_mm_mul_ps(u, v), dy),
               _mm_mul_ps(dx, _mm_add_ps(one, _mm_mul_ps(u, u)))),
           _mm_sub_ps(_mm_mul_ps(u, dy), _mm_mul_ps(v, dx)),
-          _mm_mul_ps(a, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))),
-          zero,
-          minusOne,
-          zero,
+          _mm_mul_ps(a, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))), //- a_l
+          minusOne, //- b_l
+          zero, //- a_r
+          zero, //- b_r
           _mm_load_ps(buf_warped_residual + i),
           _mm_load_ps(buf_warped_weight + i));
 
@@ -374,10 +374,10 @@ namespace dso {
               _mm_mul_ps(_mm_mul_ps(u, v), dy_r),
               _mm_mul_ps(dx_r, _mm_add_ps(one, _mm_mul_ps(u, u)))),
           _mm_sub_ps(_mm_mul_ps(u, dy_r), _mm_mul_ps(v, dx_r)),
-          zero,
-          _mm_mul_ps(a_r, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))),
-          zero,
-          minusOne,
+          zero, //- a_l
+          zero, //- b_l
+          _mm_mul_ps(a_r, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i))), //- a_r
+          minusOne, //- b_r
           _mm_load_ps(buf_warped_residual_r + i),
           _mm_load_ps(buf_warped_weight_r + i));
 
@@ -390,20 +390,20 @@ namespace dso {
     H_out.block<10, 3>(0, 0) *= SCALE_XI_ROT;
     H_out.block<10, 3>(0, 3) *= SCALE_XI_TRANS;
     H_out.block<10, 1>(0, 6) *= SCALE_A;
-    H_out.block<10, 1>(0, 7) *= SCALE_A;
-    H_out.block<10, 1>(0, 8) *= SCALE_B;
+    H_out.block<10, 1>(0, 7) *= SCALE_B;
+    H_out.block<10, 1>(0, 8) *= SCALE_A;
     H_out.block<10, 1>(0, 9) *= SCALE_B;
     H_out.block<3, 10>(0, 0) *= SCALE_XI_ROT;
     H_out.block<3, 10>(3, 0) *= SCALE_XI_TRANS;
     H_out.block<1, 10>(6, 0) *= SCALE_A;
-    H_out.block<1, 10>(7, 0) *= SCALE_A;
-    H_out.block<1, 10>(8, 0) *= SCALE_B;
+    H_out.block<1, 10>(7, 0) *= SCALE_B;
+    H_out.block<1, 10>(8, 0) *= SCALE_A;
     H_out.block<1, 10>(9, 0) *= SCALE_B;
     b_out.segment<3>(0) *= SCALE_XI_ROT;
     b_out.segment<3>(3) *= SCALE_XI_TRANS;
     b_out.segment<1>(6) *= SCALE_A;
-    b_out.segment<1>(7) *= SCALE_A;
-    b_out.segment<1>(8) *= SCALE_B;
+    b_out.segment<1>(7) *= SCALE_B;
+    b_out.segment<1>(8) *= SCALE_A;
     b_out.segment<1>(9) *= SCALE_B;
   }
 
@@ -1069,27 +1069,33 @@ namespace dso {
           inc.head<6>() = Hl.topLeftCorner<6, 6>().ldlt().solve(-b.head<6>());
           inc.tail<4>().setZero();
         }
-        if (!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)  // fix b
-        {
-          inc.head<8>() = Hl.topLeftCorner<8, 8>().ldlt().solve(-b.head<8>());
-          inc.tail<2>().setZero();
-        }
-        if (setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))  // fix a
+        if (!(setting_affineOptModeA < 0) && setting_affineOptModeB < 0)  // fix b //- discard 7, 9
         {
           Mat1010 HlStitch = Hl;
           Vec10 bStitch = b;
-          HlStitch.col(6) = HlStitch.col(8);
+          HlStitch.col(7) = HlStitch.col(8);
+          HlStitch.row(7) = HlStitch.row(8);
+          bStitch[7] = bStitch[8];
+          Vec8 incStitch = HlStitch.topLeftCorner<8, 8>().ldlt().solve(-bStitch.head<8>());
+          inc.setZero();
+          inc.head<6>() = incStitch.head<6>();
+          inc[6] = incStitch[6];
+          inc[8] = incStitch[7];
+        }
+        if (setting_affineOptModeA < 0 && !(setting_affineOptModeB < 0))  // fix a //- discard 6, 8
+        {
+          Mat1010 HlStitch = Hl;
+          Vec10 bStitch = b;
+          HlStitch.col(6) = HlStitch.col(7);
+          HlStitch.row(6) = HlStitch.row(7);
           HlStitch.col(7) = HlStitch.col(9);
-          HlStitch.row(6) = HlStitch.row(8);
           HlStitch.row(7) = HlStitch.row(9);
-          bStitch[6] = bStitch[8];
+          bStitch[6] = bStitch[7];
           bStitch[7] = bStitch[9];
           Vec8 incStitch = HlStitch.topLeftCorner<8, 8>().ldlt().solve(-bStitch.head<8>());
           inc.setZero();
           inc.head<6>() = incStitch.head<6>();
-          inc[6] = 0;
-          inc[7] = 0;
-          inc[8] = incStitch[6];
+          inc[7] = incStitch[6];
           inc[9] = incStitch[7];
         }
 
@@ -1101,8 +1107,10 @@ namespace dso {
         Vec10 incScaled = inc;
         incScaled.segment<3>(0) *= SCALE_XI_ROT;
         incScaled.segment<3>(3) *= SCALE_XI_TRANS;
-        incScaled.segment<2>(6) *= SCALE_A;
-        incScaled.segment<2>(8) *= SCALE_B;
+        incScaled[6] *= SCALE_A;
+        incScaled[7] *= SCALE_B;
+        incScaled[8] *= SCALE_A;
+        incScaled[9] *= SCALE_B;
 
         if (!std::isfinite(incScaled.sum())) incScaled.setZero();
 
@@ -1110,8 +1118,8 @@ namespace dso {
         AffLight aff_g2l_new = aff_g2l_current;
         AffLight aff_g2l_r_new = aff_g2l_r_current;
         aff_g2l_new.a += incScaled[6];
-        aff_g2l_new.b += incScaled[8];
-        aff_g2l_r_new.a += incScaled[7];
+        aff_g2l_new.b += incScaled[7];
+        aff_g2l_r_new.a += incScaled[8];
         aff_g2l_r_new.b += incScaled[9];
 
         Vec6 resNew = calcResStereo(lvl, refToNew_new, aff_g2l_new, aff_g2l_r_new,

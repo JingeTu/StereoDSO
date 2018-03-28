@@ -406,14 +406,14 @@ namespace dso {
     assert(x.size() == CPARS + nFrames * 8);
 #endif
     VecXf xF = x.cast<float>();
-    HCalib->step = -x.head<CPARS>();
+    HCalib->step = x.head<CPARS>();
 
     VecCf cstep = xF.head<CPARS>();
     if (!std::isfinite(cstep.norm())) cstep.setZero();
 #if STEREO_MODE & !INERTIAL_MODE
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
-      h->data->step = -x.segment<10>(CPARS + 10 * h->idx);
+      h->data->step = x.segment<10>(CPARS + 10 * h->idx);
 
       for (EFFrame *t : frames)
         xAd[nFrames * h->idx + t->idx] =
@@ -483,7 +483,7 @@ namespace dso {
       }
 
       p->data->step = -b * p->HdiF;
-      assert(std::isfinite(p->data->step));
+//      assert(std::isfinite(p->data->step));
     }
   }
 
@@ -847,11 +847,6 @@ namespace dso {
     VecX SVec = (HM.diagonal().cwiseAbs() + VecX::Constant(HM.cols(), 10)).cwiseSqrt();
     VecX SVecI = SVec.cwiseInverse();
 
-    if (!std::isfinite(SVecI.norm())) {
-      LOG(INFO) << "SVecI: " << SVecI;
-      LOG(INFO) << "SVec: " << SVec;
-    }
-
     // scale!
     MatXX HMScaled = SVecI.asDiagonal() * HM * SVecI.asDiagonal();
     VecX bMScaled = SVecI.asDiagonal() * bM;
@@ -865,13 +860,15 @@ namespace dso {
       LOG(INFO) << "hpi.norm() infinite";
       LOG(INFO) << "efF l_l : " << efF->data->aff_g2l().a << efF->data->aff_g2l().b;
       LOG(INFO) << "efF l_r : " << efF->data->aff_g2l_r().a << efF->data->aff_g2l_r().b;
-      Mat88 botRht88;
       hpi = Mat1010::Identity();
+      Mat88 botRht88;
       botRht88 = HMScaled.bottomRightCorner<10, 10>().topLeftCorner<8, 8>();
-      botRht88 = 0.5f * (botRht88 + botRht88);
-      botRht88 = botRht88.inverse();
-      botRht88 = 0.5f * (botRht88 + botRht88);
-      hpi.block<8, 8>(0, 0) = botRht88;
+      if (botRht88.norm() != 0) {
+        botRht88 = 0.5f * (botRht88 + botRht88);
+        botRht88 = botRht88.inverse();
+        botRht88 = 0.5f * (botRht88 + botRht88);
+        hpi.block<8, 8>(0, 0) = botRht88;
+      }
       LOG(INFO) << HMScaled.bottomRightCorner<10, 10>();
     }
 
@@ -1266,7 +1263,7 @@ namespace dso {
     if (setting_solverMode & SOLVER_SVD) {
       VecX SVecI = HFinal_top.diagonal().cwiseSqrt().cwiseInverse();
       MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
-      VecX bFinalScaled = SVecI.asDiagonal() * bFinal_top;
+      VecX bFinalScaled = SVecI.asDiagonal() * -bFinal_top;
       Eigen::JacobiSVD<MatXX> svd(HFinalScaled, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
       VecX S = svd.singularValues();
@@ -1297,7 +1294,7 @@ namespace dso {
       VecX SVecI = (HFinal_top.diagonal() + VecX::Constant(HFinal_top.cols(), 10)).cwiseSqrt().cwiseInverse();
       MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
       x = SVecI.asDiagonal() *
-          HFinalScaled.ldlt().solve(SVecI.asDiagonal() * bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
+          HFinalScaled.ldlt().solve(SVecI.asDiagonal() * -bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
       if (!std::isfinite(x.norm())) {
 //        LOG(INFO) << "HFinal_top: " << HFinal_top;
 //        LOG(INFO) << "bFinal_top: " << bFinal_top;
