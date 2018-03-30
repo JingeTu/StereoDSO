@@ -40,8 +40,6 @@ namespace dso {
     maxRelBaseline = 0;
     numGoodResiduals = 0;
 
-    rightFrameResidual = 0;
-
     // set static values & initialization.
     u = rawPoint->u;
     v = rawPoint->v;
@@ -291,6 +289,29 @@ namespace dso {
     PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(),
                                                host->aff_g2l_r()).cast<float>();
     PRE_b0_mode = host->aff_g2l_0().b;
+  }
+
+#endif
+
+#if STEREO_MODE & INERTIAL_MODE
+  SpeedAndBiasHessian::SpeedAndBiasHessian(FrameHessian *host_) : host(host) {
+    flaggedForMarginalization = false;
+    state.setZero();
+    state_zero.setZero();
+    state_scaled.setZero();
+    state_zero_scaled.setZero();
+    step_backup.setZero();
+    step.setZero();
+    step_backup.setZero();
+  }
+
+  SpeedAndBiasHessian::~SpeedAndBiasHessian(){
+    release();
+  }
+
+  void SpeedAndBiasHessian::release() {
+    for (unsigned int i = 0; i < residuals.size(); i++) delete residuals[i];
+    residuals.clear();
   }
 
 #endif

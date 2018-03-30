@@ -35,6 +35,10 @@
 #include "FullSystem/Residuals.h"
 #include "util/ImageAndExposure.h"
 
+#if STEREO_MODE & INERTIAL_MODE
+#include "util/IMUMeasurement.h"
+#endif
+
 
 namespace dso {
 
@@ -56,9 +60,14 @@ namespace dso {
 
   class EFPoint;
 
+#if STEREO_MODE & INERTIAL_MODE
+  class EFSpeedAndBias;
+#endif
+
 #define SCALE_IDEPTH 1.0f    // scales internal value to idepth.
 #define SCALE_XI_ROT 1.0f
 #define SCALE_XI_TRANS 0.5f
+#define SCALE_SB 1.0f // SpeedAndBias
 #define SCALE_F 50.0f
 #define SCALE_C 50.0f
 #define SCALE_W 1.0f
@@ -68,12 +77,21 @@ namespace dso {
 #define SCALE_IDEPTH_INVERSE (1.0f / SCALE_IDEPTH)
 #define SCALE_XI_ROT_INVERSE (1.0f / SCALE_XI_ROT)
 #define SCALE_XI_TRANS_INVERSE (1.0f / SCALE_XI_TRANS)
+#define SCALE_SB_INVERSE (1.0f / SCALE_SB) // SpeedAndBias
 #define SCALE_F_INVERSE (1.0f / SCALE_F)
 #define SCALE_C_INVERSE (1.0f / SCALE_C)
 #define SCALE_W_INVERSE (1.0f / SCALE_W)
 #define SCALE_A_INVERSE (1.0f / SCALE_A)
 #define SCALE_B_INVERSE (1.0f / SCALE_B)
 
+#if STEREO_MODE & INERTIAL_MODE
+  struct IMUPrecalc {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    SE3 T_WS;
+    Mat66 Jr_S_i;
+  };
+#endif
 
   struct FrameFramePrecalc //- Precalculate reporjection(from host to target) parameters.
   {
@@ -139,6 +157,10 @@ namespace dso {
     std::vector<PointHessian *> pointHessiansOut;    // contains all OUTLIER points (= discarded.).
     std::vector<ImmaturePoint *> immaturePoints;    // contains all OUTLIER points (= discarded.).
 
+#if STEREO_MODE & INERTIAL_MODE
+    SpeedAndBiasHessian* speedAndBiasHessian;
+#endif
+
     //- Currently for stereo mode, do not take nullspaces into account.
     Mat66 nullspaces_pose;
     Mat42 nullspaces_affine;
@@ -191,6 +213,9 @@ namespace dso {
     SE3 PRE_T_CW;
     SE3 PRE_T_WC;
     std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
+#if STEREO_MODE & INERTIAL_MODE
+    IMUPrecalc imuPrecalc;
+#endif
     MinimalImageB3 *debugImage;
 
 
@@ -580,7 +605,6 @@ namespace dso {
 
     std::vector<PointFrameResidual *> residuals;          // only contains good residuals (not OOB and not OUTLIER). Arbitrary order.
     std::pair<PointFrameResidual *, ResState> lastResiduals[2];  // contains information about residuals to the last two (!) frames. ([0] = latest, [1] = the one before).
-    PointFrameResidual *rightFrameResidual;
 
     void release();
 
@@ -621,6 +645,124 @@ namespace dso {
 
   };
 
+#if STEREO_MODE & INERTIAL_MODE
+  struct SpeedAndBiasHessian {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    EFSpeedAndBias* efSB;
+
+    FrameHessian* host;
+
+    std::vector<IMUResidual*> residuals;
+
+    enum SpeedAndBiasStatus {
+      ACTIVE = 0, OUTLIER, MARGINALIZED
+    };
+
+    int idx;
+
+    SpeedAndBias speedAndBias_evalPT;
+
+    SpeedAndBias state_scaled;
+    SpeedAndBias state_zero_scaled;
+    SpeedAndBias state_zero;
+    SpeedAndBias state;
+    SpeedAndBias state_backup;
+    SpeedAndBias step;
+    SpeedAndBias step_backup;
+
+    bool flaggedForMarginalization;
+
+    EIGEN_STRONG_INLINE const SpeedAndBias &get_state_zero() const { return state_zero; }
+    EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const {return state_zero; }
+    EIGEN_STRONG_INLINE const SpeedAndBias &get_state_scaled() const { return state_scaled; }
+    EIGEN_STRONG_INLINE const SpeedAndBias get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
+
+    SpeedAndBiasHessian(FrameHessian* host_);
+
+    ~SpeedAndBiasHessian();
+
+    void release();
+
+    inline void setState(const SpeedAndBias &speedAndBias) {
+      this->state = speedAndBias;
+      this->state_scaled = SCALE_SB * speedAndBias;
+    }
+
+    inline void setStateScaled(const SpeedAndBias &speedAndBias_scaled) {
+      this->state = SCALE_SB_INVERSE * speedAndBias_scaled;
+      this->state_scaled = speedAndBias_scaled;
+    }
+
+    inline void setStateZero(const SpeedAndBias &speedAndBias) {
+      this->state_zero = speedAndBias;
+    }
+
+    inline void setEvalPT(const SpeedAndBias &speedAndBias_evalPT) {
+      this->speedAndBias_evalPT = speedAndBias_evalPT;
+      setState(speedAndBias_evalPT);
+      setStateZero(speedAndBias_evalPT);
+    }
+
+    inline void setEvalPT_scaled(const SpeedAndBias &speedAndBias_evalPT) {
+      this->speedAndBias_evalPT = speedAndBias_evalPT;
+      setStateScaled(speedAndBias_evalPT);
+      setStateZero(this->get_state());
+    }
+/*
+ *
+    void setStateZero(const Vec10 &state_zero);
+
+    inline void setState(const Vec10 &state) {
+
+      this->state = state;
+      state_scaled.segment<3>(0) = SCALE_XI_TRANS * state.segment<3>(0);
+      state_scaled.segment<3>(3) = SCALE_XI_ROT * state.segment<3>(3);
+      state_scaled[6] = SCALE_A * state[6];
+      state_scaled[7] = SCALE_B * state[7];
+      state_scaled[8] = SCALE_A * state[8];
+      state_scaled[9] = SCALE_B * state[9];
+
+      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+      PRE_T_WC = PRE_T_CW.inverse();
+      //setCurrentNullspace();
+    };
+
+    inline void setStateScaled(const Vec10 &state_scaled) {
+
+      this->state_scaled = state_scaled;
+      state.segment<3>(0) = SCALE_XI_TRANS_INVERSE * state_scaled.segment<3>(0);
+      state.segment<3>(3) = SCALE_XI_ROT_INVERSE * state_scaled.segment<3>(3);
+      state[6] = SCALE_A_INVERSE * state_scaled[6];
+      state[7] = SCALE_B_INVERSE * state_scaled[7];
+      state[8] = SCALE_A_INVERSE * state_scaled[8];
+      state[9] = SCALE_B_INVERSE * state_scaled[9];
+
+      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+      PRE_T_WC = PRE_T_CW.inverse();
+      //setCurrentNullspace();
+    };
+
+    inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec10 &state) {
+
+      this->worldToCam_evalPT = worldToCam_evalPT;
+      setState(state);
+      setStateZero(state);
+    };
+
+    inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r) {
+      Vec10 initial_state = Vec10::Zero();
+      initial_state[6] = aff_g2l.a;
+      initial_state[7] = aff_g2l.b;
+      initial_state[8] = aff_g2l_r.a;
+      initial_state[9] = aff_g2l_r.b;
+      this->worldToCam_evalPT = worldToCam_evalPT;
+      setStateScaled(initial_state);
+      setStateZero(this->get_state());
+    };
+ * */
+  };
+#endif
 
 }
 

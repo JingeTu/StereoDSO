@@ -389,5 +389,47 @@ namespace dso {
 
   }
 
+  inline double sinc(double x) {
+    if (fabs(x) > 1e-6) {
+      return sin(x) / x;
+    }
+    else {
+      static const double c_2 = 1.0 / 6.0;
+      static const double c_4 = 1.0 / 120.0;
+      static const double c_6 = 1.0 / 5040.0;
+      const double x_2 = x * x;
+      const double x_4 = x_2 * x_2;
+      const double x_6 = x_2 * x_2 * x_2;
+      return 1.0 - c_2 * x_2 + c_4 * x_4 - c_6 * x_6;
+    }
+  }
 
+  inline Mat66 LeftJacobian(SE3 T) {
+    auto Adj = T.Adj();
+    double phi = acos((double)T.so3().unit_quaternion().w()) * 2;
+    Mat66 ret = Mat66::Identity();
+    double phi_inv = 1.0 / phi;
+
+    double phi_temp = phi_inv * phi_inv;
+    auto Adj_temp = Adj;
+    ret += (4 - phi * sin(phi) - 4 * cos(phi)) * 0.5 * phi_temp * Adj_temp;
+
+    phi_temp *= phi_inv;
+    Adj_temp *= Adj;
+    ret += (4 * phi - 5 * sin(phi) + phi * cos(phi)) * 0.5 * phi_temp * Adj_temp;
+
+    phi_temp *= phi_inv;
+    Adj_temp *= Adj;
+    ret += (2 - phi * sin(phi) - 2 * cos(phi)) * 0.5 * phi_temp * Adj_temp;
+
+    phi_temp *= phi_inv;
+    Adj_temp *= Adj;
+    ret += (2 * phi - 3 * sin(phi) + phi * cos(phi)) * 0.5 * phi_temp * Adj_temp;
+
+    return ret;
+  }
+
+  inline Mat66 RightJacobian(SE3 T) {
+    return LeftJacobian(T.inverse());
+  }
 }

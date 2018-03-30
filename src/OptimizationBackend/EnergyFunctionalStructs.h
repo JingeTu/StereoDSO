@@ -42,6 +42,14 @@ namespace dso {
 
   class PointHessian;
 
+#if STEREO_MODE & INERTIAL_MODE
+  class SpeedAndBiasHessian;
+
+  class EFSpeedAndBias;
+
+  class IMUResidual;
+#endif
+
   class EFResidual;
 
   class EFPoint;
@@ -49,7 +57,6 @@ namespace dso {
   class EFFrame;
 
   class EnergyFunctional;
-
 
   class EFResidual {
   public:
@@ -73,7 +80,6 @@ namespace dso {
 
 
     void fixLinearizationF(EnergyFunctional *ef);
-
 
     // structural pointers
     PointFrameResidual *data;
@@ -103,6 +109,48 @@ namespace dso {
     inline const bool &isActive() const { return isActiveAndIsGoodNEW; }
   };
 
+#if STEREO_MODE & INERTIAL_MODE
+  class EFIMUResidual {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    inline EFIMUResidual(IMUResidual *org, EFSpeedAndBias *from_sb_, EFSpeedAndBias *to_sb_,
+                         EFFrame *from_f_, EFFrame *to_f_) :
+        data(org), from_sb(from_sb_), to_sb(to_sb_), from_f(from_f_), to_f(to_f_) {
+      isLinearized = false;
+      flaggedForMarginalization = false;
+
+      J = new RawIMUResidualJacobian();
+    }
+
+    inline ~EFIMUResidual() {
+      delete J;
+    }
+
+    void fixLinearizationF(EnergyFunctional *ef);
+
+    void takeDataF();
+
+    int fromSBIDX, toSBIDX;
+    EFSpeedAndBias* from_sb;
+    EFSpeedAndBias* to_sb;
+    EFFrame* from_f;
+    EFFrame* to_f;
+    IMUResidual *data;
+    int idxInAll;
+
+    RawIMUResidualJacobian* J;
+
+    Vec15f res_toZeroF;
+
+    // [0] xi0, s0, [1] xi0, s1, [2] xi1, s0, [3] xi1, s1
+    Mat69f JxiJsF[4];
+
+    bool isLinearized;
+
+    bool flaggedForMarginalization;
+  };
+#endif
 
   enum EFPointStatus {
     PS_GOOD = 0, PS_MARGINALIZE, PS_DROP
@@ -148,6 +196,52 @@ namespace dso {
     EFPointStatus stateFlag;
   };
 
+#if STEREO_MODE & INERTIAL_MODE
+  class EFSpeedAndBias {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    EFSpeedAndBias(SpeedAndBiasHessian* d) : data(d) {
+      takeData();
+      stateFlag = GOOD;
+      bsSumF.setZero();
+      HsiF.setZero();
+      Hss_accLF.setZero();
+      bs_accLF.setZero();
+      Hss_accAF.setZero();
+      bs_accAF.setZero();
+    }
+
+    ~EFSpeedAndBias() {
+      for (EFIMUResidual *r : residualsAll)
+        delete r;
+      residualsAll.clear();
+    }
+
+    void takeData();
+
+    SpeedAndBias priorF;
+    SpeedAndBias deltaF;
+
+    Vec9f bsSumF;
+    Mat99f HsiF; //- inverse of (Hss_accLF + Hss_accAF)
+    Mat99f Hss_accLF;
+    Vec9f bs_accLF;
+    Mat99f Hss_accAF;
+    Vec9f bs_accAF;
+
+    SpeedAndBiasHessian *data;
+    int idx;
+
+    std::vector<EFIMUResidual *> residualsAll; //- to as host
+
+    enum EFSpeedAndBiasStatus {
+      GOOD = 0, MARGINALIZE, DROP
+    };
+
+    EFSpeedAndBiasStatus stateFlag;
+  };
+#endif
 
   class EFFrame {
   public:

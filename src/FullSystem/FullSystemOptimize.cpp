@@ -46,7 +46,7 @@ namespace dso {
 
 
   void FullSystem::linearizeAll_Reductor(bool fixLinearization, std::vector<PointFrameResidual *> *toRemove, int min,
-                                         int max, Vec10 *stats, int tid) {//- fixLinearization == false
+                                         int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++) {
       PointFrameResidual *r = activeResiduals[k];
       if (r->staticStereo)
@@ -84,6 +84,21 @@ namespace dso {
     }
   }
 
+#if STEREO_MODE & INERTIAL_MODE
+  void FullSystem::linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid) {
+    for (int k = min; k < max; k++) {
+      IMUResidual* r = activeIMUResiduals[k];
+      r->linearize(&imuParameters);
+      if (fixLinearization)
+        r->applyRes(true);
+    }
+  }
+
+  void FullSystem::applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid) {
+    for (int k = min; k < max; k++)
+      activeIMUResiduals[k]->applyRes(true);
+  }
+#endif
 
   void FullSystem::applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++)
@@ -140,6 +155,21 @@ namespace dso {
     double lastEnergyR = 0;
     double num = 0;
 
+#if STEREO_MODE & INERTIAL_MODE
+    //- do not remove imu residuals except marginalizing.
+    if (multiThreading) {
+      treadReduce.reduce(
+          boost::bind(&FullSystem::linearizeAllIMU_Reductor, this, fixLinearization, _1, _2, _3, _4), 0,
+          activeIMUResiduals.size(), 0);
+      lastEnergyP += treadReduce.stats[0];
+    }
+    else {
+      Vec10 stats;
+      stats.setZero();
+      linearizeAllIMU_Reductor(fixLinearization, 0, activeIMUResiduals.size(), &stats, 0);
+      lastEnergyP += stats[0];
+    }
+#endif
 
     std::vector<PointFrameResidual *> toRemove[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) toRemove[i].clear();
@@ -148,19 +178,19 @@ namespace dso {
       treadReduce.reduce(
           boost::bind(&FullSystem::linearizeAll_Reductor, this, fixLinearization, toRemove, _1, _2, _3, _4), 0,
           activeResiduals.size(), 0);
-      lastEnergyP = treadReduce.stats[0];
+      lastEnergyP += treadReduce.stats[0];
     }
     else {
       Vec10 stats;
       stats.setZero();
       linearizeAll_Reductor(fixLinearization, toRemove, 0, activeResiduals.size(), &stats, 0);
-      lastEnergyP = stats[0];
+      lastEnergyP += stats[0];
     }
 
     setNewFrameEnergyTH();
 
 
-    if (fixLinearization) // false for optimize
+    if (fixLinearization)
     {
 
       for (PointFrameResidual *r : activeResiduals) {
@@ -204,6 +234,10 @@ namespace dso {
   bool FullSystem::doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD) {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
+#if STEREO_MODE & INERTIAL_MODE
+    Vec9 sstepfac;
+    sstepfac.setConstant(stepfacT);
+#endif
 #if STEREO_MODE
     Vec10 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
@@ -248,6 +282,12 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + step);
         }
       }
+#if STEREO_MODE & INERTIAL_MODE
+      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+        Vec9 step = sh->step;
+        sh->setState(sh->state_backup + step);
+      }
+#endif
     }
     else {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
@@ -268,6 +308,12 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + stepfacD * ph->step);
         }
       }
+#if STEREO_MODE & INERTIAL_MODE
+      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+        Vec9 step = sh->step;
+        sh->setState(sh->state_backup + sstepfac.cwiseProduct(sh->step));
+      }
+#endif
     }
 
     sumA /= frameHessians.size();
@@ -316,9 +362,13 @@ namespace dso {
             ph->idepth_backup = ph->idepth;
             ph->step_backup = ph->step;
           }
-//          fh->rightFrame->step_backup = fh->rightFrame->step;
-//          fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
+#if STEREO_MODE & INERTIAL_MODE
+        for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+          sh->step_backup = sh->step;
+          sh->state_backup = sh->get_state();
+        }
+#endif
       }
       else {
         Hcalib.step_backup.setZero();
@@ -330,9 +380,13 @@ namespace dso {
             ph->idepth_backup = ph->idepth;
             ph->step_backup = 0;
           }
-//          fh->rightFrame->step_backup.setZero();
-//          fh->rightFrame->state_backup = fh->rightFrame->get_state();
         }
+#if STEREO_MODE & INERTIAL_MODE
+        for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+          sh->step_backup.setZero();
+          sh->state_backup = sh->get_state();
+        }
+#endif
       }
     }
     else {
@@ -341,8 +395,12 @@ namespace dso {
         fh->state_backup = fh->get_state();
         for (PointHessian *ph : fh->pointHessians)
           ph->idepth_backup = ph->idepth;
-//        fh->rightFrame->state_backup = fh->rightFrame->get_state();
       }
+#if STEREO_MODE & INERTIAL_MODE
+      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+        sh->step_backup = sh->get_state();
+      }
+#endif
     }
   }
 
@@ -356,9 +414,12 @@ namespace dso {
 
         ph->setIdepthZero(ph->idepth_backup);
       }
-//      fh->rightFrame->setState(fh->rightFrame->state_backup);
     }
-
+#if STEREO_MODE & INERTIAL_MODE
+    for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+      sh->setState(sh->state_backup);
+    }
+#endif
 
     EFDeltaValid = false;
     setPrecalcValues();
@@ -415,6 +476,14 @@ namespace dso {
         numPoints++;
       }
 
+#if STEREO_MODE & INERTIAL_MODE
+    activeIMUResiduals.clear();
+    for (SpeedAndBiasHessian *sh : speedAndBiasHessians)
+      for (IMUResidual *r : sh->residuals)
+        if (!r->efIMUResidual->isLinearized)
+          activeIMUResiduals.push_back(r);
+#endif
+
     if (!setting_debugout_runquiet) {
       char buf[256];
       sprintf(buf, "OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int) activeResiduals.size(), numLRes);
@@ -425,8 +494,8 @@ namespace dso {
     // lastEnergy[1] = 0
     // lastEnergy[2] = 0
     Vec3 lastEnergy = linearizeAll(false);
-    double lastEnergyL = calcLEnergy();
-    double lastEnergyM = calcMEnergy();
+    double lastEnergyL = calcLEnergy(); //- TODO: IMU
+    double lastEnergyM = calcMEnergy(); //- TODO: IMU
 
     if (multiThreading)
       treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0,
@@ -434,6 +503,13 @@ namespace dso {
     else
       applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
+#if STEREO_MODE & INERTIAL_MODE
+    if (multiThreading)
+      treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
+                         activeIMUResiduals.size(), 50);
+    else
+      applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
+#endif
 
     if (!setting_debugout_runquiet) {
       LOG(INFO) << "Initial Error       \t";
@@ -499,6 +575,14 @@ namespace dso {
                              activeResiduals.size(), 50);
         else
           applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
+
+#if STEREO_MODE & INERTIAL_MODE
+        if (multiThreading)
+          treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
+                             activeIMUResiduals.size(), 50);
+        else
+          applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
+#endif
 
         lastEnergy = newEnergy;
         lastEnergyL = newEnergyL;

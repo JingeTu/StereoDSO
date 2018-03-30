@@ -70,7 +70,18 @@ namespace dso {
     // = Jab^T * Jab (inner product). Only as a shorthand.
     Mat22f Jab2;      // 2x2
 #endif
-
   };
+
+#if STEREO_MODE & INERTIAL_MODE
+  struct RawIMUResidualJacobian {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    Eigen::Matrix<float, 15, 1> resF; //- residual
+
+    Eigen::Matrix<float, 15, 6> Jrdxi[2]; //- Derivative with respect to host & target pose
+
+    Eigen::Matrix<float, 15, 9> Jrdsb[2]; //- Derivative with respect to host & target SpeedAndBiases
+  };
+#endif
 }
 

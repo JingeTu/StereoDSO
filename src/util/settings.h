@@ -63,6 +63,7 @@ namespace dso {
 
   extern float setting_staticLambda;
   extern float setting_acceptStaticDepthFactor;
+  extern float setting_temporal_imu_data_overlap;
 
   extern float setting_idepthFixPrior;
   extern float setting_idepthFixPriorMargFac;

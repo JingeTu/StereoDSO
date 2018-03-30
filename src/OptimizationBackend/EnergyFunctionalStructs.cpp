@@ -56,6 +56,16 @@ namespace dso {
 #endif
   }
 
+#if STEREO_MODE & INERTIAL_MODE
+  void EFIMUResidual::takeDataF() {
+    std::swap<RawIMUResidualJacobian *>(J, data->J);
+    // [0] xi0, s0, [1] xi0, s1, [2] xi1, s0, [3] xi1, s1
+    JxiJsF[0] = (J->Jrdxi[0].transpose() * J->Jrdsb[0]).cast<float>();
+    JxiJsF[1] = (J->Jrdxi[0].transpose() * J->Jrdsb[1]).cast<float>();
+    JxiJsF[2] = (J->Jrdxi[1].transpose() * J->Jrdsb[0]).cast<float>();
+    JxiJsF[3] = (J->Jrdxi[1].transpose() * J->Jrdsb[1]).cast<float>();
+  }
+#endif
 
   void EFFrame::takeData() {
 #if STEREO_MODE
@@ -93,6 +103,23 @@ namespace dso {
 
     deltaF = data->idepth - data->idepth_zero;
   }
+
+#if STEREO_MODE & INERTIAL_MODE
+  void EFSpeedAndBias::takeData() {
+    priorF.setZero();
+    deltaF = data->state - data->state_zero;
+  }
+
+  void EFIMUResidual::fixLinearizationF(EnergyFunctional *ef) {
+    SpeedAndBiasf dsbf = this->from_sb->data->get_state_minus_stateZero().cast<float>();
+    SpeedAndBiasf dsbt = this->to_sb->data->get_state_minus_stateZero().cast<float>();
+    Vec6f dxif = this->from_f->data->get_state_minus_stateZero().head<6>().cast<float>();
+    Vec6f dxit = this->to_f->data->get_state_minus_stateZero().head<6>().cast<float>();
+
+    res_toZeroF = J->Jrdsb[0] * dsbf + J->Jrdsb[1] * dsbt
+                   + J->Jrdxi[0] * dxif + J->Jrdxi[1] * dxit;
+  }
+#endif
 
 #if STEREO_MODE
 

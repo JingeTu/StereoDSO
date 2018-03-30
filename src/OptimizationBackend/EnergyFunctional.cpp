@@ -248,6 +248,9 @@ namespace dso {
     adHTdeltaF = 0;
 
     nFrames = nResiduals = nPoints = 0;
+#if STEREO_MODE & INERTIAL_MODE
+    nSpeedAndBiases = nIMUResiduals = 0;
+#endif
 
     HM = MatXX::Zero(CPARS, CPARS);
     bM = VecX::Zero(CPARS);
@@ -274,6 +277,13 @@ namespace dso {
       f->data->efFrame = 0;
       delete f;
     }
+
+#if STEREO_MODE & INERTIAL_MODE
+    for (EFSpeedAndBias *s : speedAndBiases) {
+      s->data->efSB = 0;
+      delete s;
+    }
+#endif
 
     if (adHost != 0) delete[] adHost;
     if (adTarget != 0) delete[] adTarget;
@@ -338,6 +348,192 @@ namespace dso {
     }
 
     EFDeltaValid = true;
+  }
+
+#endif
+
+#if STEREO_MODE & INERTIAL_MODE
+
+  void EnergyFunctional::accumulateIMUAF_MT(MatXX &H, VecX &b, bool MT) {
+    // Use one thread first.
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    for (EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        if (r->isLinearized) continue;
+        RawIMUResidualJacobian *J = r->J;
+
+        Eigen::Matrix<float, 15, 1> resApprox = J->resF;
+
+        int fIdx = CPARS + 10 * r->from_f->idx;
+        int tIdx = CPARS + 10 * r->to_f->idx;
+        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+      }
+    }
+  }
+
+  void EnergyFunctional::accumulateIMULF_MT(MatXX &H, VecX &b, bool MT) {
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    for(EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        if (!r->isLinearized) continue;
+        RawIMUResidualJacobian *J = r->J;
+
+        Eigen::Matrix<float, 15, 1> resApprox = r->res_toZeroF;
+
+        int fIdx = CPARS + 10 * r->from_f->idx;
+        int tIdx = CPARS + 10 * r->to_f->idx;
+        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+      }
+    }
+  }
+
+  void EnergyFunctional::accumulateIMUSCF_MT(MatXX &H, VecX &b, MatXX &Hss_inv, MatXX &Hsx, VecX &bsr, bool MT) {
+    // Take IMU residuals' derivatives with respect to SpeedAndBiases,
+    // the matrix is not diagonal for the reason that one residual associates two speedAndBiases
+    MatXXf Hssf = MatXXf::Zero(nFrames * 9, nFrames * 9);
+    MatXXf Hxsf = MatXXf::Zero(nFrames * 6, nFrames * 9);
+    VecXf bsrf = VecXf::Zero(nFrames * 9);
+
+    for (EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        RawIMUResidualJacobian *J = r->J;
+
+        int fIdxRaw = r->from_f->idx;
+        int tIdxRaw = r->to_f->idx;
+        Hssf.block<9, 9>(fIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[0];
+        Hssf.block<9, 9>(tIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[1];
+        Hssf.block<9, 9>(fIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[1];
+        Hssf.block<9, 9>(tIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[0];
+
+        Hxsf.block<6, 9>(fIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[0];
+        Hxsf.block<6, 9>(tIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[1];
+        Hxsf.block<6, 9>(fIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[1];
+        Hxsf.block<6, 9>(tIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[0];
+        Eigen::Matrix<float, 15, 1> resApprox;
+
+        if (r->isLinearized)
+          resApprox = r->res_toZeroF;
+        else
+          resApprox = J->resF;
+
+        bsrf.segment<9>(fIdxRaw * 9).noalias() = J->Jrdsb[0].transpose() * resApprox;
+        bsrf.segment<9>(tIdxRaw * 9).noalias() = J->Jrdsb[1].transpose() * resApprox;
+      }
+    }
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    MatXXf Hssf_inv = Hssf.inverse();//- This inverse is unavoidable for me now, unless fix one speedAndBias point.
+
+    MatXXf H_small = Hxsf * Hssf_inv * Hxsf.transpose(); //- nFrame * 6
+    VecXf b_small = Hxsf * Hssf_inv * bsrf; //- nFrame * 6
+
+    //- save result
+    for (int r = 0; r < nFrames; r++) {
+      int rIdx = 10 * r + CPARS;
+      H.block<6, 6>(rIdx, rIdx).noalias() = H_small.block<6, 6>(r * 6, r * 6).cast<double>();
+      b.segment<6>(rIdx).noalias() = b_small.segment<6>(r * 6).cast<double>();
+      for (int c = r + 1; c < nFrames; c++) {
+        int cIdx = 10 * c + CPARS;
+
+        H.block<6, 6>(rIdx, cIdx).noalias() = H_small.block<6, 6>(r * 6, c * 6).cast<double>();
+        H.block<6, 6>(cIdx, rIdx).noalias() = H_small.block<6, 6>(c * 6, r * 6).cast<double>();
+      }
+    }
+    Hss_inv = Hssf_inv.cast<double>();
+    Hsx = Hxsf.transpose().cast<double>();
+    bsr = bsrf.cast<double>();
+  }
+
+  void EnergyFunctional::accumulateIMUMF_MT(MatXX &H, VecX &b, bool MT) {
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    for(EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        if (!r->flaggedForMarginalization) continue;
+        RawIMUResidualJacobian *J = r->J;
+
+        Eigen::Matrix<float, 15, 1> resApprox = r->res_toZeroF;
+
+        int fIdx = CPARS + 10 * r->from_f->idx;
+        int tIdx = CPARS + 10 * r->to_f->idx;
+        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+      }
+    }
+  }
+
+  void EnergyFunctional::accumulateIMUMSCF_MT(MatXX &H, VecX &b, bool MT) {
+    MatXXf Hssf = MatXXf::Zero(nFrames * 9, nFrames * 9);
+    MatXXf Hxsf = MatXXf::Zero(nFrames * 6, nFrames * 9);
+    VecXf bsrf = VecXf::Zero(nFrames * 9);
+
+    for (EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        if (!r->flaggedForMarginalization) continue;
+        RawIMUResidualJacobian *J = r->J;
+
+        int fIdxRaw = r->from_f->idx;
+        int tIdxRaw = r->to_f->idx;
+        Hssf.block<9, 9>(fIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[0];
+        Hssf.block<9, 9>(tIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[1];
+        Hssf.block<9, 9>(fIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[1];
+        Hssf.block<9, 9>(tIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[0];
+
+        Hxsf.block<6, 9>(fIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[0];
+        Hxsf.block<6, 9>(tIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[1];
+        Hxsf.block<6, 9>(fIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[1];
+        Hxsf.block<6, 9>(tIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[0];
+        Eigen::Matrix<float, 15, 1> resApprox;
+
+        if (r->isLinearized)
+          resApprox = r->res_toZeroF;
+        else
+          resApprox = J->resF;
+
+        bsrf.segment<9>(fIdxRaw * 9).noalias() = J->Jrdsb[0].transpose() * resApprox;
+        bsrf.segment<9>(tIdxRaw * 9).noalias() = J->Jrdsb[1].transpose() * resApprox;
+      }
+    }
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    MatXXf Hssf_inv = Hssf.inverse();//- This inverse is unavoidable for me now, unless fix one speedAndBias point.
+
+    MatXXf H_small = Hxsf * Hssf_inv * Hxsf.transpose(); //- nFrame * 6
+    VecXf b_small = Hxsf * Hssf_inv * bsrf; //- nFrame * 6
+
+    //- save result
+    for (int r = 0; r < nFrames; r++) {
+      int rIdx = 10 * r + CPARS;
+      H.block<6, 6>(rIdx, rIdx).noalias() = H_small.block<6, 6>(r * 6, r * 6).cast<double>();
+      b.segment<6>(rIdx).noalias() = b_small.segment<6>(r * 6).cast<double>();
+      for (int c = r + 1; c < nFrames; c++) {
+        int cIdx = 10 * c + CPARS;
+
+        H.block<6, 6>(rIdx, cIdx).noalias() = H_small.block<6, 6>(r * 6, c * 6).cast<double>();
+        H.block<6, 6>(cIdx, rIdx).noalias() = H_small.block<6, 6>(c * 6, r * 6).cast<double>();
+      }
+    }
   }
 
 #endif
@@ -409,7 +605,7 @@ namespace dso {
     HCalib->step = x.head<CPARS>();
 
     VecCf cstep = xF.head<CPARS>();
-    if (!std::isfinite(cstep.norm())) cstep.setZero();
+    if (!std::isfinite(cstep.norm())) cstep.setZero(); // TODO: remove this to checkout if the system will be destoryed.
 #if STEREO_MODE
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
@@ -425,7 +621,7 @@ namespace dso {
     Mat18f *xAd = new Mat18f[nFrames * nFrames];
     for (EFFrame *h : frames) {
       h->data->step.head<8>() = x.segment<8>(CPARS + 8 * h->idx);
-      h->data->step.tail<2>().setZero();
+      h->data->step.tail<2>().setZero();// TODO: remove this to checkout if the system will be destoryed.
 
       for (EFFrame *t : frames)
         xAd[nFrames * h->idx + t->idx] =
@@ -483,7 +679,7 @@ namespace dso {
       }
 
       p->data->step = -b * p->HdiF;
-//      assert(std::isfinite(p->data->step));
+      assert(std::isfinite(p->data->step));
     }
   }
 
@@ -722,6 +918,29 @@ namespace dso {
     return efr;
   }
 
+#if STEREO_MODE & INERTIAL_MODE
+  EFIMUResidual* EnergyFunctional::insertIMUResidual(IMUResidual *r) {
+    //- EFIMUResidual(IMUResidual *org, EFSpeedAndBias *from_sb_, EFSpeedAndBias *to_sb_, EFFrame *from_f_, EFFrame *to_f_)
+    EFIMUResidual *efr = new EFIMUResidual(r, r->from_sb->efSB, r->to_sb->efSB, r->from_sb->host->efFrame, r->to_sb->host->efFrame);
+    efr->idxInAll = r->to_sb->efSB->residualsAll.size();
+    r->to_sb->efSB->residualsAll.push_back(efr); //- toSpeedAndBias as host.
+
+    nIMUResiduals++;
+    r->efIMUResidual = efr;
+    return efr;
+  }
+
+  EFSpeedAndBias* EnergyFunctional::insertSpeedAndBias(SpeedAndBiasHessian *sh) {
+    EFSpeedAndBias* efs = new EFSpeedAndBias(sh);
+    efs->idx = speedAndBiases.size();
+    speedAndBiases.push_back(efs);
+
+    nSpeedAndBiases++;
+    sh->efSB = efs;
+    return efs;
+  }
+#endif
+
   EFFrame *EnergyFunctional::insertFrame(FrameHessian *fh, CalibHessian *Hcalib) {
     EFFrame *eff = new EFFrame(fh);
     eff->idx = frames.size();
@@ -776,6 +995,20 @@ namespace dso {
     return efp;
   }
 
+#if STEREO_MODE & INERTIAL_MODE
+  void EnergyFunctional::dropIMUResidual(EFIMUResidual *r) {
+    EFSpeedAndBias *s = r->to_sb;
+    assert(r == s->residualsAll[r->idxInAll]);
+
+    s->residualsAll[r->idxInAll] = s->residualsAll.back();
+    s->residualsAll[r->idxInAll]->idxInAll = r->idxInAll;
+    s->residualsAll.pop_back();
+
+    nIMUResiduals--;
+    r->data->efIMUResidual = 0;
+    delete r;
+  }
+#endif
 
   void EnergyFunctional::dropResidual(EFResidual *r) {
     EFPoint *p = r->point;
@@ -893,6 +1126,20 @@ namespace dso {
     frames.pop_back();
     nFrames--;
     efF->data->efFrame = 0;
+
+#if STEREO_MODE & INERTIAL_MODE
+    EFSpeedAndBias *efSB = efF->data->speedAndBiasHessian->efSB;
+    for (unsigned int i = efSB->idx; i + 1 < speedAndBiases.size(); i++) {
+      speedAndBiases[i] = speedAndBiases[i+1];
+      speedAndBiases[i]->idx = i;
+    }
+    for (unsigned int i = 0; i < efSB->residualsAll.size(); i++)
+      dropIMUResidual(efSB->residualsAll[i]);
+    speedAndBiases.pop_back();
+    nSpeedAndBiases--;
+    efSB->data->efSB = 0;
+    delete efSB;
+#endif
 
     assert((int) frames.size() * 10 + CPARS == (int) HM.rows());
     assert((int) frames.size() * 10 + CPARS == (int) HM.cols());
@@ -1013,6 +1260,35 @@ namespace dso {
     delete efF;
   }
 
+#endif
+
+#if STEREO_MODE & INERTIAL_MODE
+  void EnergyFunctional::marginalizeSpeedAndBiasesF() {
+    MatXX M_imu, Msc_imu;
+    VecX Mb_imu, Mbsc_imu;
+
+    accumulateIMUMF_MT(M_imu, Mb_imu, multiThreading);
+
+    accumulateIMUMSCF_MT(Msc_imu, Mbsc_imu, multiThreading);
+
+    MatXX H = M_imu - Msc_imu;
+    VecX b = Mb_imu - Mbsc_imu;
+
+    if (setting_solverMode & SOLVER_ORTHOGONALIZE_POINTMARG) {
+      bool haveFirstFrame = false;
+      for (EFFrame *f : frames) if (f->frameID == 0) haveFirstFrame = true;
+
+      if (!haveFirstFrame)
+        orthogonalize(&b, &H);
+
+    }
+
+    HM += setting_margWeightFac * H;
+    bM += setting_margWeightFac * b;
+
+    if (setting_solverMode & SOLVER_ORTHOGONALIZE_FULL)
+      orthogonalize(&bM, &HM);
+  }
 #endif
 
   void EnergyFunctional::marginalizePointsF() {
@@ -1209,6 +1485,28 @@ namespace dso {
     // schur complement
     accumulateSCF_MT(H_sc, b_sc, multiThreading);
 
+#if STEREO_MODE & INERTIAL_MODE
+    MatXX HL_top_imu, HA_top_imu, H_sc_imu;
+    VecX bL_top_imu, bA_top_imu, b_sc_imu;
+    //- For speedAndBiases steps compute
+    MatXX Hss_inv, Hsx;
+    VecX bsr;
+
+    accumulateIMUAF_MT(HA_top_imu, bA_top_imu, multiThreading);
+
+    accumulateIMULF_MT(HL_top_imu, bL_top_imu, multiThreading);
+
+    accumulateIMUSCF_MT(H_sc_imu, b_sc_imu, Hss_inv, Hsx, bsr, multiThreading);
+
+    HA_top += HA_top_imu;
+    HL_top += HL_top_imu;
+    H_sc += H_sc_imu;
+
+    bA_top += bA_top_imu;
+    bL_top += bL_top_imu;
+    b_sc += b_sc_imu;
+#endif
+
     bM_top = (bM + HM * getStitchedDeltaF());
 
     MatXX HFinal_top;
@@ -1336,7 +1634,18 @@ namespace dso {
     //- Modify step.
     resubstituteF_MT(x, HCalib, multiThreading);
     currentLambda = 0;
-
+#if STEREO_MODE & INERTIAL_MODE
+    //- resubstitute speedAndBiases
+    //- Prepare \delta_X first
+    VecX deltaX = VecX::Zero(nFrames * 6);
+    for (int r = 0; r < nFrames; r++) {
+      int rIdx = r * 10 + CPARS;
+      deltaX.segment<6>(r * 6) = x.segment<6>(rIdx);
+    }
+    VecX deltaS = -Hss_inv * (bsr + Hsx * deltaX);
+    for(EFSpeedAndBias *s : speedAndBiases)
+      s->data->step = deltaS.segment<9>(9 * s->idx);
+#endif
 
   }
 
@@ -1358,6 +1667,14 @@ namespace dso {
         }
       }
 
+#if STEREO_MODE & INERTIAL_MODE
+    for (EFSpeedAndBias *s : speedAndBiases) {
+      for (EFIMUResidual *r : s->residualsAll) {
+        r->fromSBIDX = r->from_sb->idx;
+        r->toSBIDX = r->to_sb->idx;
+      }
+    }
+#endif
 
     EFIndicesValid = true;
   }

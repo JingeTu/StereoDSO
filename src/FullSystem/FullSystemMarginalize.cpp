@@ -58,6 +58,9 @@ namespace dso {
       for (int i = setting_maxFrames; i < (int) frameHessians.size(); i++) {
         FrameHessian *fh = frameHessians[i - setting_maxFrames];
         fh->flaggedForMarginalization = true;
+#if STEREO_MODE & INERTIAL_MODE
+        fh->speedAndBiasHessian->flaggedForMarginalization = true;
+#endif
       }
       return;
     }
@@ -85,6 +88,9 @@ namespace dso {
 //					visInLast, outInLast,
 //					fh->statistics_tracesCreatedForThisFrame, fh->statistics_pointsActivatedForThisFrame);
         fh->flaggedForMarginalization = true;
+#if STEREO_MODE & INERTIAL_MODE
+        fh->speedAndBiasHessian->flaggedForMarginalization = true;
+#endif
         flagged++;
       }
       else {
@@ -127,6 +133,9 @@ namespace dso {
 //				toMarginalize->frameID, smallestScore);
       toMarginalize->flaggedForMarginalization = true;
       flagged++;
+#if STEREO_MODE & INERTIAL_MODE
+      toMarginalize->speedAndBiasHessian->flaggedForMarginalization = true;
+#endif
     }
 
 //	printf("FRAMES LEFT: ");
@@ -172,6 +181,24 @@ namespace dso {
       }
     }
 
+#if STEREO_MODE & INERTIAL_MODE
+    for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
+      for (unsigned int i = 0; i < sh->residuals.size(); i++) {
+        IMUResidual *r = sh->residuals[i];
+        if (r->from_f == frame) {
+          ef->dropIMUResidual(r->efIMUResidual);
+          deleteOut<IMUResidual>(sh->residuals, i);
+        }
+        if (r->to_f == frame) {
+          //- r->efIMUResidual already deleted in ef->marginalizeFrame(frame->efFrame);
+          deleteOut<IMUResidual>(sh->residuals, i);
+        }
+      }
+    }
+    deleteOutOrder<SpeedAndBiasHessian>(speedAndBiasHessians, frame->speedAndBiasHessian);
+    for (unsigned int i = 0; i < speedAndBiasHessians.size(); i++)
+      speedAndBiasHessians[i]->idx = i;
+#endif
 
     {
       std::vector<FrameHessian *> v;

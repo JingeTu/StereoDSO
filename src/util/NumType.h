@@ -54,6 +54,7 @@ namespace dso {
 
 
   typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MatXX;
+  typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> MatXXf;
   typedef Eigen::Matrix<double, CPARS, CPARS> MatCC;
 #define MatToDynamic(x) MatXX(x)
 
@@ -85,6 +86,8 @@ namespace dso {
 
   typedef Eigen::Matrix<double, CPARS, 1> VecC;
   typedef Eigen::Matrix<float, CPARS, 1> VecCf;
+  typedef Eigen::Matrix<float, 9, 1> SpeedAndBiasf;
+  typedef Eigen::Matrix<double, 15, 1> Vec15;
   typedef Eigen::Matrix<double, 13, 1> Vec13;
   typedef Eigen::Matrix<double, 10, 1> Vec10;
   typedef Eigen::Matrix<double, 9, 1> Vec9;
@@ -96,6 +99,7 @@ namespace dso {
   typedef Eigen::Matrix<double, 3, 1> Vec3;
   typedef Eigen::Matrix<double, 2, 1> Vec2;
   typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VecX;
+  typedef Eigen::Matrix<float, Eigen::Dynamic, 1> VecXf;
 
   typedef Eigen::Matrix<float, 3, 3> Mat33f;
   typedef Eigen::Matrix<float, 10, 3> Mat103f;
@@ -132,6 +136,7 @@ namespace dso {
   typedef Eigen::Matrix<float, 1, 8> Mat18f;
   typedef Eigen::Matrix<float, 1, 10> Mat110f;
   typedef Eigen::Matrix<float, 6, 6> Mat66f;
+  typedef Eigen::Matrix<float, 6, 9> Mat69f;
   typedef Eigen::Matrix<float, 8, 8> Mat88f;
   typedef Eigen::Matrix<float, 8, 4> Mat84f;
   typedef Eigen::Matrix<float, 8, 1> Vec8f;

@@ -344,8 +344,6 @@ int main(int argc, char **argv) {
   //- Initialize imu related parameters.
 //  setGlobalIMUCalib();
 
-  double lastImuEndTimestamp = 0.0f;
-
   if (setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0) {
     printf("ERROR: dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
     exit(1);
@@ -475,12 +473,7 @@ int main(int argc, char **argv) {
       bool MODE_STEREOMATCH = false;
 
       if (MODE_SLAM) {
-        // Add IMU measurements.
-        std::vector<IMUMeasurement> imuMeasurements;
-//        reader_imu->getIMUMeasurementsBetween(lastImuEndTimestamp, img_left->timestamp, imuMeasurements);
-        lastImuEndTimestamp = img_left->timestamp;
-//        std::cout << imuMeasurements.size() << std::endl;
-        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, imuMeasurements, i);
+        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, i);
       }
 
       if (MODE_STEREOMATCH) {
@@ -585,7 +578,6 @@ int main(int argc, char **argv) {
   printf("DELETE READER!\n");
   delete reader;
   delete reader_right;
-//  delete reader_imu;
 
   printf("EXIT NOW!\n");
   return 0;

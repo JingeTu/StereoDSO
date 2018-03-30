@@ -141,7 +141,7 @@ namespace dso {
 
     // adds a new frame, and creates point & residual structs.
     void
-    addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight, std::vector<IMUMeasurement> &imuMeasurements,
+    addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight,
                    int id);
 
     void stereoMatch(ImageAndExposure *image, ImageAndExposure *imageRight, int id, cv::Mat &idepthMap);
@@ -174,12 +174,17 @@ namespace dso {
 
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
+    void setIMUData(const std::vector<IMUMeasurement> &imuVec);
   private:
 
     CalibHessian Hcalib;
 
     IMUParameters imuParameters;
 
+    std::vector<IMUMeasurement> imuMeasurementsVec;
+
+    //- Get IMUMeasurements according to start and end time.
+    std::vector<IMUMeasurement> getIMUMeasurements(double timeStart, double timeEnd);
 
     // opt single point
     int optimizePoint(PointHessian *point, int minObs, bool flagOOB);
@@ -190,6 +195,8 @@ namespace dso {
     Vec4 trackNewCoarse(FrameHessian *fh);
 
     Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight);
+
+    Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, SE3 T_WC0);
 
     void traceNewCoarseKey(FrameHessian *fh);
 
@@ -204,6 +211,10 @@ namespace dso {
     void activatePointsOldFirst();
 
     void flagPointsForRemoval();
+
+#if STEREO_MODE & INERTIAL_MODE
+    void flagSpeedAndBiasesForRemoval();
+#endif
 
     void makeNewTraces(FrameHessian *newFrame, float *gtDepth);
 
@@ -239,11 +250,19 @@ namespace dso {
     void linearizeAll_Reductor(bool fixLinearization, std::vector<PointFrameResidual *> *toRemove, int min, int max,
                                Vec10 *stats, int tid);
 
+#if STEREO_MODE & INERTIAL_MODE
+    void linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid);
+#endif
+
     void
     activatePointsMT_Reductor(std::vector<PointHessian *> *optimized, std::vector<ImmaturePoint *> *toOptimize, int min,
                               int max, Vec10 *stats, int tid);
 
     void applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
+
+#if STEREO_MODE & INERTIAL_MODE
+    void applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
+#endif
 
     void printOptRes(const Vec3 &res, double resL, double resM, double resPrior, double LExact, float a, float b);
 
@@ -310,6 +329,10 @@ namespace dso {
 
     std::vector<FrameHessian *> frameHessians;  // ONLY changed in marginalizeFrame and addFrame.
     std::vector<FrameHessian *> frameHessiansRight;
+#if STEREO_MODE & INERTIAL_MODE
+    std::vector<SpeedAndBiasHessian *> speedAndBiasHessians;
+    std::vector<IMUResidual *> activeIMUResiduals;
+#endif
     std::vector<PointFrameResidual *> activeResiduals;
     float currentMinActDist;
 
@@ -321,7 +344,6 @@ namespace dso {
     boost::mutex coarseTrackerSwapMutex;      // if tracker sees that there is a new reference, tracker locks [coarseTrackerSwapMutex] and swaps the two.
     CoarseTracker *coarseTracker_forNewKF;      // set as as reference. protected by [coarseTrackerSwapMutex].
     CoarseTracker *coarseTracker;          // always used to track new frames. protected by [trackMutex].
-    IMUPropagation *imuPropagation;
     float minIdJetVisTracker, maxIdJetVisTracker;
     float minIdJetVisDebug, maxIdJetVisDebug;
 

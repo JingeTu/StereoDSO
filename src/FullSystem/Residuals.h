@@ -43,6 +43,10 @@ namespace dso {
 
   class EFResidual;
 
+#if STEREO_MODE & INERTIAL_MODE
+  class EFIMUResidual;
+  class SpeedAndBiasHessian;
+#endif
 
   enum ResLocation {
     ACTIVE = 0, LINEARIZED, MARGINALIZED, NONE
@@ -111,5 +115,65 @@ namespace dso {
 
     void printRows(std::vector<VecX> &v, VecX &r, int nFrames, int nPoints, int M, int res);
   };
+#if STEREO_MODE & INERTIAL_MODE
+  class IMUResidual {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    std::vector<IMUMeasurement> imuData;
+
+    EFIMUResidual *efIMUResidual;
+
+    FrameHessian *from_f;
+    FrameHessian *to_f;
+    SpeedAndBiasHessian* from_sb;
+    SpeedAndBiasHessian* to_sb;
+
+    RawIMUResidualJacobian *J;
+
+    IMUResidual(SpeedAndBiasHessian* from_sb_, SpeedAndBiasHessian* to_sb_,
+                FrameHessian* from_f_, FrameHessian* to_f_,
+                std::vector<IMUMeasurement> &imu_data_);
+    ~IMUResidual();
+
+    double linearize(IMUParameters *imuParameters);
+
+    void applyRes(bool copyJacobians);
+
+    double t0_;
+    double t1_;
+    double state_energy;
+    double state_NewEnergy;
+
+    int redoPreintegration(const SE3 &T_WS, SpeedAndBias &speedAndBias, IMUParameters *imuParameters) const;
+
+    /// \brief The type of the covariance.
+    typedef Eigen::Matrix<double, 15, 15> covariance_t;
+
+    /// \brief The type of the information (same matrix dimension as covariance).
+    typedef covariance_t information_t;
+
+    mutable information_t information_;
+    mutable information_t squareRootInformation_;
+
+    mutable Eigen::Quaterniond Delta_q_ = Eigen::Quaterniond(1, 0, 0, 0);
+    mutable Eigen::Matrix3d C_integral_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d C_doubleintegral_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Vector3d acc_integral_ = Eigen::Vector3d::Zero();
+    mutable Eigen::Vector3d acc_doubleintegral_ = Eigen::Vector3d::Zero();
+
+    mutable Eigen::Matrix3d cross_ = Eigen::Matrix3d::Zero();
+
+    mutable Eigen::Matrix3d dalpha_db_g_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d dv_db_g_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d dp_db_g_ = Eigen::Matrix3d::Zero();
+
+    mutable Eigen::Matrix<double, 15, 15> P_delta_ = Eigen::Matrix<double, 15, 15>::Zero();
+
+    mutable SpeedAndBias speedAndBiases_ref_ = SpeedAndBias::Zero();
+    bool redo_;
+    bool redoCounter_ = 0;
+  };
+#endif
 }
 

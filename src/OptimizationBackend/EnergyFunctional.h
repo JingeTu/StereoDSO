@@ -42,6 +42,14 @@ namespace dso {
 
   class PointHessian;
 
+#if STEREO_MODE & INERTIAL_MODE
+  class IMUResidual;
+
+  class EFIMUResidual;
+
+  class EFSpeedAndBias;
+  class SpeedAndBiasHessian;
+#endif
 
   class EFResidual;
 
@@ -93,6 +101,12 @@ namespace dso {
 
     EFResidual *insertStaticResidual(PointFrameResidual *r);
 
+#if STEREO_MODE & INERTIAL_MODE
+    EFIMUResidual *insertIMUResidual(IMUResidual *r);
+
+    EFSpeedAndBias *insertSpeedAndBias(SpeedAndBiasHessian *sh);
+#endif
+
     EFFrame *insertFrame(FrameHessian *fh, CalibHessian *Hcalib);
 
     EFPoint *insertPoint(PointHessian *ph);
@@ -103,6 +117,11 @@ namespace dso {
 
     void removePoint(EFPoint *ph);
 
+#if STEREO_MODE & INERTIAL_MODE
+    void marginalizeSpeedAndBiasesF();
+
+    void dropIMUResidual(EFIMUResidual *r);
+#endif
 
     void marginalizePointsF();
 
@@ -123,6 +142,11 @@ namespace dso {
 
     std::vector<EFFrame *> frames;
     int nPoints, nFrames, nResiduals;
+
+#if STEREO_MODE & INERTIAL_MODE
+    std::vector<EFSpeedAndBias *> speedAndBiases;
+    int nSpeedAndBiases, nIMUResiduals;
+#endif
 
     MatXX HM;
     VecX bM;
@@ -168,6 +192,18 @@ namespace dso {
     void accumulateLF_MT(MatXX &H, VecX &b, bool MT);
 
     void accumulateSCF_MT(MatXX &H, VecX &b, bool MT);
+
+#if STEREO_MODE & INERTIAL_MODE
+    void accumulateIMUAF_MT(MatXX &H, VecX &b, bool MT);
+
+    void accumulateIMULF_MT(MatXX &H, VecX &b, bool MT);
+
+    void accumulateIMUSCF_MT(MatXX &H, VecX &b, MatXX &Hss_inv, MatXX &Hsx, VecX &bsr, bool MT);
+
+    void accumulateIMUMF_MT(MatXX &H, VecX &b, bool MT);
+
+    void accumulateIMUMSCF_MT(MatXX &H, VecX &b, bool MT);
+#endif
 
     void calcLEnergyPt(int min, int max, Vec10 *stats, int tid);
 

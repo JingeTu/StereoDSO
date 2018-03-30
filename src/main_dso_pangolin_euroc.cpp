@@ -359,6 +359,7 @@ int main(int argc, char **argv) {
   fullSystem->setGammaFunction(reader->getPhotometricGamma());
   fullSystem->linearizeOperation = (playbackSpeed == 0);
 
+  fullSystem->setIMUData(reader_imu->vec_imu_);
 
   IOWrap::PangolinDSOViewer *viewer = 0;
   if (!disableAllDisplay) {
@@ -477,13 +478,7 @@ int main(int argc, char **argv) {
       bool MODE_STEREOMATCH = false;
 
       if (MODE_SLAM) {
-        // Add IMU measurements.
-        std::vector<IMUMeasurement> imuMeasurements;
-        reader_imu->getIMUMeasurementsBetween(lastImuEndTimestamp, img_left->timestamp, imuMeasurements);
-        lastImuEndTimestamp = img_left->timestamp;
-//        std::cout << imuMeasurements.size() << std::endl;
-//        img_right->exposure_time = 0.5f;
-        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, imuMeasurements, i);
+        if (!skipFrame) fullSystem->addActiveFrame(img_left, img_right, i);
       }
 
       if (MODE_STEREOMATCH) {
@@ -512,6 +507,7 @@ int main(int argc, char **argv) {
           for (IOWrap::Output3DWrapper *ow : wraps) ow->reset();
 
           fullSystem = new FullSystem();
+          fullSystem->setIMUData(reader_imu->vec_imu_);
           fullSystem->setGammaFunction(reader->getPhotometricGamma());
           fullSystem->linearizeOperation = (playbackSpeed == 0);
 
