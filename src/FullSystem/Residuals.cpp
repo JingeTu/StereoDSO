@@ -82,7 +82,7 @@ namespace dso {
     isNew = true;
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
@@ -601,7 +601,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE
+#if !defined(STEREO_MODE)
 
   double PointFrameResidual::linearize(CalibHessian *HCalib) {
     state_NewEnergyWithOutlier = -1;
@@ -1062,7 +1062,7 @@ namespace dso {
     state_energy = state_NewEnergy;
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
   IMUResidual::IMUResidual(SpeedAndBiasHessian* from_sb_, SpeedAndBiasHessian* to_sb_,
                            FrameHessian* from_f_, FrameHessian* to_f_,

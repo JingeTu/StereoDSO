@@ -40,7 +40,9 @@ namespace dso {
     // set once after tracking
     SE3 camToTrackingRef;
     FrameShell *trackingRef;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     SpeedAndBias speedAndBias;
+#endif
 
     // constantly adapted.
     SE3 T_WC;        // Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].

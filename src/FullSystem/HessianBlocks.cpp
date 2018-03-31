@@ -67,7 +67,7 @@ namespace dso {
     residuals.clear();
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void FrameHessian::setStateZero(const Vec10 &state_zero) {
     assert(state_zero.head<6>().squaredNorm() < 1e-20);
@@ -105,7 +105,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void FrameHessian::setStateZero(const Vec8 &state_zero) {
     assert(state_zero.head<6>().squaredNorm() < 1e-20);
@@ -261,7 +261,7 @@ namespace dso {
     PRE_b0_mode = host->aff_g2l_0().b;
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void FrameFramePrecalc::setStatic(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib) {
     this->host = host;
@@ -293,7 +293,7 @@ namespace dso {
 
 #endif
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   SpeedAndBiasHessian::SpeedAndBiasHessian(FrameHessian *host_) : host(host) {
     flaggedForMarginalization = false;
     state.setZero();

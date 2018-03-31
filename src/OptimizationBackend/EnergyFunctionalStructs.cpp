@@ -49,14 +49,14 @@ namespace dso {
 //      LOG(INFO) << "\t";
 //    }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     JpJdF.segment<4>(6) = J->JabJIdx * J->Jpdd;
 #else
     JpJdF.segment<2>(6) = J->JabJIdx * J->Jpdd;
 #endif
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void EFIMUResidual::takeDataF() {
     std::swap<RawIMUResidualJacobian *>(J, data->J);
     // [0] xi0, s0, [1] xi0, s1, [2] xi1, s0, [3] xi1, s1
@@ -68,12 +68,12 @@ namespace dso {
 #endif
 
   void EFFrame::takeData() {
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     prior = data->getPrior().head<10>();
     delta = data->get_state_minus_stateZero().head<10>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<10>();
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     prior = data->getPrior().head<8>();
     delta = data->get_state_minus_stateZero().head<8>();
     delta_prior = (data->get_state() - data->getPriorZero()).head<8>();
@@ -104,7 +104,7 @@ namespace dso {
     deltaF = data->idepth - data->idepth_zero;
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void EFSpeedAndBias::takeData() {
     priorF.setZero();
     deltaF = data->state - data->state_zero;
@@ -121,7 +121,7 @@ namespace dso {
   }
 #endif
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec10f dp;
@@ -160,7 +160,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EFResidual::fixLinearizationF(EnergyFunctional *ef) {
     Vec8f dp;

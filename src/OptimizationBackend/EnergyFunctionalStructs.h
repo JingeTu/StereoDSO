@@ -42,7 +42,7 @@ namespace dso {
 
   class PointHessian;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class SpeedAndBiasHessian;
 
   class EFSpeedAndBias;
@@ -93,10 +93,10 @@ namespace dso {
 
     VecNRf res_toZeroF;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Vec10f JpJdF;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Vec8f JpJdF;
 #endif
 
@@ -109,7 +109,7 @@ namespace dso {
     inline const bool &isActive() const { return isActiveAndIsGoodNEW; }
   };
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class EFIMUResidual {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -196,7 +196,7 @@ namespace dso {
     EFPointStatus stateFlag;
   };
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class EFSpeedAndBias {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -253,12 +253,12 @@ namespace dso {
 
     void takeData();
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Vec10 prior;        // prior hessian (diagonal)
     Vec10 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
     Vec10 delta;        // state - state_zero.
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Vec8 prior;        // prior hessian (diagonal)
     Vec8 delta_prior;    // = state-state_prior (E_prior = (delta_prior)' * diag(prior) * (delta_prior)
     Vec8 delta;        // state - state_zero.

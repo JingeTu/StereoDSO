@@ -35,7 +35,7 @@
 namespace dso {
 
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   template<int mode>
   void AccumulatedTopHessianSSE::addPoint(EFPoint *p, EnergyFunctional const *const ef,
@@ -210,7 +210,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE
+#if !defined(STEREO_MODE)
 
   template<int mode>
   void AccumulatedTopHessianSSE::addPoint(EFPoint *p, EnergyFunctional const *const ef,
@@ -332,7 +332,7 @@ namespace dso {
 
   template void AccumulatedTopHessianSSE::addPoint<2>(EFPoint *p, EnergyFunctional const *const ef, int tid);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void AccumulatedTopHessianSSE::stitchDouble(MatXX &H, VecX &b, EnergyFunctional const *const EF, bool usePrior,
                                               bool useDelta, int tid) {

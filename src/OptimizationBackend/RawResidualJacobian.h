@@ -46,7 +46,7 @@ namespace dso {
     // the two columns of d[r]/d[x,y].
     VecNRf JIdx[2];      // 8x2
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     // = the two columns of d[r] / d[ab]. Includes rightFrame ab.
     VecNRf JabF[4];      // 8x4
 #else
@@ -56,14 +56,14 @@ namespace dso {
 
     // = JIdx^T * JIdx (inner product). Only as a shorthand.
     Mat22f JIdx2;        // 2x2
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     //- = Jab^T * JIdx (innter product). Only as a shorhand. Includes rightFrame ab.
     Mat42f JabJIdx;
 #else
     // = Jab^T * JIdx (inner product). Only as a shorthand.
     Mat22f JabJIdx;      // 2x2
 #endif
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     // = Jab^T * Jab (inner product). Only as a shorthand. Includes rightFrame ab.
     Mat44f Jab2;      // 4x4
 #else
@@ -72,7 +72,7 @@ namespace dso {
 #endif
   };
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   struct RawIMUResidualJacobian {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

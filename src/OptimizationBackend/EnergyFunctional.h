@@ -42,7 +42,7 @@ namespace dso {
 
   class PointHessian;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class IMUResidual;
 
   class EFIMUResidual;
@@ -101,7 +101,7 @@ namespace dso {
 
     EFResidual *insertStaticResidual(PointFrameResidual *r);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     EFIMUResidual *insertIMUResidual(IMUResidual *r);
 
     EFSpeedAndBias *insertSpeedAndBias(SpeedAndBiasHessian *sh);
@@ -117,7 +117,7 @@ namespace dso {
 
     void removePoint(EFPoint *ph);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     void marginalizeSpeedAndBiasesF();
 
     void dropIMUResidual(EFIMUResidual *r);
@@ -143,7 +143,7 @@ namespace dso {
     std::vector<EFFrame *> frames;
     int nPoints, nFrames, nResiduals;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     std::vector<EFSpeedAndBias *> speedAndBiases;
     int nSpeedAndBiases, nIMUResiduals;
 #endif
@@ -176,12 +176,12 @@ namespace dso {
 
     void resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     void resubstituteFPt(const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid);
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     void resubstituteFPt(const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid);
 
@@ -193,7 +193,7 @@ namespace dso {
 
     void accumulateSCF_MT(MatXX &H, VecX &b, bool MT);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     void accumulateIMUAF_MT(MatXX &H, VecX &b, bool MT);
 
     void accumulateIMULF_MT(MatXX &H, VecX &b, bool MT);
@@ -209,7 +209,7 @@ namespace dso {
 
     void orthogonalize(VecX *b, MatXX *H);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Mat110f *adHTdeltaF;
 
     Mat1010 *adHost;
@@ -218,7 +218,7 @@ namespace dso {
     Mat1010f *adHostF;
     Mat1010f *adTargetF;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Mat18f *adHTdeltaF;
 
     Mat88 *adHost;

@@ -90,7 +90,7 @@ namespace dso {
     }
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,
@@ -244,7 +244,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void AccumulatedSCHessianSSE::stitchDoubleInternal(
       MatXX *H, VecX *b, EnergyFunctional const *const EF,

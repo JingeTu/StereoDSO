@@ -25,8 +25,8 @@
 
 #pragma once
 
-#define STEREO_MODE 1
-#define INERTIAL_MODE 0
+#define STEREO_MODE
+//#define INERTIAL_MODE
 
 #include <string.h>
 #include <string>

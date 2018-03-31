@@ -35,7 +35,7 @@
 #include "FullSystem/Residuals.h"
 #include "util/ImageAndExposure.h"
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 #include "util/IMUMeasurement.h"
 #endif
 
@@ -60,7 +60,7 @@ namespace dso {
 
   class EFPoint;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class EFSpeedAndBias;
 #endif
 
@@ -84,7 +84,7 @@ namespace dso {
 #define SCALE_A_INVERSE (1.0f / SCALE_A)
 #define SCALE_B_INVERSE (1.0f / SCALE_B)
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   struct IMUPrecalc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -157,7 +157,7 @@ namespace dso {
     std::vector<PointHessian *> pointHessiansOut;    // contains all OUTLIER points (= discarded.).
     std::vector<ImmaturePoint *> immaturePoints;    // contains all OUTLIER points (= discarded.).
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     SpeedAndBiasHessian* speedAndBiasHessian;
 #endif
 
@@ -166,7 +166,7 @@ namespace dso {
     Mat42 nullspaces_affine;
     Vec6 nullspaces_scale;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     // variable info.
     SE3 worldToCam_evalPT;
     Vec10 state_zero;
@@ -187,7 +187,7 @@ namespace dso {
     EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     // variable info.
     SE3 worldToCam_evalPT;
     Vec8 state_zero;
@@ -213,7 +213,7 @@ namespace dso {
     SE3 PRE_T_CW;
     SE3 PRE_T_WC;
     std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     IMUPrecalc imuPrecalc;
 #endif
     MinimalImageB3 *debugImage;
@@ -225,7 +225,7 @@ namespace dso {
 
     inline AffLight aff_g2l_0() const { return AffLight(get_state_zero()[6] * SCALE_A, get_state_zero()[7] * SCALE_B); }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     inline AffLight aff_g2l_r() const { return AffLight(get_state_scaled()[8], get_state_scaled()[9]); }
 
@@ -235,7 +235,7 @@ namespace dso {
 
 #endif
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     void setStateZero(const Vec10 &state_zero);
 
@@ -287,7 +287,7 @@ namespace dso {
       setStateZero(this->get_state());
     };
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     void setStateZero(const Vec8 &state_zero);
 
@@ -365,7 +365,7 @@ namespace dso {
 
     void makeImages(float *color, CalibHessian *HCalib);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     inline Vec10 getPrior() {
       Vec10 p = Vec10::Zero();
@@ -406,7 +406,7 @@ namespace dso {
     }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     inline Vec8 getPrior() {
       Vec8 p = Vec8::Zero();
@@ -645,7 +645,7 @@ namespace dso {
 
   };
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   struct SpeedAndBiasHessian {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

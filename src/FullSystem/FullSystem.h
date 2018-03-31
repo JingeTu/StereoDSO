@@ -175,6 +175,7 @@ namespace dso {
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
     void setIMUData(const std::vector<IMUMeasurement> &imuVec);
+
   private:
 
     CalibHessian Hcalib;
@@ -212,7 +213,7 @@ namespace dso {
 
     void flagPointsForRemoval();
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     void flagSpeedAndBiasesForRemoval();
 #endif
 
@@ -250,7 +251,7 @@ namespace dso {
     void linearizeAll_Reductor(bool fixLinearization, std::vector<PointFrameResidual *> *toRemove, int min, int max,
                                Vec10 *stats, int tid);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     void linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid);
 #endif
 
@@ -260,7 +261,7 @@ namespace dso {
 
     void applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     void applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
 #endif
 
@@ -329,7 +330,7 @@ namespace dso {
 
     std::vector<FrameHessian *> frameHessians;  // ONLY changed in marginalizeFrame and addFrame.
     std::vector<FrameHessian *> frameHessiansRight;
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     std::vector<SpeedAndBiasHessian *> speedAndBiasHessians;
     std::vector<IMUResidual *> activeIMUResiduals;
 #endif

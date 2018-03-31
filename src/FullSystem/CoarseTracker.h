@@ -46,7 +46,7 @@ namespace dso {
 
     ~CoarseTracker();
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     bool trackNewestCoarseStereo(
         FrameHessian *newFrameHessian,
@@ -57,7 +57,7 @@ namespace dso {
         IOWrap::Output3DWrapper *wrap = 0);
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     bool trackNewestCoarse(
         FrameHessian *newFrameHessian,
@@ -124,7 +124,7 @@ namespace dso {
 
     Vec6 calcResAndGS(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     Vec6 calcResStereo(int lvl, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r, float cutoffTH);
 
@@ -132,7 +132,7 @@ namespace dso {
     calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r);
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
 
@@ -169,10 +169,10 @@ namespace dso {
 
     std::vector<float *> ptrToDelete;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Accumulator11 acc;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Accumulator9 acc;
 #endif
   };

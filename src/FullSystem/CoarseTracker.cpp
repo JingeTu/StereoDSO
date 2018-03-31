@@ -310,7 +310,7 @@ namespace dso {
 
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
                                       AffLight aff_g2l_r) {
@@ -593,7 +593,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void CoarseTracker::calcGSSSE(int lvl, Mat88 &H_out, Vec8 &b_out, const SE3 &refToNew, AffLight aff_g2l) {
     acc.initialize();
@@ -991,7 +991,7 @@ namespace dso {
 
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   bool CoarseTracker::trackNewestCoarseStereo(
       FrameHessian *newFrameHessian,
@@ -1201,7 +1201,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   bool CoarseTracker::trackNewestCoarse(
       FrameHessian *newFrameHessian,

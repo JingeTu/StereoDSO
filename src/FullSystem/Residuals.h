@@ -43,7 +43,7 @@ namespace dso {
 
   class EFResidual;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class EFIMUResidual;
   class SpeedAndBiasHessian;
 #endif
@@ -115,7 +115,8 @@ namespace dso {
 
     void printRows(std::vector<VecX> &v, VecX &r, int nFrames, int nPoints, int M, int res);
   };
-#if STEREO_MODE & INERTIAL_MODE
+
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   class IMUResidual {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;

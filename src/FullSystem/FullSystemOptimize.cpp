@@ -84,7 +84,7 @@ namespace dso {
     }
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void FullSystem::linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++) {
       IMUResidual* r = activeIMUResiduals[k];
@@ -155,7 +155,7 @@ namespace dso {
     double lastEnergyR = 0;
     double num = 0;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     //- do not remove imu residuals except marginalizing.
     if (multiThreading) {
       treadReduce.reduce(
@@ -190,8 +190,7 @@ namespace dso {
     setNewFrameEnergyTH();
 
 
-    if (fixLinearization)
-    {
+    if (fixLinearization) {
 
       for (PointFrameResidual *r : activeResiduals) {
         PointHessian *ph = r->point;
@@ -234,17 +233,17 @@ namespace dso {
   bool FullSystem::doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD) {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     Vec9 sstepfac;
     sstepfac.setConstant(stepfacT);
 #endif
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Vec10 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
     pstepfac.segment<3>(3).setConstant(stepfacR);
     pstepfac.segment<4>(6).setConstant(stepfacA);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Vec8 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
     pstepfac.segment<3>(3).setConstant(stepfacR);
@@ -258,10 +257,10 @@ namespace dso {
     if (setting_solverMode & SOLVER_MOMENTUM) {
       Hcalib.setValue(Hcalib.value_backup + Hcalib.step);
       for (FrameHessian *fh : frameHessians) {
-#if STEREO_MODE
+#if defined(STEREO_MODE)
         Vec10 step = fh->step;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
         Vec8 step = fh->step;
 #endif
         step.head<6>() += 0.5f * (fh->step_backup.head<6>());
@@ -282,7 +281,7 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + step);
         }
       }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
         Vec9 step = sh->step;
         sh->setState(sh->state_backup + step);
@@ -308,7 +307,7 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + stepfacD * ph->step);
         }
       }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
         Vec9 step = sh->step;
         sh->setState(sh->state_backup + sstepfac.cwiseProduct(sh->step));
@@ -363,7 +362,7 @@ namespace dso {
             ph->step_backup = ph->step;
           }
         }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
         for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
           sh->step_backup = sh->step;
           sh->state_backup = sh->get_state();
@@ -381,7 +380,7 @@ namespace dso {
             ph->step_backup = 0;
           }
         }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
         for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
           sh->step_backup.setZero();
           sh->state_backup = sh->get_state();
@@ -396,7 +395,7 @@ namespace dso {
         for (PointHessian *ph : fh->pointHessians)
           ph->idepth_backup = ph->idepth;
       }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
         sh->step_backup = sh->get_state();
       }
@@ -415,7 +414,7 @@ namespace dso {
         ph->setIdepthZero(ph->idepth_backup);
       }
     }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
       sh->setState(sh->state_backup);
     }
@@ -476,7 +475,7 @@ namespace dso {
         numPoints++;
       }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     activeIMUResiduals.clear();
     for (SpeedAndBiasHessian *sh : speedAndBiasHessians)
       for (IMUResidual *r : sh->residuals)
@@ -503,7 +502,7 @@ namespace dso {
     else
       applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     if (multiThreading)
       treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
                          activeIMUResiduals.size(), 50);
@@ -522,10 +521,10 @@ namespace dso {
 
     double lambda = 1e-1;
     float stepsize = 1;
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     VecX previousX = VecX::Constant(CPARS + 10 * frameHessians.size(), NAN);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     VecX previousX = VecX::Constant(CPARS + 8 * frameHessians.size(), NAN);
 #endif
     for (int iteration = 0; iteration < mnumOptIts; iteration++) {
@@ -576,7 +575,7 @@ namespace dso {
         else
           applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
         if (multiThreading)
           treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
                              activeIMUResiduals.size(), 50);
@@ -602,11 +601,11 @@ namespace dso {
     }
 
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Vec10 newStateZero = Vec10::Zero();
     newStateZero.segment<4>(6) = frameHessians.back()->get_state().segment<4>(6);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Vec8 newStateZero = Vec8::Zero();
     newStateZero.segment<2>(6) = frameHessians.back()->get_state().segment<2>(6);
 #endif
@@ -646,7 +645,7 @@ namespace dso {
         fh->shell->aff_g2l = fh->aff_g2l();
 //        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
 //        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
-#if STEREO_MODE
+#if defined(STEREO_MODE)
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
 #endif
       }
@@ -699,7 +698,7 @@ namespace dso {
     ef->dropPointsF();
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,
@@ -754,7 +753,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   std::vector<VecX> FullSystem::getNullspaces(
       std::vector<VecX> &nullspaces_pose,

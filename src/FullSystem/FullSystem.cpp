@@ -293,7 +293,7 @@ namespace dso {
     myfile.close();
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, SE3 T_WC0) {
     assert(allFrameHistory.size() > 0);
 
@@ -611,7 +611,7 @@ namespace dso {
   }
 #endif
 
-#if STEREO_MODE & !INERTIAL_MODE
+#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight) {
 
@@ -928,7 +928,7 @@ namespace dso {
 
 #endif
 
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   Vec4 FullSystem::trackNewCoarse(FrameHessian *fh) {
 
@@ -1682,7 +1682,7 @@ namespace dso {
 
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void FullSystem::flagSpeedAndBiasesForRemoval() {
     for (SpeedAndBiasHessian *s : speedAndBiasHessians) {
       for (IMUResidual *r : s->residuals) {
@@ -1945,7 +1945,9 @@ namespace dso {
     shell->marginalizedAt = shell->id = allFrameHistory.size();
     shell->timestamp = image->timestamp;
     shell->incoming_id = id;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     shell->speedAndBias.setZero();
+#endif
     fh->shell = shell;
     allFrameHistory.push_back(shell);
     //- Right Image
@@ -1968,7 +1970,7 @@ namespace dso {
     //- FrameHessian::makeImages() just calculate some image gradient.
 
     if (!initialized) {
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -1994,7 +1996,7 @@ namespace dso {
       }
       return;
 #endif
-#if STEREO_MODE & !INERTIAL_MODE
+#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -2014,7 +2016,7 @@ namespace dso {
       }
       return;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -2044,7 +2046,7 @@ namespace dso {
         coarseTracker = coarseTracker_forNewKF;
         coarseTracker_forNewKF = tmp;
       }
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       if (allFrameHistory.size() == 2) {
         initializeFromInitializerStereo(fh);
 
@@ -2068,10 +2070,10 @@ namespace dso {
 
       Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
 #endif
-#if STEREO_MODE & !INERTIAL_MODE
+#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       Vec4 tres = trackNewCoarse(fh);
 #endif
       if (!std::isfinite((double) tres[0]) || !std::isfinite((double) tres[1]) || !std::isfinite((double) tres[2]) ||
@@ -2190,7 +2192,7 @@ namespace dso {
           unmappedTrackedFrames.pop_front();
           FrameHessian *fhRight = unmappedTrackedFramesRight.front();
           unmappedTrackedFramesRight.pop_front();
-#if STEREO_MODE
+#if defined(STEREO_MODE)
           {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
@@ -2200,7 +2202,7 @@ namespace dso {
             fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
           }
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
           {
             boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
             assert(fh->shell->trackingRef != 0);
@@ -2208,7 +2210,6 @@ namespace dso {
             fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
             fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-            fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
           }
 #endif
           delete fh;
@@ -2245,7 +2246,7 @@ namespace dso {
 
   void FullSystem::makeNonKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread. no lock required since we are in mapping thread.
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -2257,7 +2258,7 @@ namespace dso {
     traceNewCoarseNonKey(fh, fhRight);
 //    traceNewCoarseKey(fh);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -2265,7 +2266,6 @@ namespace dso {
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l);
 
       fhRight->shell->T_WC = fh->shell->T_WC * leftToRight_SE3.inverse();
-      fhRight->setEvalPT_scaled(fhRight->shell->T_WC.inverse(), fhRight->shell->aff_g2l);
     }
     traceNewCoarseKey(fh);
 #endif
@@ -2276,7 +2276,7 @@ namespace dso {
 
   void FullSystem::makeKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
     // needs to be set by mapping thread
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -2284,7 +2284,7 @@ namespace dso {
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
     }
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     {
       boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
       assert(fh->shell->trackingRef != 0);
@@ -2312,7 +2312,7 @@ namespace dso {
 
     setPrecalcValues();
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     //--------------------------- add New SpeedAndBias to Hessian Struct. -----------------------------
     SpeedAndBiasHessian* speedAndBiasHessian = new SpeedAndBiasHessian(fh);
     speedAndBiasHessian->setEvalPT_scaled(frameHessians.back()->shell->speedAndBias);
@@ -2410,7 +2410,7 @@ namespace dso {
 
     // =========================== (Activate-)Marginalize Points =========================
     flagPointsForRemoval();
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     flagSpeedAndBiasesForRemoval();
 #endif
     ef->dropPointsF();
@@ -2420,7 +2420,7 @@ namespace dso {
         ef->lastNullspaces_affA,
         ef->lastNullspaces_affB);
     ef->marginalizePointsF();
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     ef->marginalizeSpeedAndBiasesF();
 #endif
 
@@ -2428,7 +2428,7 @@ namespace dso {
 
     // =========================== add new Immature points & new residuals =========================
     makeNewTraces(fh, 0);
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     //- use right frame to initialize the depth of fh->immaturePoints
     stereoMatch(fh, fhRight);
 #endif
@@ -2457,7 +2457,7 @@ namespace dso {
   }
 
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void FullSystem::initializeFromInitializerStereo(FrameHessian *newFrame) {
     boost::unique_lock<boost::mutex> lock(mapMutex);
@@ -2479,7 +2479,7 @@ namespace dso {
     ef->insertFrame(firstFrame, &Hcalib);
     setPrecalcValues();
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     SpeedAndBiasHessian* speedAndBiasHessian = new SpeedAndBiasHessian(firstFrame);
     speedAndBiasHessian->idx = speedAndBiasHessians.size();
     ef->insertSpeedAndBias(speedAndBiasHessian);
@@ -2613,7 +2613,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void FullSystem::initializeFromInitializer(FrameHessian *newFrame) {
 
@@ -2731,8 +2731,7 @@ namespace dso {
     //printf("MADE %d IMMATURE POINTS!\n", (int)newFrame->immaturePoints.size());
 
   }
-
-#if STEREO_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
@@ -2740,15 +2739,25 @@ namespace dso {
       for (unsigned int i = 0; i < frameHessians.size(); i++)
         fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
       fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
-#if STEREO_MODE & INERTIAL_MODE
       fh->imuPrecalc.T_WS = (T_SC0 * fh->get_worldToCam_evalPT()).inverse();
       fh->imuPrecalc.Jr_S_i = RightJacobian(fh->imuPrecalc.T_WS).inverse();
-#endif
     }
     ef->setDeltaF(&Hcalib);
   }
+#endif
+#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
-#else
+  void FullSystem::setPrecalcValues() {
+    for (FrameHessian *fh : frameHessians) {
+      fh->targetPrecalc.resize(frameHessians.size() + 1);
+      for (unsigned int i = 0; i < frameHessians.size(); i++)
+        fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
+      fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
+    }
+    ef->setDeltaF(&Hcalib);
+  }
+#endif
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {

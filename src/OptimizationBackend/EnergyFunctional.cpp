@@ -41,7 +41,7 @@ namespace dso {
   bool EFIndicesValid = false;
   bool EFDeltaValid = false;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EnergyFunctional::setAdjointsF(CalibHessian *Hcalib) {
 
@@ -166,7 +166,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EnergyFunctional::setAdjointsF(CalibHessian *Hcalib) {
 
@@ -248,7 +248,7 @@ namespace dso {
     adHTdeltaF = 0;
 
     nFrames = nResiduals = nPoints = 0;
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     nSpeedAndBiases = nIMUResiduals = 0;
 #endif
 
@@ -278,7 +278,7 @@ namespace dso {
       delete f;
     }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     for (EFSpeedAndBias *s : speedAndBiases) {
       s->data->efSB = 0;
       delete s;
@@ -299,7 +299,7 @@ namespace dso {
     delete accSSE_bot;
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EnergyFunctional::setDeltaF(CalibHessian *HCalib) {
     if (adHTdeltaF != 0) delete[] adHTdeltaF;
@@ -325,7 +325,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EnergyFunctional::setDeltaF(CalibHessian *HCalib) {
     if (adHTdeltaF != 0) delete[] adHTdeltaF;
@@ -352,7 +352,7 @@ namespace dso {
 
 #endif
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
   void EnergyFunctional::accumulateIMUAF_MT(MatXX &H, VecX &b, bool MT) {
     // Use one thread first.
@@ -595,10 +595,10 @@ namespace dso {
   }
 
   void EnergyFunctional::resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT) {
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     assert(x.size() == CPARS + nFrames * 10);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     assert(x.size() == CPARS + nFrames * 8);
 #endif
     VecXf xF = x.cast<float>();
@@ -606,7 +606,7 @@ namespace dso {
 
     VecCf cstep = xF.head<CPARS>();
     if (!std::isfinite(cstep.norm())) cstep.setZero(); // TODO: remove this to checkout if the system will be destoryed.
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     Mat110f *xAd = new Mat110f[nFrames * nFrames];
     for (EFFrame *h : frames) {
       h->data->step = x.segment<10>(CPARS + 10 * h->idx);
@@ -617,7 +617,7 @@ namespace dso {
             + xF.segment<10>(CPARS + 10 * t->idx).transpose() * adTargetF[h->idx + nFrames * t->idx];
     }
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     Mat18f *xAd = new Mat18f[nFrames * nFrames];
     for (EFFrame *h : frames) {
       h->data->step.head<8>() = x.segment<8>(CPARS + 8 * h->idx);
@@ -638,7 +638,7 @@ namespace dso {
     delete[] xAd;
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EnergyFunctional::resubstituteFPt(
       const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid) {
@@ -684,7 +684,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EnergyFunctional::resubstituteFPt(
       const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid) {
@@ -739,7 +739,7 @@ namespace dso {
     return delta.dot(2 * bM + HM * delta);
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
@@ -810,7 +810,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EnergyFunctional::calcLEnergyPt(int min, int max, Vec10 *stats, int tid) {
 
@@ -918,7 +918,7 @@ namespace dso {
     return efr;
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   EFIMUResidual* EnergyFunctional::insertIMUResidual(IMUResidual *r) {
     //- EFIMUResidual(IMUResidual *org, EFSpeedAndBias *from_sb_, EFSpeedAndBias *to_sb_, EFFrame *from_f_, EFFrame *to_f_)
     EFIMUResidual *efr = new EFIMUResidual(r, r->from_sb->efSB, r->to_sb->efSB, r->from_sb->host->efFrame, r->to_sb->host->efFrame);
@@ -949,7 +949,7 @@ namespace dso {
     nFrames++;
     fh->efFrame = eff;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     assert(HM.cols() == 10 * nFrames + CPARS - 10);
     bM.conservativeResize(10 * nFrames + CPARS);
     HM.conservativeResize(10 * nFrames + CPARS, 10 * nFrames + CPARS);
@@ -957,7 +957,7 @@ namespace dso {
     HM.rightCols<10>().setZero();
     HM.bottomRows<10>().setZero();
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     assert(HM.cols() == 8 * nFrames + CPARS - 8);
     bM.conservativeResize(8 * nFrames + CPARS);
     HM.conservativeResize(8 * nFrames + CPARS, 8 * nFrames + CPARS);
@@ -995,7 +995,7 @@ namespace dso {
     return efp;
   }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void EnergyFunctional::dropIMUResidual(EFIMUResidual *r) {
     EFSpeedAndBias *s = r->to_sb;
     assert(r == s->residualsAll[r->idxInAll]);
@@ -1035,7 +1035,7 @@ namespace dso {
     delete r;
   }
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
@@ -1127,7 +1127,7 @@ namespace dso {
     nFrames--;
     efF->data->efFrame = 0;
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     EFSpeedAndBias *efSB = efF->data->speedAndBiasHessian->efSB;
     for (unsigned int i = efSB->idx; i + 1 < speedAndBiases.size(); i++) {
       speedAndBiases[i] = speedAndBiases[i+1];
@@ -1164,7 +1164,7 @@ namespace dso {
   }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
   void EnergyFunctional::marginalizeFrame(EFFrame *efF) {
 
@@ -1262,7 +1262,7 @@ namespace dso {
 
 #endif
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   void EnergyFunctional::marginalizeSpeedAndBiasesF() {
     MatXX M_imu, Msc_imu;
     VecX Mb_imu, Mbsc_imu;
@@ -1485,7 +1485,7 @@ namespace dso {
     // schur complement
     accumulateSCF_MT(H_sc, b_sc, multiThreading);
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     MatXX HL_top_imu, HA_top_imu, H_sc_imu;
     VecX bL_top_imu, bA_top_imu, b_sc_imu;
     //- For speedAndBiases steps compute
@@ -1531,10 +1531,10 @@ namespace dso {
 
       lastHS = HFinal_top;
       lastbS = bFinal_top;
-#if STEREO_MODE
+#if defined(STEREO_MODE)
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       for (int i = 0; i < 8 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
     }
@@ -1547,10 +1547,10 @@ namespace dso {
       lastHS = HFinal_top - H_sc;
       lastbS = bFinal_top;
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
       for (int i = 0; i < 10 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       for (int i = 0; i < 8 * nFrames + CPARS; i++) HFinal_top(i, i) *= (1 + lambda);
 #endif
       HFinal_top -= H_sc * (1.0f / (1 + lambda));
@@ -1634,7 +1634,7 @@ namespace dso {
     //- Modify step.
     resubstituteF_MT(x, HCalib, multiThreading);
     currentLambda = 0;
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     //- resubstitute speedAndBiases
     //- Prepare \delta_X first
     VecX deltaX = VecX::Zero(nFrames * 6);
@@ -1667,7 +1667,7 @@ namespace dso {
         }
       }
 
-#if STEREO_MODE & INERTIAL_MODE
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     for (EFSpeedAndBias *s : speedAndBiases) {
       for (EFIMUResidual *r : s->residualsAll) {
         r->fromSBIDX = r->from_sb->idx;
@@ -1681,13 +1681,13 @@ namespace dso {
 
 
   VecX EnergyFunctional::getStitchedDeltaF() const {
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     VecX d = VecX(CPARS + nFrames * 10);
     d.head<CPARS>() = cDeltaF.cast<double>();
     for (int h = 0; h < nFrames; h++) d.segment<10>(CPARS + 10 * h) = frames[h]->delta;
     return d;
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     VecX d = VecX(CPARS + nFrames * 8);
     d.head<CPARS>() = cDeltaF.cast<double>();
     for (int h = 0; h < nFrames; h++) d.segment<8>(CPARS + 8 * h) = frames[h]->delta;

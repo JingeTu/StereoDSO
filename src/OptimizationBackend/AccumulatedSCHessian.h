@@ -59,7 +59,7 @@ namespace dso {
       }
     };
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
 
     inline void setZero(int n, int min = 0, int max = 1, Vec10 *stats = 0, int tid = 0) {
       if (n != nframes[tid]) {
@@ -120,7 +120,7 @@ namespace dso {
     }
 
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     inline void setZero(int n, int min = 0, int max = 1, Vec10 *stats = 0, int tid = 0) {
       if (n != nframes[tid]) {
@@ -186,12 +186,12 @@ namespace dso {
 
     void addPoint(EFPoint *p, bool shiftPriorToZero, int tid = 0);
 
-#if STEREO_MODE
+#if defined(STEREO_MODE)
     AccumulatorXX<10, CPARS> *accE[NUM_THREADS];
     AccumulatorX<10> *accEB[NUM_THREADS];
     AccumulatorXX<10, 10> *accD[NUM_THREADS];
 #endif
-#if !STEREO_MODE & !INERTIAL_MODE
+#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
     AccumulatorXX<8, CPARS> *accE[NUM_THREADS];
     AccumulatorX<8> *accEB[NUM_THREADS];
     AccumulatorXX<8, 8> *accD[NUM_THREADS];
