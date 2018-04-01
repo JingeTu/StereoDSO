@@ -660,6 +660,7 @@ namespace dso {
     };
 
     int idx;
+    int margIDX;
 
     SpeedAndBias speedAndBias_evalPT;
 
@@ -674,7 +675,7 @@ namespace dso {
     bool flaggedForMarginalization;
 
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state_zero() const { return state_zero; }
-    EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const {return state_zero; }
+    EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const {return state; }
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state_scaled() const { return state_scaled; }
     EIGEN_STRONG_INLINE const SpeedAndBias get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
 

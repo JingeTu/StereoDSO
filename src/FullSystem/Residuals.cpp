@@ -1072,6 +1072,7 @@ namespace dso {
       imuData(std::move(imu_data_)) {
     J = new RawIMUResidualJacobian();
     efIMUResidual = 0;
+    redo_ = true;
   }
 
   IMUResidual::~IMUResidual() {

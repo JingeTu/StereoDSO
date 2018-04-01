@@ -180,8 +180,6 @@ namespace dso {
 
     CalibHessian Hcalib;
 
-    IMUParameters imuParameters;
-
     std::vector<IMUMeasurement> imuMeasurementsVec;
 
     //- Get IMUMeasurements according to start and end time.
@@ -214,7 +212,9 @@ namespace dso {
     void flagPointsForRemoval();
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    void flagSpeedAndBiasesForRemoval();
+    void flagIMUResidualsForRemoval();
+
+    void makeSpeedAndBiasesMargIDXForMarginalization();
 #endif
 
     void makeNewTraces(FrameHessian *newFrame, float *gtDepth);

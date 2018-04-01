@@ -397,7 +397,7 @@ namespace dso {
       }
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-        sh->step_backup = sh->get_state();
+        sh->state_backup = sh->get_state();
       }
 #endif
     }
@@ -477,10 +477,11 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     activeIMUResiduals.clear();
-    for (SpeedAndBiasHessian *sh : speedAndBiasHessians)
+    for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
       for (IMUResidual *r : sh->residuals)
         if (!r->efIMUResidual->isLinearized)
           activeIMUResiduals.push_back(r);
+    }
 #endif
 
     if (!setting_debugout_runquiet) {
@@ -612,6 +613,10 @@ namespace dso {
 
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
                                     newStateZero);
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+//    LOG(INFO) << speedAndBiasHessians.back()->state;
+    speedAndBiasHessians.back()->setEvalPT(speedAndBiasHessians.back()->state);
+#endif
     EFDeltaValid = false;
     EFAdjointsValid = false;
     ef->setAdjointsF(&Hcalib);
@@ -647,6 +652,9 @@ namespace dso {
 //        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
 #if defined(STEREO_MODE)
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
+#endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+        fh->shell->speedAndBias = fh->speedAndBiasHessian->speedAndBias_evalPT;
 #endif
       }
     }

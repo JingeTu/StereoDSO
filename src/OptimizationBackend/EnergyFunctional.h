@@ -145,7 +145,7 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     std::vector<EFSpeedAndBias *> speedAndBiases;
-    int nSpeedAndBiases, nIMUResiduals;
+    int nSpeedAndBiases, nIMUResiduals, nMargSpeedAndBiases;
 #endif
 
     MatXX HM;

@@ -249,7 +249,7 @@ namespace dso {
 
     nFrames = nResiduals = nPoints = 0;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    nSpeedAndBiases = nIMUResiduals = 0;
+    nSpeedAndBiases = nIMUResiduals = nMargSpeedAndBiases = 0;
 #endif
 
     HM = MatXX::Zero(CPARS, CPARS);
@@ -483,17 +483,25 @@ namespace dso {
   }
 
   void EnergyFunctional::accumulateIMUMSCF_MT(MatXX &H, VecX &b, bool MT) {
-    MatXXf Hssf = MatXXf::Zero(nFrames * 9, nFrames * 9);
-    MatXXf Hxsf = MatXXf::Zero(nFrames * 6, nFrames * 9);
-    VecXf bsrf = VecXf::Zero(nFrames * 9);
+    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
+    b = VecX::Zero(nFrames * 10 + CPARS);
+
+    if (nMargSpeedAndBiases == 0) return;
+
+    int *pair = new int[nMargSpeedAndBiases];
+    MatXXf Hssf = MatXXf::Zero(nMargSpeedAndBiases * 9, nMargSpeedAndBiases * 9);
+    MatXXf Hxsf = MatXXf::Zero(nMargSpeedAndBiases * 6, nMargSpeedAndBiases * 9);
+    VecXf bsrf = VecXf::Zero(nMargSpeedAndBiases * 9);
 
     for (EFSpeedAndBias *s : speedAndBiases) {
       for (EFIMUResidual *r : s->residualsAll) {
         if (!r->flaggedForMarginalization) continue;
         RawIMUResidualJacobian *J = r->J;
 
-        int fIdxRaw = r->from_f->idx;
-        int tIdxRaw = r->to_f->idx;
+        int fIdxRaw = r->from_sb->data->margIDX;
+        int tIdxRaw = r->to_sb->data->margIDX;
+        pair[fIdxRaw] = r->from_sb->idx;
+        pair[tIdxRaw] = r->to_sb->idx;
         Hssf.block<9, 9>(fIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[0];
         Hssf.block<9, 9>(tIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[1];
         Hssf.block<9, 9>(fIdxRaw * 9, tIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * J->Jrdsb[1];
@@ -514,26 +522,28 @@ namespace dso {
         bsrf.segment<9>(tIdxRaw * 9).noalias() = J->Jrdsb[1].transpose() * resApprox;
       }
     }
-    H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
-    b = VecX::Zero(nFrames * 10 + CPARS);
 
     MatXXf Hssf_inv = Hssf.inverse();//- This inverse is unavoidable for me now, unless fix one speedAndBias point.
+
+    LOG(INFO) << "Hssf: " << Hssf;
 
     MatXXf H_small = Hxsf * Hssf_inv * Hxsf.transpose(); //- nFrame * 6
     VecXf b_small = Hxsf * Hssf_inv * bsrf; //- nFrame * 6
 
     //- save result
-    for (int r = 0; r < nFrames; r++) {
-      int rIdx = 10 * r + CPARS;
-      H.block<6, 6>(rIdx, rIdx).noalias() = H_small.block<6, 6>(r * 6, r * 6).cast<double>();
-      b.segment<6>(rIdx).noalias() = b_small.segment<6>(r * 6).cast<double>();
-      for (int c = r + 1; c < nFrames; c++) {
-        int cIdx = 10 * c + CPARS;
+    for (int r = 0; r < nMargSpeedAndBiases; r++) {
+      int rBIdx = 10 * pair[r] + CPARS;
+      H.block<6, 6>(rBIdx, rBIdx).noalias() = H_small.block<6, 6>(r * 6, r * 6).cast<double>();
+      b.segment<6>(rBIdx).noalias() = b_small.segment<6>(r * 6).cast<double>();
+      for (int c = r + 1; c < nMargSpeedAndBiases; c++) {
+        int cBIdx = 10 * pair[c] + CPARS;
 
-        H.block<6, 6>(rIdx, cIdx).noalias() = H_small.block<6, 6>(r * 6, c * 6).cast<double>();
-        H.block<6, 6>(cIdx, rIdx).noalias() = H_small.block<6, 6>(c * 6, r * 6).cast<double>();
+        H.block<6, 6>(rBIdx, cBIdx).noalias() = H_small.block<6, 6>(r * 6, c * 6).cast<double>();
+        H.block<6, 6>(cBIdx, rBIdx).noalias() = H_small.block<6, 6>(c * 6, r * 6).cast<double>();
       }
     }
+
+    delete [] pair;
   }
 
 #endif
@@ -921,6 +931,10 @@ namespace dso {
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   EFIMUResidual* EnergyFunctional::insertIMUResidual(IMUResidual *r) {
     //- EFIMUResidual(IMUResidual *org, EFSpeedAndBias *from_sb_, EFSpeedAndBias *to_sb_, EFFrame *from_f_, EFFrame *to_f_)
+    assert(r->from_sb->efSB != NULL);
+    assert(r->to_sb->efSB != NULL);
+    assert(r->from_sb->host->efFrame != NULL);
+    assert(r->to_sb->host->efFrame != NULL);
     EFIMUResidual *efr = new EFIMUResidual(r, r->from_sb->efSB, r->to_sb->efSB, r->from_sb->host->efFrame, r->to_sb->host->efFrame);
     efr->idxInAll = r->to_sb->efSB->residualsAll.size();
     r->to_sb->efSB->residualsAll.push_back(efr); //- toSpeedAndBias as host.
@@ -1093,7 +1107,7 @@ namespace dso {
       LOG(INFO) << "hpi.norm() infinite";
       LOG(INFO) << "efF l_l : " << efF->data->aff_g2l().a << efF->data->aff_g2l().b;
       LOG(INFO) << "efF l_r : " << efF->data->aff_g2l_r().a << efF->data->aff_g2l_r().b;
-      hpi = Mat1010::Identity();
+      hpi = Mat1010::Zero();
       Mat88 botRht88;
       botRht88 = HMScaled.bottomRightCorner<10, 10>().topLeftCorner<8, 8>();
       if (botRht88.norm() != 0) {
@@ -1596,30 +1610,20 @@ namespace dso {
       if (!std::isfinite(x.norm())) {
 //        LOG(INFO) << "HFinal_top: " << HFinal_top;
 //        LOG(INFO) << "bFinal_top: " << bFinal_top;
-//        LOG(INFO) << "HL_top: " << HL_top;
-//        LOG(INFO) << "bL_top: " << bL_top;
-//        LOG(INFO) << "bM_top: " << bM_top;
-//        LOG(INFO) << "HA_top: " << HA_top;
-//        LOG(INFO) << "bA_top: " << bA_top;
 //        LOG(INFO) << "H_sc: " << H_sc;
-//        LOG(INFO) << "b_sc: " << b_sc;
-//        LOG(INFO) << "bM_top: " << bM_top;
-//        LOG(INFO) << "bM: " << bM;
 //        LOG(INFO) << "HM: " << HM;
-//        LOG(INFO) << "getStitchedDeltaF(): " << getStitchedDeltaF();
+//        LOG(INFO) << "HA_top_imu : " << HA_top_imu;
+//        LOG(INFO) << "HL_top_imu : " << HL_top_imu;
+//        LOG(INFO) << "bA_top_imu : " << bA_top_imu;
+//        LOG(INFO) << "bL_top_imu : " << bL_top_imu;
+//        LOG(INFO) << "H_sc_imu : " << H_sc_imu;
+//        LOG(INFO) << "b_sc_imu : " << b_sc_imu;
 
 //        bM_top = (bM + HM * getStitchedDeltaF());
 //        HFinal_top = HL_top + HM + HA_top;
 //        bFinal_top = bL_top + bM_top + bA_top - b_sc;
       }
-//      std::cout << "HFinal_top: " << HFinal_top << std::endl;
-//      std::cout << "bFinal_top: " << bFinal_top << std::endl;
     }
-
-//    LOG(INFO) << "HA_top: " << HA_top;
-//    LOG(INFO) << "HFinal_top: " << HFinal_top;
-//    LOG(INFO) << "HFinal_top" << HFinal_top.size();
-
 
     if ((setting_solverMode & SOLVER_ORTHOGONALIZE_X) ||
         (iteration >= 2 && (setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER))) {
