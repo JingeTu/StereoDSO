@@ -41,7 +41,6 @@ namespace dso {
     double halfnorm = 0.5 * poseIncrement.template tail<3>().norm();
     dq.template head<3>() = sinc(halfnorm) * 0.5 * poseIncrement.template tail<3>();
     dq[3] = cos(halfnorm);
-    LOG(INFO) << dq[3];
 
     return Sophus::Quaterniond(dq);
   }

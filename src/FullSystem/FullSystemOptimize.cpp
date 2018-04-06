@@ -563,6 +563,7 @@ namespace dso {
                 log10(lambda),
                 incDirChange,
                 stepsize);
+        LOG(INFO) << buf;
         printOptRes(newEnergy, newEnergyL, newEnergyM, 0, 0, frameHessians.back()->aff_g2l().a,
                     frameHessians.back()->aff_g2l().b);
       }

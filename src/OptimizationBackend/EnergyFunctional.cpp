@@ -930,11 +930,6 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
   EFIMUResidual* EnergyFunctional::insertIMUResidual(IMUResidual *r) {
-    //- EFIMUResidual(IMUResidual *org, EFSpeedAndBias *from_sb_, EFSpeedAndBias *to_sb_, EFFrame *from_f_, EFFrame *to_f_)
-    assert(r->from_sb->efSB != NULL);
-    assert(r->to_sb->efSB != NULL);
-    assert(r->from_sb->host->efFrame != NULL);
-    assert(r->to_sb->host->efFrame != NULL);
     EFIMUResidual *efr = new EFIMUResidual(r, r->from_sb->efSB, r->to_sb->efSB, r->from_sb->host->efFrame, r->to_sb->host->efFrame);
     efr->idxInAll = r->to_sb->efSB->residualsAll.size();
     r->to_sb->efSB->residualsAll.push_back(efr); //- toSpeedAndBias as host.
@@ -1657,6 +1652,11 @@ namespace dso {
     for (unsigned int idx = 0; idx < frames.size(); idx++)
       frames[idx]->idx = idx;
 
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    for (unsigned int idx = 0; idx < speedAndBiases.size(); idx++)
+      speedAndBiases[idx]->idx = idx;
+#endif
+
     allPoints.clear();
 
     for (EFFrame *f : frames)
@@ -1673,12 +1673,14 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     for (EFSpeedAndBias *s : speedAndBiases) {
+      assert(s->idx == s->data->host->efFrame->idx);
       for (EFIMUResidual *r : s->residualsAll) {
         r->fromSBIDX = r->from_sb->idx;
         r->toSBIDX = r->to_sb->idx;
       }
     }
 #endif
+
 
     EFIndicesValid = true;
   }

@@ -1296,8 +1296,8 @@ namespace dso {
     SE3 T_WS_1 = to_f->imuPrecalc.T_WS;
 
     // get speed and bias
-    SpeedAndBias speedAndBiases_0 = from_f->shell->speedAndBias;
-    SpeedAndBias speedAndBiases_1 = to_f->shell->speedAndBias;
+    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->speedAndBias_evalPT;
+    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->speedAndBias_evalPT;
 
     // this will NOT be changed:
     const Eigen::Matrix3d C_WS_0 = T_WS_0.rotationMatrix();
@@ -1359,21 +1359,13 @@ namespace dso {
       error.tail<6>() = speedAndBiases_0.tail<6>() - speedAndBiases_1.tail<6>();
 
       // error weighting
-      J->resF = (squareRootInformation_ * error).cast<float>();
-
-      // get the Jacobians
-      {
-        Eigen::Matrix<double, 15, 6> J0_minimal = squareRootInformation_ * F0.block<15, 6>(0, 0);
-
-      }
-//      Mat66 Jr_S_0_i = RightJacobian(T_WS_0).inverse();
-//      Mat66 Jr_S_1_i = RightJacobian(T_WS_1).inverse();
-      J->Jrdxi[0] = (squareRootInformation_ * F0.block<15, 6>(0, 0) * from_f->imuPrecalc.Jr_S_i).cast<float>();
-      J->Jrdsb[0] = (squareRootInformation_ * F0.block<15, 9>(0, 6)).cast<float>();
-      J->Jrdxi[1] = (squareRootInformation_ * F1.block<15, 6>(0, 0) * to_f->imuPrecalc.Jr_S_i).cast<float>();
-      J->Jrdsb[1] = (squareRootInformation_ * F1.block<15, 9>(0, 6)).cast<float>();
+      J->resF = setting_imuResidualWeight * (squareRootInformation_ * error).cast<float>();
+      J->Jrdxi[0] = setting_imuResidualWeight * (squareRootInformation_ * F0.block<15, 6>(0, 0) * from_f->imuPrecalc.Jr_S_i).cast<float>();
+      J->Jrdsb[0] = setting_imuResidualWeight * (squareRootInformation_ * F0.block<15, 9>(0, 6)).cast<float>();
+      J->Jrdxi[1] = setting_imuResidualWeight * (squareRootInformation_ * F1.block<15, 6>(0, 0) * to_f->imuPrecalc.Jr_S_i).cast<float>();
+      J->Jrdsb[1] = setting_imuResidualWeight * (squareRootInformation_ * F1.block<15, 9>(0, 6)).cast<float>();
     }
-    state_NewEnergy = J->resF.norm();
+    state_NewEnergy = setting_imuResidualWeight * J->resF.norm();
     return state_NewEnergy;
   }
 #endif

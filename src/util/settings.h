@@ -60,6 +60,10 @@ namespace dso {
   extern float setting_maxShiftWeightRT;
   extern float setting_maxAffineWeight;
   extern float setting_kfGlobalWeight;
+  extern float setting_imuResidualWeight; //- point-frame residual is 1.
+  extern float setting_imuResidualWeightInv;
+  extern float setting_imuResidualWeightSquare;
+  extern float setting_imuResidualWeightSquareInv;
 
   extern float setting_staticLambda;
   extern float setting_acceptStaticDepthFactor;
