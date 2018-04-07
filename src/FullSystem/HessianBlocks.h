@@ -213,9 +213,6 @@ namespace dso {
     SE3 PRE_T_CW;
     SE3 PRE_T_WC;
     std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    IMUPrecalc imuPrecalc;
-#endif
     MinimalImageB3 *debugImage;
 
 

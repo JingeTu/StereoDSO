@@ -174,7 +174,7 @@ namespace dso {
 
     void setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH);
 
-    void setIMUData(const std::vector<IMUMeasurement> &imuVec);
+    void setIMUData(const std::vector<IMUMeasurement> &imuMeasurementsVec, const std::vector<Vec3> &imuGyrDerVec);
 
   private:
 
@@ -182,8 +182,12 @@ namespace dso {
 
     std::vector<IMUMeasurement> imuMeasurementsVec;
 
+    std::vector<Vec3> imuGyrDerVec;
+
     //- Get IMUMeasurements according to start and end time.
     std::vector<IMUMeasurement> getIMUMeasurements(double timeStart, double timeEnd);
+
+    std::vector<IMUMeasurement> getCameraVIMUMeasurements(const double timeStart, const double timeEnd);
 
     // opt single point
     int optimizePoint(PointHessian *point, int minObs, bool flagOOB);

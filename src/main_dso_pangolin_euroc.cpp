@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
   fullSystem->setGammaFunction(reader->getPhotometricGamma());
   fullSystem->linearizeOperation = (playbackSpeed == 0);
 
-  fullSystem->setIMUData(reader_imu->vec_imu_);
+  fullSystem->setIMUData(reader_imu->vec_imu_, reader_imu->vec_gyr_der_);
 
   IOWrap::PangolinDSOViewer *viewer = 0;
   if (!disableAllDisplay) {
@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
           for (IOWrap::Output3DWrapper *ow : wraps) ow->reset();
 
           fullSystem = new FullSystem();
-          fullSystem->setIMUData(reader_imu->vec_imu_);
+          fullSystem->setIMUData(reader_imu->vec_imu_, reader_imu->vec_gyr_der_);
           fullSystem->setGammaFunction(reader->getPhotometricGamma());
           fullSystem->linearizeOperation = (playbackSpeed == 0);
 

@@ -432,4 +432,11 @@ namespace dso {
   inline Mat66 RightJacobian(SE3 T) {
     return LeftJacobian(T.inverse());
   }
+
+  inline Mat33 Hat(Vec3 a) {
+    Mat33 hat = Mat33::Zero();
+    hat(0, 1) = -a[2]; hat(0, 2) = a[1]; hat(1, 2) = -a[0];
+    hat(1, 0) = a[2]; hat(2, 0) = -a[1]; hat(2, 1) = a[0];
+    return hat;
+  }
 }

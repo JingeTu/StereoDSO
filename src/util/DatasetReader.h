@@ -121,6 +121,7 @@ public:
     }
 
     vec_imu_.reserve(imuCount);
+    vec_gyr_der_.reserve(imuCount);
 
     f.clear();
     f.seekg(0, std::ios::beg);
@@ -131,9 +132,28 @@ public:
       if (7 == sscanf(buf.c_str(), "%lld,%lf,%lf,%lf,%lf,%lf,%lf",
                       &timestampL, &item.gyr[0], &item.gyr[1], &item.gyr[2],
                       &item.acc[0], &item.acc[1], &item.acc[2])) {
-        item.timestamp = timestampL * 1e-9;
+        item.timestamp = timestampL * 1e-9; //- to second
         vec_imu_.push_back(item);
       }
+    }
+
+    for (size_t i = 0; i < imuCount; i++) {
+      Vec3 der;
+      double deltaTime;
+      if (i == 0) {
+        der = vec_imu_[1].gyr - vec_imu_[0].gyr;
+        deltaTime = vec_imu_[1].timestamp - vec_imu_[0].timestamp;
+      }
+      else if (i == imuCount - 1) {
+        der = vec_imu_[imuCount - 1].gyr - vec_imu_[imuCount - 2].gyr;
+        deltaTime = vec_imu_[imuCount - 1].timestamp - vec_imu_[imuCount - 2].timestamp;
+      }
+      else {
+        der = vec_imu_[i + 1].gyr - vec_imu_[i - 1].gyr;
+        deltaTime = vec_imu_[i + 1].timestamp - vec_imu_[i - 1].timestamp;
+      }
+      Vec3 temp = der / deltaTime;
+      vec_gyr_der_.push_back(temp);
     }
 
     printf("IMUFileReader: got %lld imu measurements in %s!\n", (long long int) vec_imu_.size(), imuFilePath.c_str());
@@ -165,6 +185,7 @@ public:
   }
 
   std::vector<IMUMeasurement> vec_imu_;
+  std::vector<Vec3> vec_gyr_der_;
 };
 
 

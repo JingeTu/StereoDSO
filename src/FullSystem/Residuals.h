@@ -31,6 +31,7 @@
 #include "util/NumType.h"
 #include <iostream>
 #include <fstream>
+#include <mutex>
 #include "util/globalFuncs.h"
 #include "OptimizationBackend/RawResidualJacobian.h"
 
@@ -153,7 +154,7 @@ namespace dso {
 
     /// \brief The type of the information (same matrix dimension as covariance).
     typedef covariance_t information_t;
-
+    mutable std::mutex preintegrationMutex_;
     mutable information_t information_;
     mutable information_t squareRootInformation_;
 

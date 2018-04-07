@@ -368,12 +368,12 @@ namespace dso {
 
         int fIdx = CPARS + 10 * r->from_f->idx;
         int tIdx = CPARS + 10 * r->to_f->idx;
-        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
-        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
-        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+        H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() += (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() += (J->Jrdxi[1].transpose() * resApprox).cast<double>();
       }
     }
   }
@@ -391,12 +391,12 @@ namespace dso {
 
         int fIdx = CPARS + 10 * r->from_f->idx;
         int tIdx = CPARS + 10 * r->to_f->idx;
-        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
-        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
-        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+        H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() += (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() += (J->Jrdxi[1].transpose() * resApprox).cast<double>();
       }
     }
   }
@@ -430,8 +430,8 @@ namespace dso {
         else
           resApprox = J->resF;
 
-        bsrf.segment<9>(fIdxRaw * 9).noalias() = J->Jrdsb[0].transpose() * resApprox;
-        bsrf.segment<9>(tIdxRaw * 9).noalias() = J->Jrdsb[1].transpose() * resApprox;
+        bsrf.segment<9>(fIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * resApprox;
+        bsrf.segment<9>(tIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * resApprox;
       }
     }
     H = MatXX::Zero(nFrames * 10 + CPARS, nFrames * 10 + CPARS);
@@ -472,12 +472,12 @@ namespace dso {
 
         int fIdx = CPARS + 10 * r->from_f->idx;
         int tIdx = CPARS + 10 * r->to_f->idx;
-        H.block<6, 6>(fIdx, tIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
-        H.block<6, 6>(tIdx, fIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(fIdx, fIdx).noalias() = (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(tIdx, tIdx).noalias() = (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        b.segment<6>(fIdx).noalias() = (J->Jrdxi[0].transpose() * resApprox).cast<double>();
-        b.segment<6>(tIdx).noalias() = (J->Jrdxi[1].transpose() * resApprox).cast<double>();
+        H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
+        H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
+        b.segment<6>(fIdx).noalias() += (J->Jrdxi[0].transpose() * resApprox).cast<double>();
+        b.segment<6>(tIdx).noalias() += (J->Jrdxi[1].transpose() * resApprox).cast<double>();
       }
     }
   }
@@ -518,14 +518,12 @@ namespace dso {
         else
           resApprox = J->resF;
 
-        bsrf.segment<9>(fIdxRaw * 9).noalias() = J->Jrdsb[0].transpose() * resApprox;
-        bsrf.segment<9>(tIdxRaw * 9).noalias() = J->Jrdsb[1].transpose() * resApprox;
+        bsrf.segment<9>(fIdxRaw * 9).noalias() += J->Jrdsb[0].transpose() * resApprox;
+        bsrf.segment<9>(tIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * resApprox;
       }
     }
 
     MatXXf Hssf_inv = Hssf.inverse();//- This inverse is unavoidable for me now, unless fix one speedAndBias point.
-
-    LOG(INFO) << "Hssf: " << Hssf;
 
     MatXXf H_small = Hxsf * Hssf_inv * Hxsf.transpose(); //- nFrame * 6
     VecXf b_small = Hxsf * Hssf_inv * bsrf; //- nFrame * 6

@@ -1,6 +1,6 @@
 /**
 * This file is part of DSO.
-* 
+*
 * Copyright 2016 Technical University of Munich and Intel.
 * Developed by Jakob Engel <engelj at in dot tum dot de>,
 * for more information see <http://vision.in.tum.de/dso>.
@@ -242,8 +242,9 @@ namespace dso {
     Hcalib.B[255] = 255;
   }
 
-  void FullSystem::setIMUData(const std::vector<IMUMeasurement> &imuVec) {
-    imuMeasurementsVec = imuVec;
+  void FullSystem::setIMUData(const std::vector<IMUMeasurement> &imuMeasurementsVec, const std::vector<Vec3> &imuGyrDerVec) {
+    this->imuMeasurementsVec = imuMeasurementsVec;
+    this->imuGyrDerVec = imuGyrDerVec;
   }
 
   std::vector<IMUMeasurement> FullSystem::getIMUMeasurements(double timeStart, double timeEnd) {
@@ -268,6 +269,52 @@ namespace dso {
     }
 
     return std::vector<IMUMeasurement>(first_imu_package, last_imu_package);
+  }
+
+  std::vector<IMUMeasurement> FullSystem::getCameraVIMUMeasurements(const double timeStart, const double timeEnd) {
+    assert(!imuMeasurementsVec.empty());
+    assert(timeEnd > timeStart);
+    assert(timeStart < imuMeasurementsVec.back().timestamp);
+    if (imuMeasurementsVec.empty()) return std::vector<IMUMeasurement>();
+    if (timeEnd < timeStart || timeStart > imuMeasurementsVec.back().timestamp)
+      return std::vector<IMUMeasurement>();
+
+    std::vector<IMUMeasurement>::iterator first_imu_package = imuMeasurementsVec.begin();
+    std::vector<IMUMeasurement>::iterator last_imu_package = imuMeasurementsVec.end();
+    std::vector<Vec3>::iterator first_imu_der_package = imuGyrDerVec.begin();
+    std::vector<Vec3>::iterator last_imu_der_package = imuGyrDerVec.end();
+
+    auto iter = imuMeasurementsVec.begin();
+    auto iter_der = imuGyrDerVec.begin();
+    for (; iter != imuMeasurementsVec.end() && iter_der != imuGyrDerVec.end(); ++iter, ++iter_der) {
+      if (iter->timestamp <= timeStart) {
+        first_imu_package = iter;
+        first_imu_der_package = iter_der;
+      }
+      if (iter->timestamp >= timeEnd) {
+        last_imu_der_package = iter_der;
+        last_imu_der_package++;
+        last_imu_package = iter;
+        last_imu_package++;
+        break;
+      }
+    }
+
+    std::vector<IMUMeasurement> imuData(first_imu_package, last_imu_package);
+    std::vector<Vec3> imuDerData(first_imu_der_package, last_imu_der_package);
+    int imuDataSize = (int)imuData.size();
+
+    Mat33 C_C0S = T_SC0.rotationMatrix().transpose();
+    Vec3 r = -C_C0S * T_SC0.translation();
+    for (int i = 0; i < imuDataSize; i++) {
+      Vec3 new_gyr = C_C0S * imuData[i].gyr;
+      Mat33 hat_new_gyr = Hat(new_gyr);
+      Vec3 new_acc = C_C0S * imuData[i].acc - hat_new_gyr * hat_new_gyr * r - Hat(C_C0S * imuDerData[i]) * r;
+      imuData[i].gyr = new_gyr;
+      imuData[i].acc = new_acc;
+    }
+
+    return imuData;
   }
 
   void FullSystem::printResult(std::string file) {
@@ -1874,14 +1921,21 @@ namespace dso {
       {
         double imuTimeStart = 0.0 - setting_temporal_imu_data_overlap;
         double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-        std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
         //- Initialize IMU
-        Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuData);
-//        LOG(WARNING) << std::setprecision(32) << "imuTimeStart : " << imuTimeStart << "\timuTimeEnd : " << imuTimeEnd;
-//        LOG(WARNING) << std::setprecision(32) << "imuData.front().timestamp : " << imuData.front().timestamp << "\timuData.back().timestamp : " << imuData.back().timestamp;
-        LOG(WARNING) << "Initialized q_WS: " << q_WS.w() << ", " << q_WS.x() << ", " << q_WS.y() << ", " << q_WS.z();
+//        std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+//        Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuData);
         // T_WS * T_SC0 = T_WC0
-        coarseInitializer->T_WC_ini = SE3(q_WS, Vec3(0, 0, 0)) * T_SC0;
+//        coarseInitializer->T_WC_ini = SE3(q_WS, Vec3(0, 0, 0)) * T_SC0;
+//        LOG(WARNING) << "Initialized q_WS: " << q_WS.w() << ", " << q_WS.x() << ", " << q_WS.y() << ", " << q_WS.z();
+
+        std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
+        Sophus::Quaterniond q_WC0 = dso::IMUPropagation::initializeRollPitchFromMeasurements(vIMUData);
+//        Sophus::Quaterniond q_WS_V(T_SC0.rotationMatrix() * q_WC0.toRotationMatrix() * T_SC0.rotationMatrix().transpose());
+//        LOG(WARNING) << "Initialized q_WS_V: " << q_WS_V.w() << ", " << q_WS_V.x() << ", " << q_WS_V.y() << ", " << q_WS_V.z();
+//        LOG(WARNING) << q_WS_V.toRotationMatrix();
+//        LOG(WARNING) << q_WC0.toRotationMatrix();
+        coarseInitializer->T_WC_ini = SE3(q_WC0, Vec3(0, 0, 0));
+
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
 
@@ -1955,26 +2009,43 @@ namespace dso {
       }
 
       //- Get the last propagated frame as the propagation start point
+//      FrameShell* startF = allFrameHistory[allFrameHistory.size() - 2]; //- use the last frame as start point.
+//      double imuTimeStart = startF->timestamp - setting_temporal_imu_data_overlap;
+//      double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
+//      SpeedAndBias lastSpeedAndBias = startF->speedAndBias;
+//      std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+//      SE3 T_WC0 = startF->T_WC;
+//      SE3 T_WS = T_WC0 * T_SC0.inverse();
+//      LOG(WARNING) << "before propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
+//      //- T_WS and lastSpeedAndBias will be propagated.
+//      IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBias, startF->timestamp, fh->shell->timestamp, 0, 0);
+//      LOG(WARNING) << "after propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
+//      fh->shell->speedAndBias = lastSpeedAndBias;
+//      T_WC0 = T_WS * T_SC0;
+//
+//      LOG(WARNING) << "propagated se(3) " << T_WC0.translation().x() << "\t" << T_WC0.translation().y() << "\t" << T_WC0.translation().z() << "\t"
+//                   << T_WC0.unit_quaternion().w() << "\t" << T_WC0.unit_quaternion().x() << "\t" << T_WC0.unit_quaternion().y() << "\t" << T_WC0.unit_quaternion().z();
+//      Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
+//      LOG(WARNING) << "tracked se(3) " << fh->shell->T_WC.translation().x() << "\t" << fh->shell->T_WC.translation().y() << "\t" << fh->shell->T_WC.translation().z() << "\t"
+//          << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
+
       FrameShell* startF = allFrameHistory[allFrameHistory.size() - 2]; //- use the last frame as start point.
-//      FrameShell* startF = coarseTracker->lastRef->shell; //- use the last reference frame as start point.
       double imuTimeStart = startF->timestamp - setting_temporal_imu_data_overlap;
       double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
       SpeedAndBias lastSpeedAndBias = startF->speedAndBias;
-      std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
+      std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
       SE3 T_WC0 = startF->T_WC;
-      SE3 T_WS = T_WC0 * T_SC0.inverse();
       LOG(WARNING) << "before propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
       //- T_WS and lastSpeedAndBias will be propagated.
-      IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBias, startF->timestamp, fh->shell->timestamp, 0, 0);
+      IMUPropagation::propagate(vIMUData, T_WC0, lastSpeedAndBias, startF->timestamp, fh->shell->timestamp, 0, 0);
       LOG(WARNING) << "after propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
       fh->shell->speedAndBias = lastSpeedAndBias;
-      T_WC0 = T_WS * T_SC0;
 
       LOG(WARNING) << "propagated se(3) " << T_WC0.translation().x() << "\t" << T_WC0.translation().y() << "\t" << T_WC0.translation().z() << "\t"
                    << T_WC0.unit_quaternion().w() << "\t" << T_WC0.unit_quaternion().x() << "\t" << T_WC0.unit_quaternion().y() << "\t" << T_WC0.unit_quaternion().z();
       Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
       LOG(WARNING) << "tracked se(3) " << fh->shell->T_WC.translation().x() << "\t" << fh->shell->T_WC.translation().y() << "\t" << fh->shell->T_WC.translation().z() << "\t"
-          << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
+                   << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
 #endif
 #if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
@@ -2238,8 +2309,8 @@ namespace dso {
 //    }
     double time_start = fh1->shell->timestamp - setting_temporal_imu_data_overlap;
     double time_end = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-    std::vector<IMUMeasurement> imuData = getIMUMeasurements(time_start, time_end);
-    IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, imuData);//- from, to
+    std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(time_start, time_end);
+    IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, vIMUData);//- from, to
     fh->speedAndBiasHessian->residuals.push_back(r); //- to as the host
     ef->insertIMUResidual(r);
 #endif
@@ -2653,9 +2724,6 @@ namespace dso {
       for (unsigned int i = 0; i < frameHessians.size(); i++)
         fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
       fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
-      fh->imuPrecalc.T_WS = (T_SC0 * fh->get_worldToCam_evalPT()).inverse();
-//      fh->imuPrecalc.Jr_S_i = RightJacobian(fh->imuPrecalc.T_WS).inverse();
-      fh->imuPrecalc.Jr_S_i = T_SC0.Adj();
     }
     ef->setDeltaF(&Hcalib);
   }

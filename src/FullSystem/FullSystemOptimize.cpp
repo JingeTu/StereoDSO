@@ -615,7 +615,6 @@ namespace dso {
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
                                     newStateZero);
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-//    LOG(INFO) << speedAndBiasHessians.back()->state;
     speedAndBiasHessians.back()->setEvalPT(speedAndBiasHessians.back()->state);
 #endif
     EFDeltaValid = false;
@@ -649,8 +648,6 @@ namespace dso {
       for (FrameHessian *fh : frameHessians) {
         fh->shell->T_WC = fh->PRE_T_WC;
         fh->shell->aff_g2l = fh->aff_g2l();
-//        fh->rightFrame->shell->T_WC = fh->rightFrame->PRE_T_WC;
-//        fh->rightFrame->shell->aff_g2l = fh->rightFrame->aff_g2l();
 #if defined(STEREO_MODE)
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
 #endif

@@ -1086,6 +1086,8 @@ namespace dso {
   }
 
   int IMUResidual::redoPreintegration(const SE3 &T_WS, SpeedAndBias &speedAndBias, IMUParameters *imuParameters) const {
+    std::lock_guard<std::mutex> lock(preintegrationMutex_);
+
     // now the propagation
     double time = t0_;
     double end = t1_;
@@ -1290,12 +1292,14 @@ namespace dso {
   }
 
   double IMUResidual::linearize(IMUParameters *imuParameters) {
-//    SE3 T_WS_0 = (T_SC0 * from_f->get_worldToCam_evalPT()).inverse();
-//    SE3 T_WS_1 = (T_SC0 * to_f->get_worldToCam_evalPT()).inverse();
-    SE3 T_WS_0 = from_f->imuPrecalc.T_WS;
-    SE3 T_WS_1 = to_f->imuPrecalc.T_WS;
 
-    // get speed and bias
+//    SE3 T_WS_0 = from_f->PRE_T_CW.inverse();
+//    SE3 T_WS_1 = to_f->PRE_T_CW.inverse();
+//    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->get_state();
+//    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->get_state();
+
+    SE3 T_WS_0 = from_f->get_worldToCam_evalPT().inverse();
+    SE3 T_WS_1 = to_f->get_worldToCam_evalPT().inverse();
     SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->speedAndBias_evalPT;
     SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->speedAndBias_evalPT;
 
@@ -1305,7 +1309,12 @@ namespace dso {
 
     // call the propagation
     const double Delta_t = (t1_ - t0_);
-    Eigen::Matrix<double, 6, 1> Delta_b = speedAndBiases_0.tail<6>() - speedAndBiases_ref_.tail<6>();
+    Eigen::Matrix<double, 6, 1> Delta_b;
+
+    {
+      std::lock_guard<std::mutex> lock(preintegrationMutex_);
+      Delta_b = speedAndBiases_0.tail<6>() - speedAndBiases_ref_.tail<6>();
+    }
 
     redo_ = redo_ || (Delta_b.head<3>().norm() * Delta_t > 0.0001);
     if (redo_) {
@@ -1316,6 +1325,7 @@ namespace dso {
     }
 
     {
+      std::lock_guard<std::mutex> lock(preintegrationMutex_);
       const Eigen::Vector3d g_W = imuParameters->g * Eigen::Vector3d(0, 0, 6371009).normalized();
 
       // assign Jacobian w.r.t. x0
@@ -1360,12 +1370,13 @@ namespace dso {
 
       // error weighting
       J->resF = setting_imuResidualWeight * (squareRootInformation_ * error).cast<float>();
-      J->Jrdxi[0] = setting_imuResidualWeight * (squareRootInformation_ * F0.block<15, 6>(0, 0) * from_f->imuPrecalc.Jr_S_i).cast<float>();
+      J->Jrdxi[0] = setting_imuResidualWeight * (squareRootInformation_ * F0.block<15, 6>(0, 0)).cast<float>();
       J->Jrdsb[0] = setting_imuResidualWeight * (squareRootInformation_ * F0.block<15, 9>(0, 6)).cast<float>();
-      J->Jrdxi[1] = setting_imuResidualWeight * (squareRootInformation_ * F1.block<15, 6>(0, 0) * to_f->imuPrecalc.Jr_S_i).cast<float>();
+      J->Jrdxi[1] = setting_imuResidualWeight * (squareRootInformation_ * F1.block<15, 6>(0, 0)).cast<float>();
       J->Jrdsb[1] = setting_imuResidualWeight * (squareRootInformation_ * F1.block<15, 9>(0, 6)).cast<float>();
     }
     state_NewEnergy = setting_imuResidualWeight * J->resF.norm();
+
     return state_NewEnergy;
   }
 #endif
