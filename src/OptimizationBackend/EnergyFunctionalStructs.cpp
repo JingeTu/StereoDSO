@@ -57,6 +57,7 @@ namespace dso {
   }
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   void EFIMUResidual::takeDataF() {
     std::swap<RawIMUResidualJacobian *>(J, data->J);
     // [0] xi0, s0, [1] xi0, s1, [2] xi1, s0, [3] xi1, s1
@@ -65,6 +66,7 @@ namespace dso {
     JxiJsF[2] = (J->Jrdxi[1].transpose() * J->Jrdsb[0]).cast<float>();
     JxiJsF[3] = (J->Jrdxi[1].transpose() * J->Jrdsb[1]).cast<float>();
   }
+
 #endif
 
   void EFFrame::takeData() {
@@ -91,7 +93,7 @@ namespace dso {
 //	std::cout << "state_zero: " << state_zero.transpose() << "\n";
 
 
-    assert(data->frameID != -1);
+//    assert(data->frameID != -1);
 
     frameID = data->frameID;
   }
@@ -105,6 +107,7 @@ namespace dso {
   }
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   void EFSpeedAndBias::takeData() {
     priorF.setZero();
     deltaF = data->state - data->state_zero;
@@ -117,8 +120,9 @@ namespace dso {
     Vec6f dxit = this->to_f->data->get_state_minus_stateZero().head<6>().cast<float>();
 
     res_toZeroF = J->Jrdsb[0] * dsbf + J->Jrdsb[1] * dsbt
-                   + J->Jrdxi[0] * dxif + J->Jrdxi[1] * dxit;
+                  + J->Jrdxi[0] * dxif + J->Jrdxi[1] * dxit;
   }
+
 #endif
 
 #if defined(STEREO_MODE)

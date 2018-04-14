@@ -57,6 +57,16 @@ namespace dso {
         IOWrap::Output3DWrapper *wrap = 0);
 
 #endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+    Vec6 calculateRes(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight);
+
+    void calculateHAndb(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight, Mat1010 &H, Vec10 &b);
+
+    void
+    calculateMscAndbsc(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight, Mat1010 &Msc, Vec10 &bsc);
+
+#endif
 #if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     bool trackNewestCoarse(
@@ -132,6 +142,12 @@ namespace dso {
     calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r);
 
 #endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+    void
+    calcMSCSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l, AffLight aff_g2l_r);
+
+#endif
 #if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
     Vec6 calcRes(int lvl, const SE3 &refToNew, AffLight aff_g2l, float cutoffTH);
@@ -159,13 +175,21 @@ namespace dso {
     float *buf_warped_weight;
     float *buf_warped_refColor;
     int buf_warped_n;
+#if defined(STEREO_MODE)
     //- warped buffers for stereo
     float *buf_warped_idepth_r;
     float *buf_warped_dx_r;
     float *buf_warped_dy_r;
     float *buf_warped_residual_r;
     float *buf_warped_weight_r;
+#endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    float *buf_warped_dd;
+    float *buf_warped_dd_r;
+#endif
 
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+#endif
 
     std::vector<float *> ptrToDelete;
 

@@ -43,11 +43,13 @@ namespace dso {
   class PointHessian;
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class SpeedAndBiasHessian;
 
   class EFSpeedAndBias;
 
   class IMUResidual;
+
 #endif
 
   class EFResidual;
@@ -110,6 +112,7 @@ namespace dso {
   };
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class EFIMUResidual {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -132,14 +135,14 @@ namespace dso {
     void takeDataF();
 
     int fromSBIDX, toSBIDX;
-    EFSpeedAndBias* from_sb;
-    EFSpeedAndBias* to_sb;
-    EFFrame* from_f;
-    EFFrame* to_f;
+    EFSpeedAndBias *from_sb;
+    EFSpeedAndBias *to_sb;
+    EFFrame *from_f;
+    EFFrame *to_f;
     IMUResidual *data;
     int idxInAll;
 
-    RawIMUResidualJacobian* J;
+    RawIMUResidualJacobian *J;
 
     Vec15f res_toZeroF;
 
@@ -150,6 +153,7 @@ namespace dso {
 
     bool flaggedForMarginalization;
   };
+
 #endif
 
   enum EFPointStatus {
@@ -197,11 +201,12 @@ namespace dso {
   };
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class EFSpeedAndBias {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-    EFSpeedAndBias(SpeedAndBiasHessian* d) : data(d) {
+    EFSpeedAndBias(SpeedAndBiasHessian *d) : data(d) {
       takeData();
       stateFlag = GOOD;
       bsSumF.setZero();
@@ -241,6 +246,7 @@ namespace dso {
 
     EFSpeedAndBiasStatus stateFlag;
   };
+
 #endif
 
   class EFFrame {

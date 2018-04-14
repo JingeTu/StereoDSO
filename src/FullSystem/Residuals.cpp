@@ -1064,8 +1064,8 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
-  IMUResidual::IMUResidual(SpeedAndBiasHessian* from_sb_, SpeedAndBiasHessian* to_sb_,
-                           FrameHessian* from_f_, FrameHessian* to_f_,
+  IMUResidual::IMUResidual(SpeedAndBiasHessian *from_sb_, SpeedAndBiasHessian *to_sb_,
+                           FrameHessian *from_f_, FrameHessian *to_f_,
                            std::vector<IMUMeasurement> &imu_data_) :
       from_sb(from_sb_), to_sb(to_sb_), from_f(from_f_), to_f(to_f_),
       t0_(from_f_->shell->timestamp), t1_(to_f_->shell->timestamp),
@@ -1293,15 +1293,15 @@ namespace dso {
 
   double IMUResidual::linearize(IMUParameters *imuParameters) {
 
-//    SE3 T_WS_0 = from_f->PRE_T_CW.inverse();
-//    SE3 T_WS_1 = to_f->PRE_T_CW.inverse();
-//    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->get_state();
-//    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->get_state();
+    SE3 T_WS_0 = from_f->PRE_T_CW.inverse();
+    SE3 T_WS_1 = to_f->PRE_T_CW.inverse();
+    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->get_state();
+    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->get_state();
 
-    SE3 T_WS_0 = from_f->get_worldToCam_evalPT().inverse();
-    SE3 T_WS_1 = to_f->get_worldToCam_evalPT().inverse();
-    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->speedAndBias_evalPT;
-    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->speedAndBias_evalPT;
+//    SE3 T_WS_0 = from_f->get_worldToCam_evalPT().inverse();
+//    SE3 T_WS_1 = to_f->get_worldToCam_evalPT().inverse();
+//    SpeedAndBias speedAndBiases_0 = from_f->speedAndBiasHessian->speedAndBias_evalPT;
+//    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->speedAndBias_evalPT;
 
     // this will NOT be changed:
     const Eigen::Matrix3d C_WS_0 = T_WS_0.rotationMatrix();
@@ -1379,5 +1379,6 @@ namespace dso {
 
     return state_NewEnergy;
   }
+
 #endif
 }

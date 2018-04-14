@@ -154,6 +154,11 @@ namespace dso {
     ef = new EnergyFunctional();
     ef->red = &this->treadReduce;
 
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    PRE_ef = new PREEnergyFunctional();
+    PRE_ef->red = &this->treadReduce;
+#endif
+
     isLost = false;
     initFailed = false;
 
@@ -242,7 +247,8 @@ namespace dso {
     Hcalib.B[255] = 255;
   }
 
-  void FullSystem::setIMUData(const std::vector<IMUMeasurement> &imuMeasurementsVec, const std::vector<Vec3> &imuGyrDerVec) {
+  void
+  FullSystem::setIMUData(const std::vector<IMUMeasurement> &imuMeasurementsVec, const std::vector<Vec3> &imuGyrDerVec) {
     this->imuMeasurementsVec = imuMeasurementsVec;
     this->imuGyrDerVec = imuGyrDerVec;
   }
@@ -302,7 +308,7 @@ namespace dso {
 
     std::vector<IMUMeasurement> imuData(first_imu_package, last_imu_package);
     std::vector<Vec3> imuDerData(first_imu_der_package, last_imu_der_package);
-    int imuDataSize = (int)imuData.size();
+    int imuDataSize = (int) imuData.size();
 
     Mat33 C_C0S = T_SC0.rotationMatrix().transpose();
     Vec3 r = -C_C0S * T_SC0.translation();
@@ -338,14 +344,15 @@ namespace dso {
 //             " " << s->T_WC.so3().unit_quaternion().w() << "\n";
       auto R = s->T_WC.rotationMatrix();
       auto t = s->T_WC.translation();
-      myfile << R(0,0) << " " << R(0,1) << " " << R(0,2) << " " << t(0) << " "
-             << R(1,0) << " " << R(1,1) << " " << R(1,2) << " " << t(1) << " "
-             << R(2,0) << " " << R(2,1) << " " << R(2,2) << " " << t(2) << "\n";
+      myfile << R(0, 0) << " " << R(0, 1) << " " << R(0, 2) << " " << t(0) << " "
+             << R(1, 0) << " " << R(1, 1) << " " << R(1, 2) << " " << t(1) << " "
+             << R(2, 0) << " " << R(2, 1) << " " << R(2, 2) << " " << t(2) << "\n";
     }
     myfile.close();
   }
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   Vec4 FullSystem::trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, SE3 T_WC0) {
     assert(allFrameHistory.size() > 0);
 
@@ -456,24 +463,30 @@ namespace dso {
           // if they don't work they will only be tried on the coarsest level, which is super fast anyway.
           // also, if tracking rails here we loose, so we really, really want to avoid that.
           for (float rotDelta = 0.02; rotDelta < 0.1; rotDelta = rotDelta + 0.02) {
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, rotDelta, 0, 0),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, rotDelta, 0),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, 0, rotDelta),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, -rotDelta, 0, 0),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, -rotDelta, 0),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
-            lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, 0, -rotDelta),
-                                                                                  Vec3(0, 0,
-                                                                                       0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, rotDelta, 0, 0),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, rotDelta, 0),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, 0, rotDelta),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, -rotDelta, 0, 0),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, -rotDelta, 0),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
+            lastF_2_fh_tries.push_back(
+                fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1, 0, 0, -rotDelta),
+                                                           Vec3(0, 0,
+                                                                0)));      // assume constant motion.
             lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast *
                                        SE3(Sophus::Quaterniond(1, rotDelta, rotDelta, 0),
                                            Vec3(0, 0, 0)));  // assume constant motion.
@@ -661,6 +674,7 @@ namespace dso {
 
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
   }
+
 #endif
 
 #if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
@@ -1619,27 +1633,6 @@ namespace dso {
 
   }
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-  void FullSystem::flagIMUResidualsForRemoval() {
-    for (SpeedAndBiasHessian *s : speedAndBiasHessians) {
-      for (IMUResidual *r : s->residuals) {
-        if (r->from_sb->flaggedForMarginalization || r->to_sb->flaggedForMarginalization) {
-          r->efIMUResidual->isLinearized = false;
-          r->efIMUResidual->flaggedForMarginalization = true;
-        }
-      }
-    }
-  }
-
-  void FullSystem::makeSpeedAndBiasesMargIDXForMarginalization() {
-    int count = 0;
-    for (SpeedAndBiasHessian *s : speedAndBiasHessians) {
-      if (s->flaggedForMarginalization) s->margIDX = count++;
-    }
-    ef->nMargSpeedAndBiases = count;
-  }
-#endif
-
   void FullSystem::stereoMatch(ImageAndExposure *image, ImageAndExposure *imageRight, int id, cv::Mat &idepthMap) {
     // =========================== add into allFrameHistory =========================
     FrameHessian *fh = new FrameHessian();
@@ -1802,19 +1795,12 @@ namespace dso {
     K(0, 2) = Hcalib.cxl();
     K(1, 2) = Hcalib.cyl();
 
-//    std::vector<cv::KeyPoint> keypoints_left;
-//    std::vector<cv::KeyPoint> keypoints_right;
-//    std::vector<cv::DMatch> matches;
-//    float debugKeepPercentage = 0.2;
-
     for (ImmaturePoint *ip : fh->immaturePoints) {
       ip->u_stereo = ip->u;
       ip->v_stereo = ip->v;
       ip->idepth_min_stereo = ip->idepth_min = 0;
       ip->idepth_max_stereo = ip->idepth_max = NAN;
 
-
-//      std::cout << "idx: " << ip->idxInImmaturePoints << "\t Right." << std::endl;
       ImmaturePointStatus phTraceRightStatus = ip->traceStereo(fhRight, K, 1);
 
       if (phTraceRightStatus == ImmaturePointStatus::IPS_GOOD) {
@@ -1825,7 +1811,6 @@ namespace dso {
         ipRight->v_stereo = ipRight->v;
         ipRight->idepth_min_stereo = ip->idepth_min = 0;
         ipRight->idepth_max_stereo = ip->idepth_max = NAN;
-//        std::cout << "idx: " << ip->idxInImmaturePoints << "\t Left." << std::endl;
         ImmaturePointStatus phTraceLeftStatus = ipRight->traceStereo(fh, K, 0);
 
         float u_stereo_delta = abs(ip->u_stereo - ipRight->lastTraceUV(0));
@@ -1835,47 +1820,14 @@ namespace dso {
             depth < setting_acceptStaticDepthFactor * baseline &&
             depth > 20 * baseline) //original u_stereo_delta 1 depth < 70
         {
-
           ip->idepth_min = ip->idepth_min_stereo;
           ip->idepth_max = ip->idepth_max_stereo;
-
-//          if (rand() / (float) RAND_MAX > debugKeepPercentage) continue;
-//          keypoints_left.emplace_back(ip->u, ip->v, 1);
-//          keypoints_right.emplace_back(ip->lastTraceUV(0), ip->lastTraceUV(1), 1);
-//          matches.emplace_back(keypoints_left.size() - 1, keypoints_right.size() - 1, 1.0f);
         }
       }
     }
-
-//    cv::Mat matLeft(hG[0], wG[0], CV_32FC3, fh->dI);
-//    cv::Mat matRight(hG[0], wG[0], CV_32FC3, fhRight->dI);
-//    matLeft.convertTo(matLeft, CV_8UC3);
-//    matRight.convertTo(matRight, CV_8UC3);
-//
-//    cv::Mat matMatches;
-//    cv::drawMatches(matLeft, keypoints_left, matRight, keypoints_right, matches, matMatches);
-//    cv::imshow("matches", matMatches);
-//    cv::waitKey(0);
   }
 
   void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *imageRight, int id) {
-
-
-//    cv::Mat matLeft(image->h, image->w, CV_32F, image->image);
-//    cv::Mat matRight(imageRight->h, imageRight->w, CV_32F, imageRight->image);
-//
-//
-//    matLeft.convertTo(matLeft, CV_8UC3);
-//    matRight.convertTo(matRight, CV_8UC3);
-//
-//    cv::Mat matShow(image->h, image->w * 2, CV_8UC3);
-//
-//    matShow.rowRange(0, image->h).colRange(0, image->w) = matLeft;
-//    matShow.rowRange(0, image->h).colRange(image->w, image->w * 2) = matRight;
-//
-//
-//    cv::imshow("LR", matShow);
-//    cv::waitKey(0);
 
     if (isLost) return;
     boost::unique_lock<boost::mutex> lock(trackMutex);
@@ -1922,18 +1874,8 @@ namespace dso {
         double imuTimeStart = 0.0 - setting_temporal_imu_data_overlap;
         double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
         //- Initialize IMU
-//        std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
-//        Sophus::Quaterniond q_WS = dso::IMUPropagation::initializeRollPitchFromMeasurements(imuData);
-        // T_WS * T_SC0 = T_WC0
-//        coarseInitializer->T_WC_ini = SE3(q_WS, Vec3(0, 0, 0)) * T_SC0;
-//        LOG(WARNING) << "Initialized q_WS: " << q_WS.w() << ", " << q_WS.x() << ", " << q_WS.y() << ", " << q_WS.z();
-
         std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
         Sophus::Quaterniond q_WC0 = dso::IMUPropagation::initializeRollPitchFromMeasurements(vIMUData);
-//        Sophus::Quaterniond q_WS_V(T_SC0.rotationMatrix() * q_WC0.toRotationMatrix() * T_SC0.rotationMatrix().transpose());
-//        LOG(WARNING) << "Initialized q_WS_V: " << q_WS_V.w() << ", " << q_WS_V.x() << ", " << q_WS_V.y() << ", " << q_WS_V.z();
-//        LOG(WARNING) << q_WS_V.toRotationMatrix();
-//        LOG(WARNING) << q_WC0.toRotationMatrix();
         coarseInitializer->T_WC_ini = SE3(q_WC0, Vec3(0, 0, 0));
 
         //- Add the First frame to the corseInitializer.
@@ -2007,45 +1949,80 @@ namespace dso {
         coarseTracker->makeK(&Hcalib);
         coarseTracker->setCTRefForFirstFrame(frameHessians);
       }
-
-      //- Get the last propagated frame as the propagation start point
-//      FrameShell* startF = allFrameHistory[allFrameHistory.size() - 2]; //- use the last frame as start point.
-//      double imuTimeStart = startF->timestamp - setting_temporal_imu_data_overlap;
-//      double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-//      SpeedAndBias lastSpeedAndBias = startF->speedAndBias;
-//      std::vector<IMUMeasurement> imuData = getIMUMeasurements(imuTimeStart, imuTimeEnd);
-//      SE3 T_WC0 = startF->T_WC;
-//      SE3 T_WS = T_WC0 * T_SC0.inverse();
-//      LOG(WARNING) << "before propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
-//      //- T_WS and lastSpeedAndBias will be propagated.
-//      IMUPropagation::propagate(imuData, T_WS, lastSpeedAndBias, startF->timestamp, fh->shell->timestamp, 0, 0);
-//      LOG(WARNING) << "after propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
-//      fh->shell->speedAndBias = lastSpeedAndBias;
-//      T_WC0 = T_WS * T_SC0;
-//
-//      LOG(WARNING) << "propagated se(3) " << T_WC0.translation().x() << "\t" << T_WC0.translation().y() << "\t" << T_WC0.translation().z() << "\t"
-//                   << T_WC0.unit_quaternion().w() << "\t" << T_WC0.unit_quaternion().x() << "\t" << T_WC0.unit_quaternion().y() << "\t" << T_WC0.unit_quaternion().z();
-//      Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
-//      LOG(WARNING) << "tracked se(3) " << fh->shell->T_WC.translation().x() << "\t" << fh->shell->T_WC.translation().y() << "\t" << fh->shell->T_WC.translation().z() << "\t"
-//          << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
-
-      FrameShell* startF = allFrameHistory[allFrameHistory.size() - 2]; //- use the last frame as start point.
+      FrameShell *startF = allFrameHistory[allFrameHistory.size() - 2]; //- use the last frame as start point.
       double imuTimeStart = startF->timestamp - setting_temporal_imu_data_overlap;
       double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
       SpeedAndBias lastSpeedAndBias = startF->speedAndBias;
       std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
       SE3 T_WC0 = startF->T_WC;
-      LOG(WARNING) << "before propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
+//      LOG(WARNING) << "before propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
       //- T_WS and lastSpeedAndBias will be propagated.
       IMUPropagation::propagate(vIMUData, T_WC0, lastSpeedAndBias, startF->timestamp, fh->shell->timestamp, 0, 0);
-      LOG(WARNING) << "after propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
+//      LOG(WARNING) << "after propagation lastSpeedAndBias : " << lastSpeedAndBias.transpose();
       fh->shell->speedAndBias = lastSpeedAndBias;
 
-      LOG(WARNING) << "propagated se(3) " << T_WC0.translation().x() << "\t" << T_WC0.translation().y() << "\t" << T_WC0.translation().z() << "\t"
-                   << T_WC0.unit_quaternion().w() << "\t" << T_WC0.unit_quaternion().x() << "\t" << T_WC0.unit_quaternion().y() << "\t" << T_WC0.unit_quaternion().z();
+//      LOG(WARNING) << "propagated se(3) " << T_WC0.translation().x() << "\t" << T_WC0.translation().y() << "\t" << T_WC0.translation().z() << "\t"
+//                   << T_WC0.unit_quaternion().w() << "\t" << T_WC0.unit_quaternion().x() << "\t" << T_WC0.unit_quaternion().y() << "\t" << T_WC0.unit_quaternion().z();
       Vec4 tres = trackNewCoarseStereo(fh, fhRight, T_WC0);
-      LOG(WARNING) << "tracked se(3) " << fh->shell->T_WC.translation().x() << "\t" << fh->shell->T_WC.translation().y() << "\t" << fh->shell->T_WC.translation().z() << "\t"
-                   << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
+//      LOG(WARNING) << "tracked se(3) " << fh->shell->T_WC.translation().x() << "\t" << fh->shell->T_WC.translation().y() << "\t" << fh->shell->T_WC.translation().z() << "\t"
+//                   << fh->shell->T_WC.unit_quaternion().w() << "\t" << fh->shell->T_WC.unit_quaternion().x() << "\t" << fh->shell->T_WC.unit_quaternion().y() << "\t" << fh->shell->T_WC.unit_quaternion().z();
+
+      //- pre-optimization
+      //- set evaluate point from tracking result.
+      FrameHessian *fh1 = PRE_frameHessians.back();
+      if (fh1->isKF && PRE_frameHessians.size() > 1) { //- Changed reference KF
+        //- We do not delete former KF here, just delete F here, and pop up former KF
+        assert(PRE_frameHessians.size() == 3);
+        FrameHessian *delfh = PRE_frameHessians[0];
+        assert(delfh->isKF);
+        popOutOrder<FrameHessian>(PRE_frameHessians, 0);
+        popOutOrder<FrameHessian>(PRE_frameHessiansRight, 0);
+        delfh = PRE_frameHessians[0];
+        assert(!delfh->isKF);
+        deleteOutOrder<FrameHessian>(PRE_frameHessians, delfh);
+        deleteOutOrder<FrameHessian>(PRE_frameHessiansRight, delfh->rightFrame);
+      }
+      fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
+      fh->PRE_idx = PRE_frameHessians.size();
+      PRE_frameHessians.push_back(fh);
+      PRE_frameHessiansRight.push_back(fh->rightFrame);
+      PRE_ef->insertFrame(fh);
+
+      SpeedAndBiasHessian *speedAndBiasHessian = new SpeedAndBiasHessian(fh);
+      speedAndBiasHessian->setEvalPT(fh->shell->speedAndBias);
+      speedAndBiasHessian->idx = fh->PRE_idx;
+      PRE_speedAndBiasHessians.push_back(speedAndBiasHessian);
+      PRE_ef->insertSpeedAndBias(speedAndBiasHessian);
+
+      assert(fh1->shell == startF);
+      IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, vIMUData);
+      fh->speedAndBiasHessian->residuals.push_back(r);
+      PRE_ef->insertIMUResidual(r);
+
+      PRE_setPrecalcValues();
+
+      //- optimization
+      PRE_optimize(setting_maxOptIterations);
+
+      //- prepare for marginalization
+      PRE_flagFramesForMarginalization();
+      PRE_flagIMUResidualsForRemoval();
+      PRE_makeSpeedAndBiasesMargIDXForMarginalization();
+
+      PRE_getNullspaces(
+          PRE_ef->lastNullspaces_pose,
+          PRE_ef->lastNullspaces_scale,
+          PRE_ef->lastNullspaces_affA,
+          PRE_ef->lastNullspaces_affB);
+
+      //- marginalization
+      PRE_marginalizeSpeedAndBiases();
+      PRE_marginalizePoints();
+      for (unsigned int i = 0; i < PRE_frameHessians.size(); i++)
+        if (PRE_frameHessians[i]->PRE_flaggedForMarginalization) {
+          PRE_marginalizeFrame(PRE_frameHessians[i]);
+          i = 0;
+        }
 #endif
 #if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       Vec4 tres = trackNewCoarseStereo(fh, fhRight);
@@ -2246,9 +2223,11 @@ namespace dso {
     }
     traceNewCoarseKey(fh);
 #endif
-
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+#else
     delete fh;
     delete fhRight;
+#endif
   }
 
   void FullSystem::makeKeyFrame(FrameHessian *fh, FrameHessian *fhRight) {
@@ -2282,6 +2261,7 @@ namespace dso {
     // =========================== add New Frame to Hessian Struct. =========================
     fh->idx = frameHessians.size();
     FrameHessian *fh1 = frameHessians.back();
+    fh->isKF = true;
     frameHessians.push_back(fh);
     frameHessiansRight.push_back(fhRight);
     fh->frameID = allKeyFramesHistory.size();
@@ -2289,31 +2269,6 @@ namespace dso {
     ef->insertFrame(fh, &Hcalib);
 
     setPrecalcValues();
-
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    //--------------------------- add New SpeedAndBias to Hessian Struct. -----------------------------
-    SpeedAndBiasHessian* speedAndBiasHessian = new SpeedAndBiasHessian(fh);
-    speedAndBiasHessian->setEvalPT_scaled(fh->shell->speedAndBias);
-    speedAndBiasHessian->idx = speedAndBiasHessians.size();
-    speedAndBiasHessians.push_back(speedAndBiasHessian);
-    ef->insertSpeedAndBias(speedAndBiasHessian);
-    //---------------------------- add new IMU residuals -----------------------------
-//    for (FrameHessian *fh1 : frameHessians) {
-//      if (fh1 == fh) continue;
-//      double time_start = fh1->shell->timestamp - setting_temporal_imu_data_overlap;
-//      double time_end = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-//      std::vector<IMUMeasurement> imuData = getIMUMeasurements(time_start, time_end);
-//      IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, imuData);//- from, to
-//      fh->speedAndBiasHessian->residuals.push_back(r); //- to as the host
-//      ef->insertIMUResidual(r);
-//    }
-    double time_start = fh1->shell->timestamp - setting_temporal_imu_data_overlap;
-    double time_end = fh->shell->timestamp + setting_temporal_imu_data_overlap;
-    std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(time_start, time_end);
-    IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, vIMUData);//- from, to
-    fh->speedAndBiasHessian->residuals.push_back(r); //- to as the host
-    ef->insertIMUResidual(r);
-#endif
 
 
 
@@ -2393,10 +2348,6 @@ namespace dso {
 
     // =========================== (Activate-)Marginalize Points =========================
     flagPointsForRemoval();
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    flagIMUResidualsForRemoval();
-    makeSpeedAndBiasesMargIDXForMarginalization();
-#endif
     ef->dropPointsF();
     getNullspaces(
         ef->lastNullspaces_pose,
@@ -2404,9 +2355,6 @@ namespace dso {
         ef->lastNullspaces_affA,
         ef->lastNullspaces_affB);
     ef->marginalizePointsF();
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    ef->marginalizeSpeedAndBiasesF();
-#endif
 
 
 
@@ -2463,11 +2411,20 @@ namespace dso {
     ef->insertFrame(firstFrame, &Hcalib);
     setPrecalcValues();
 
+    //- add to pre optimization window
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    SpeedAndBiasHessian* speedAndBiasHessian = new SpeedAndBiasHessian(firstFrame);
+    firstFrame->isKF = true;
+    firstFrame->PRE_idx = PRE_frameHessians.size();
+    PRE_frameHessians.push_back(firstFrame);
+    PRE_ef->insertFrame(firstFrame);
+
+    SpeedAndBiasHessian *speedAndBiasHessian = new SpeedAndBiasHessian(firstFrame);
     speedAndBiasHessian->setEvalPT_scaled(firstFrame->shell->speedAndBias);
-    speedAndBiasHessian->idx = speedAndBiasHessians.size();
-    ef->insertSpeedAndBias(speedAndBiasHessian);
+    speedAndBiasHessian->idx = firstFrame->PRE_idx;
+    PRE_speedAndBiasHessians.push_back(speedAndBiasHessian);
+    PRE_ef->insertSpeedAndBias(speedAndBiasHessian);
+
+    PRE_setPrecalcValues();
 #endif
     FrameHessian *firstFrameRight = coarseInitializer->firstFrameRight;
     frameHessiansRight.push_back(firstFrameRight);
@@ -2716,7 +2673,8 @@ namespace dso {
     //printf("MADE %d IMMATURE POINTS!\n", (int)newFrame->immaturePoints.size());
 
   }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+#if defined(STEREO_MODE)
 
   void FullSystem::setPrecalcValues() {
     for (FrameHessian *fh : frameHessians) {
@@ -2727,18 +2685,7 @@ namespace dso {
     }
     ef->setDeltaF(&Hcalib);
   }
-#endif
-#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 
-  void FullSystem::setPrecalcValues() {
-    for (FrameHessian *fh : frameHessians) {
-      fh->targetPrecalc.resize(frameHessians.size() + 1);
-      for (unsigned int i = 0; i < frameHessians.size(); i++)
-        fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
-      fh->targetPrecalc.back().setStatic(fh, fh->rightFrame, &Hcalib);
-    }
-    ef->setDeltaF(&Hcalib);
-  }
 #endif
 #if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
 

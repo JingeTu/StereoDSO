@@ -73,6 +73,7 @@ namespace dso {
   };
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   struct RawIMUResidualJacobian {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -82,6 +83,7 @@ namespace dso {
 
     Eigen::Matrix<float, 15, 9> Jrdsb[2]; //- Derivative with respect to host & target SpeedAndBiases
   };
+
 #endif
 }
 

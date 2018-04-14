@@ -39,6 +39,7 @@
 #include "util/FrameShell.h"
 #include "util/IndexThreadReduce.h"
 #include "OptimizationBackend/EnergyFunctional.h"
+#include "OptimizationBackend/PREEnergyFunctional.h"
 #include "FullSystem/PixelSelector2.h"
 
 #include <opencv2/opencv.hpp>
@@ -113,6 +114,28 @@ namespace dso {
     delete element;
   }
 
+  template<typename T>
+  inline void popOutOrder(std::vector<T *> &v, const int i) {
+    for (unsigned int k = i + 1; k < v.size(); k++)
+      v[k - 1] = v[k];
+    v.pop_back();
+  }
+
+  template<typename T>
+  inline void popOutOrder(std::vector<T *> &v, const T *element) {
+    int i = -1;
+    for (unsigned int k = 0; k < v.size(); k++) {
+      if (v[k] == element) {
+        i = k;
+        break;
+      }
+    }
+    assert(i != -1);
+
+    for (unsigned int k = i + 1; k < v.size(); k++)
+      v[k - 1] = v[k];
+    v.pop_back();
+  }
 
   inline bool eigenTestNan(const MatXX &m, std::string msg) {
     bool foundNan = false;
@@ -216,9 +239,47 @@ namespace dso {
     void flagPointsForRemoval();
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    void flagIMUResidualsForRemoval();
 
-    void makeSpeedAndBiasesMargIDXForMarginalization();
+    void PRE_flagFramesForMarginalization();
+
+    void PRE_flagIMUResidualsForRemoval();
+
+    void PRE_makeSpeedAndBiasesMargIDXForMarginalization();
+
+    void PRE_marginalizeSpeedAndBiases();
+
+    void PRE_marginalizePoints();
+
+    void PRE_marginalizeFrame(FrameHessian *frame);
+
+    void PRE_optimize(int mnumOptIts);
+
+    void PRE_setPrecalcValues();
+
+    Vec3 PRE_linearizeAll(bool fixLinearization);
+
+    void PRE_linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid);
+
+    void PRE_applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
+
+    void PRE_backupState(bool backupLastStep);
+
+    void PRE_loadSateBackup();
+
+    void PRE_solveSystem(int iteration, double lambda);
+
+    bool PRE_doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD);
+
+    double PRE_calcLEnergy();
+
+    double PRE_calcMEnergy();
+
+    std::vector<VecX> PRE_getNullspaces(
+        std::vector<VecX> &nullspaces_pose,
+        std::vector<VecX> &nullspaces_scale,
+        std::vector<VecX> &nullspaces_affA,
+        std::vector<VecX> &nullspaces_affB);
+
 #endif
 
     void makeNewTraces(FrameHessian *newFrame, float *gtDepth);
@@ -255,19 +316,11 @@ namespace dso {
     void linearizeAll_Reductor(bool fixLinearization, std::vector<PointFrameResidual *> *toRemove, int min, int max,
                                Vec10 *stats, int tid);
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    void linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid);
-#endif
-
     void
     activatePointsMT_Reductor(std::vector<PointHessian *> *optimized, std::vector<ImmaturePoint *> *toOptimize, int min,
                               int max, Vec10 *stats, int tid);
 
     void applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
-
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    void applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
-#endif
 
     void printOptRes(const Vec3 &res, double resL, double resM, double resPrior, double LExact, float a, float b);
 
@@ -326,6 +379,9 @@ namespace dso {
     std::vector<FrameShell *> allKeyFramesHistory;
 
     EnergyFunctional *ef;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    PREEnergyFunctional *PRE_ef;
+#endif
     IndexThreadReduce<Vec10> treadReduce;
 
     float *selectionMap;
@@ -335,8 +391,10 @@ namespace dso {
     std::vector<FrameHessian *> frameHessians;  // ONLY changed in marginalizeFrame and addFrame.
     std::vector<FrameHessian *> frameHessiansRight;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    std::vector<SpeedAndBiasHessian *> speedAndBiasHessians;
-    std::vector<IMUResidual *> activeIMUResiduals;
+    std::vector<FrameHessian *> PRE_frameHessians;
+    std::vector<FrameHessian *> PRE_frameHessiansRight;
+    std::vector<SpeedAndBiasHessian *> PRE_speedAndBiasHessians;
+    std::vector<IMUResidual *> PRE_activeIMUResiduals;
 #endif
     std::vector<PointFrameResidual *> activeResiduals;
     float currentMinActDist;

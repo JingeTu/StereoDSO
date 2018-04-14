@@ -84,22 +84,6 @@ namespace dso {
     }
   }
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-  void FullSystem::linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid) {
-    for (int k = min; k < max; k++) {
-      IMUResidual* r = activeIMUResiduals[k];
-      r->linearize(&imuParameters);
-      if (fixLinearization)
-        r->applyRes(true);
-    }
-  }
-
-  void FullSystem::applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid) {
-    for (int k = min; k < max; k++)
-      activeIMUResiduals[k]->applyRes(true);
-  }
-#endif
-
   void FullSystem::applyRes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid) {
     for (int k = min; k < max; k++)
       activeResiduals[k]->applyRes(true);
@@ -154,22 +138,6 @@ namespace dso {
     double lastEnergyP = 0;
     double lastEnergyR = 0;
     double num = 0;
-
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    //- do not remove imu residuals except marginalizing.
-    if (multiThreading) {
-      treadReduce.reduce(
-          boost::bind(&FullSystem::linearizeAllIMU_Reductor, this, fixLinearization, _1, _2, _3, _4), 0,
-          activeIMUResiduals.size(), 0);
-      lastEnergyP += treadReduce.stats[0];
-    }
-    else {
-      Vec10 stats;
-      stats.setZero();
-      linearizeAllIMU_Reductor(fixLinearization, 0, activeIMUResiduals.size(), &stats, 0);
-      lastEnergyP += stats[0];
-    }
-#endif
 
     std::vector<PointFrameResidual *> toRemove[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) toRemove[i].clear();
@@ -233,10 +201,6 @@ namespace dso {
   bool FullSystem::doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD) {
 //	float meanStepC=0,meanStepP=0,meanStepD=0;
 //	meanStepC += Hcalib.step.norm();
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    Vec9 sstepfac;
-    sstepfac.setConstant(stepfacT);
-#endif
 #if defined(STEREO_MODE)
     Vec10 pstepfac;
     pstepfac.segment<3>(0).setConstant(stepfacT);
@@ -281,12 +245,6 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + step);
         }
       }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-        Vec9 step = sh->step;
-        sh->setState(sh->state_backup + step);
-      }
-#endif
     }
     else {
       Hcalib.setValue(Hcalib.value_backup + stepfacC * Hcalib.step);
@@ -307,12 +265,6 @@ namespace dso {
           ph->setIdepthZero(ph->idepth_backup + stepfacD * ph->step);
         }
       }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-        Vec9 step = sh->step;
-        sh->setState(sh->state_backup + sstepfac.cwiseProduct(sh->step));
-      }
-#endif
     }
 
     sumA /= frameHessians.size();
@@ -362,12 +314,6 @@ namespace dso {
             ph->step_backup = ph->step;
           }
         }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-        for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-          sh->step_backup = sh->step;
-          sh->state_backup = sh->get_state();
-        }
-#endif
       }
       else {
         Hcalib.step_backup.setZero();
@@ -380,12 +326,6 @@ namespace dso {
             ph->step_backup = 0;
           }
         }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-        for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-          sh->step_backup.setZero();
-          sh->state_backup = sh->get_state();
-        }
-#endif
       }
     }
     else {
@@ -395,11 +335,6 @@ namespace dso {
         for (PointHessian *ph : fh->pointHessians)
           ph->idepth_backup = ph->idepth;
       }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-      for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-        sh->state_backup = sh->get_state();
-      }
-#endif
     }
   }
 
@@ -414,11 +349,6 @@ namespace dso {
         ph->setIdepthZero(ph->idepth_backup);
       }
     }
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-      sh->setState(sh->state_backup);
-    }
-#endif
 
     EFDeltaValid = false;
     setPrecalcValues();
@@ -475,15 +405,6 @@ namespace dso {
         numPoints++;
       }
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    activeIMUResiduals.clear();
-    for (SpeedAndBiasHessian *sh : speedAndBiasHessians) {
-      for (IMUResidual *r : sh->residuals)
-        if (!r->efIMUResidual->isLinearized)
-          activeIMUResiduals.push_back(r);
-    }
-#endif
-
     if (!setting_debugout_runquiet) {
       char buf[256];
       sprintf(buf, "OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int) activeResiduals.size(), numLRes);
@@ -494,22 +415,14 @@ namespace dso {
     // lastEnergy[1] = 0
     // lastEnergy[2] = 0
     Vec3 lastEnergy = linearizeAll(false);
-    double lastEnergyL = calcLEnergy(); //- TODO: IMU
-    double lastEnergyM = calcMEnergy(); //- TODO: IMU
+    double lastEnergyL = calcLEnergy();
+    double lastEnergyM = calcMEnergy();
 
     if (multiThreading)
       treadReduce.reduce(boost::bind(&FullSystem::applyRes_Reductor, this, true, _1, _2, _3, _4), 0,
                          activeResiduals.size(), 50);
     else
       applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
-
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    if (multiThreading)
-      treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
-                         activeIMUResiduals.size(), 50);
-    else
-      applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
-#endif
 
     if (!setting_debugout_runquiet) {
       LOG(INFO) << "Initial Error       \t";
@@ -577,14 +490,6 @@ namespace dso {
         else
           applyRes_Reductor(true, 0, activeResiduals.size(), 0, 0);
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-        if (multiThreading)
-          treadReduce.reduce(boost::bind(&FullSystem::applyIMURes_Reductor, this, true, _1, _2, _3, _4), 0,
-                             activeIMUResiduals.size(), 50);
-        else
-          applyIMURes_Reductor(true, 0, activeIMUResiduals.size(), 0, 0);
-#endif
-
         lastEnergy = newEnergy;
         lastEnergyL = newEnergyL;
         lastEnergyM = newEnergyM;
@@ -614,9 +519,6 @@ namespace dso {
 
     frameHessians.back()->setEvalPT(frameHessians.back()->PRE_T_CW,
                                     newStateZero);
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    speedAndBiasHessians.back()->setEvalPT(speedAndBiasHessians.back()->state);
-#endif
     EFDeltaValid = false;
     EFAdjointsValid = false;
     ef->setAdjointsF(&Hcalib);
@@ -650,9 +552,6 @@ namespace dso {
         fh->shell->aff_g2l = fh->aff_g2l();
 #if defined(STEREO_MODE)
         fh->rightFrame->shell->aff_g2l = fh->aff_g2l_r();
-#endif
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-        fh->shell->speedAndBias = fh->speedAndBiasHessian->speedAndBias_evalPT;
 #endif
       }
     }
@@ -734,7 +633,7 @@ namespace dso {
       VecX nullspace_x0(n);
       nullspace_x0.setZero();
       for (FrameHessian *fh : frameHessians) {
-        nullspace_x0.segment<2>(CPARS + fh->idx * 10 + 6) = fh->nullspaces_affine.col(i).head<2>();
+        nullspace_x0.segment<4>(CPARS + fh->idx * 10 + 6) = fh->nullspaces_affine.col(i).head<4>();
         nullspace_x0[CPARS + fh->idx * 10 + 6] *= SCALE_A_INVERSE;
         nullspace_x0[CPARS + fh->idx * 10 + 7] *= SCALE_B_INVERSE;
         nullspace_x0[CPARS + fh->idx * 10 + 8] *= SCALE_A_INVERSE;

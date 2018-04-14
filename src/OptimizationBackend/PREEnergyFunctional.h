@@ -1,6 +1,9 @@
+//
+// Created by jg on 18-4-12.
+//
 /**
 * This file is part of DSO.
-* 
+*
 * Copyright 2016 Technical University of Munich and Intel.
 * Developed by Jakob Engel <engelj at in dot tum dot de>,
 * for more information see <http://vision.in.tum.de/dso>.
@@ -33,18 +36,21 @@
 
 
 namespace dso {
-
-  class PointFrameResidual;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
   class CalibHessian;
 
   class FrameHessian;
 
-  class PointHessian;
+  class IMUResidual;
+
+  class EFIMUResidual;
+
+  class EFSpeedAndBias;
+
+  class SpeedAndBiasHessian;
 
   class EFResidual;
-
-  class EFPoint;
 
   class EFFrame;
 
@@ -58,19 +64,18 @@ namespace dso {
 
   class AccumulatedSCHessianSSE;
 
+  class CoarseTracker;
 
-  extern bool EFAdjointsValid;
-  extern bool EFIndicesValid;
-  extern bool EFDeltaValid;
+  extern bool PRE_EFAdjointsValid;
+  extern bool PRE_EFIndicesValid;
+  extern bool PRE_EFDeltaValid;
 
 
-  class EnergyFunctional {
+  class PREEnergyFunctional {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     friend class EFFrame;
-
-    friend class EFPoint;
 
     friend class EFResidual;
 
@@ -82,45 +87,44 @@ namespace dso {
 
     friend class AccumulatedSCHessianSSE;
 
-    EnergyFunctional();
+    PREEnergyFunctional();
 
-    ~EnergyFunctional();
+    ~PREEnergyFunctional();
 
-    int marginalizeCountforDebug;
+    void clear();
 
-    EFResidual *insertResidual(PointFrameResidual *r);
+    EFIMUResidual *insertIMUResidual(IMUResidual *r);
 
-    EFResidual *insertStaticResidual(PointFrameResidual *r);
+    EFSpeedAndBias *insertSpeedAndBias(SpeedAndBiasHessian *sh);
 
-    EFFrame *insertFrame(FrameHessian *fh, CalibHessian *Hcalib);
-
-    EFPoint *insertPoint(PointHessian *ph);
-
-    void dropResidual(EFResidual *r);
+    EFFrame *insertFrame(FrameHessian *fh);
 
     void marginalizeFrame(EFFrame *efF);
 
-    void removePoint(EFPoint *ph);
+    void marginalizeSpeedAndBiasesF();
 
-    void marginalizePointsF();
+    void marginalizePointsF(const Mat1010 &M_last, const Vec10 &Mb_last,
+                            const Mat1010 &Msc_last, const Vec10 &Mbsc_last);
 
-    void dropPointsF();
+    void dropIMUResidual(EFIMUResidual *r);
 
-    void solveSystemF(int iteration, double lambda, CalibHessian *HCalib);
+    void solveSystemF(int iteration, double lambda, Mat1010 &H_last, Vec10 &b_last);
 
     double calcMEnergyF();
 
     double calcLEnergyF_MT();
 
-
     void makeIDX();
 
-    void setDeltaF(CalibHessian *HCalib);
+    void setDeltaF();
 
-    void setAdjointsF(CalibHessian *Hcalib);
+    void setAdjointsF();
 
     std::vector<EFFrame *> frames;
-    int nPoints, nFrames, nResiduals;
+    int nFrames;
+
+    std::vector<EFSpeedAndBias *> speedAndBiases;
+    int nSpeedAndBiases, nIMUResiduals, nMargSpeedAndBiases;
 
     MatXX HM;
     VecX bM;
@@ -137,41 +141,24 @@ namespace dso {
 
     IndexThreadReduce<Vec10> *red;
 
-
-    std::map<uint64_t,
-        Eigen::Vector2i,
-        std::less<uint64_t>,
-        Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>
-    > connectivityMap;
-
   private:
 
     VecX getStitchedDeltaF() const;
 
-    void resubstituteF_MT(VecX x, CalibHessian *HCalib, bool MT);
+    void resubstituteF_MT(VecX x, bool MT);
 
-#if defined(STEREO_MODE)
+    void accumulateIMUAF_MT(MatXX &H, VecX &b, bool MT);
 
-    void resubstituteFPt(const VecCf &xc, Mat110f *xAd, int min, int max, Vec10 *stats, int tid);
+    void accumulateIMULF_MT(MatXX &H, VecX &b, bool MT);
 
-#endif
-#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
+    void accumulateIMUSCF_MT(MatXX &H, VecX &b, MatXX &Hss_inv, MatXX &Hsx, VecX &bsr, bool MT);
 
-    void resubstituteFPt(const VecCf &xc, Mat18f *xAd, int min, int max, Vec10 *stats, int tid);
+    void accumulateIMUMF_MT(MatXX &H, VecX &b, bool MT);
 
-#endif
-
-    void accumulateAF_MT(MatXX &H, VecX &b, bool MT);
-
-    void accumulateLF_MT(MatXX &H, VecX &b, bool MT);
-
-    void accumulateSCF_MT(MatXX &H, VecX &b, bool MT);
-
-    void calcLEnergyPt(int min, int max, Vec10 *stats, int tid);
+    void accumulateIMUMSCF_MT(MatXX &H, VecX &b, bool MT);
 
     void orthogonalize(VecX *b, MatXX *H);
 
-#if defined(STEREO_MODE)
     Mat110f *adHTdeltaF;
 
     Mat1010 *adHost;
@@ -179,31 +166,13 @@ namespace dso {
 
     Mat1010f *adHostF;
     Mat1010f *adTargetF;
-#endif
-#if !defined(STEREO_MODE) && !defined(INERTIAL_MODE)
-    Mat18f *adHTdeltaF;
-
-    Mat88 *adHost;
-    Mat88 *adTarget;
-
-    Mat88f *adHostF;
-    Mat88f *adTargetF;
-#endif
 
     VecC cPrior;
-    VecCf cDeltaF;
     VecCf cPriorF;
-
-    AccumulatedTopHessianSSE *accSSE_top_L;
-    AccumulatedTopHessianSSE *accSSE_top_A;
-
-
-    AccumulatedSCHessianSSE *accSSE_bot;
-
-    std::vector<EFPoint *> allPoints;
-    std::vector<EFPoint *> allPointsToMarg;
 
     float currentLambda;
   };
+
+#endif
 }
 

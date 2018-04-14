@@ -80,13 +80,17 @@ namespace dso {
     buf_warped_residual = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_weight = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_refColor = allocAligned<4, float>(ww * hh, ptrToDelete);
-
+#if defined(STEREO_MODE)
     buf_warped_idepth_r = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_dx_r = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_dy_r = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_residual_r = allocAligned<4, float>(ww * hh, ptrToDelete);
     buf_warped_weight_r = allocAligned<4, float>(ww * hh, ptrToDelete);
-
+#endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    buf_warped_dd = allocAligned<4, float>(ww * hh, ptrToDelete);
+    buf_warped_dd_r = allocAligned<4, float>(ww * hh, ptrToDelete);
+#endif
     newFrame = 0;
     newFrameRight = 0;
     lastRef = 0;
@@ -310,6 +314,125 @@ namespace dso {
 
   }
 
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+  void CoarseTracker::calcMSCSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
+                                       AffLight aff_g2l_r) {
+    acc.initialize();
+
+    __m128 fxl = _mm_set1_ps(fx[lvl]);
+    __m128 fyl = _mm_set1_ps(fy[lvl]);
+    __m128 b0 = _mm_set1_ps(lastRef_aff_g2l.b);
+    __m128 a = _mm_set1_ps(
+        (float) (AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                             aff_g2l)[0]));
+    __m128 a_r = _mm_set1_ps(
+        (float) (AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l,
+                                             aff_g2l_r)[0]));
+
+    __m128 one = _mm_set1_ps(1);
+    __m128 minusOne = _mm_set1_ps(-1);
+    __m128 zero = _mm_set1_ps(0);
+
+    int n = buf_warped_n;
+//    assert(n > 0);
+//    LOG(INFO) << "buf_warped_n : " << buf_warped_n;
+    assert(n % 4 == 0);
+    for (int i = 0; i < n; i += 4) {
+      __m128 dx = _mm_mul_ps(_mm_load_ps(buf_warped_dx + i), fxl);
+      __m128 dy = _mm_mul_ps(_mm_load_ps(buf_warped_dy + i), fyl);
+      __m128 u = _mm_load_ps(buf_warped_u + i);
+      __m128 v = _mm_load_ps(buf_warped_v + i);
+      __m128 id = _mm_load_ps(buf_warped_idepth + i);
+      __m128 dd = _mm_load_ps(buf_warped_dd + i);
+      __m128 dd_r = _mm_load_ps(buf_warped_dd_r + i);
+      __m128 dd2_i = _mm_div_ps(one, _mm_add_ps(_mm_mul_ps(dd, dd), _mm_mul_ps(dd_r, dd_r)));
+
+//      float ddf;
+//      float dd_rf;
+//      float dd2_if;
+//      float wf;
+//      float w_rf;
+//      _mm_store_ps(&ddf, dd);
+//      _mm_store_ps(&dd_rf, dd_r);
+//      _mm_store_ps(&dd2_if, dd2_i);
+//      _mm_store_ps(&wf, _mm_mul_ps(_mm_load_ps(buf_warped_weight + i), dd2_i));
+//      _mm_store_ps(&w_rf, _mm_mul_ps(_mm_load_ps(buf_warped_weight_r + i), dd2_i));
+//      LOG(INFO) << i << "\tddf: " << ddf << "\tdd_rf: " << dd_rf << "\tdd2_if: " << dd2_if << "\twf: " << wf << "\tw_rf: " << w_rf;
+//      if (!std::isfinite(dd2_if) || !std::isfinite(dd_rf) || !std::isfinite(ddf)) {
+//        LOG(INFO) << "ddf: " << ddf;
+//        LOG(INFO) << "dd_rf: " << dd_rf;
+//        LOG(INFO) << "dd2_if: " << dd2_if;
+//        assert(std::isfinite(dd2_if) && std::isfinite(dd_rf) && std::isfinite(ddf));
+//      }
+
+      acc.updateSSE_tened(
+          _mm_mul_ps(dd, _mm_mul_ps(id, dx)),
+          _mm_mul_ps(dd, _mm_mul_ps(id, dy)),
+          _mm_mul_ps(dd, _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx), _mm_mul_ps(v, dy))))),
+          _mm_mul_ps(dd, _mm_sub_ps(zero, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dx),
+              _mm_mul_ps(dy, _mm_add_ps(one, _mm_mul_ps(v, v)))))),
+          _mm_mul_ps(dd, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dy),
+              _mm_mul_ps(dx, _mm_add_ps(one, _mm_mul_ps(u, u))))),
+          _mm_mul_ps(dd, _mm_sub_ps(_mm_mul_ps(u, dy), _mm_mul_ps(v, dx))),
+          _mm_mul_ps(dd, _mm_mul_ps(a, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i)))), //- a_l
+          _mm_mul_ps(dd, minusOne), //- b_l
+          _mm_mul_ps(dd, zero), //- a_r
+          _mm_mul_ps(dd, zero), //- b_r
+          _mm_load_ps(buf_warped_residual + i),
+          _mm_mul_ps(_mm_load_ps(buf_warped_weight + i), dd2_i));
+
+      __m128 dx_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
+                                          _mm_load_ps(buf_warped_dx_r + i)), fxl);
+      __m128 dy_r = _mm_mul_ps(_mm_mul_ps(_mm_load_ps(buf_warped_idepth_r + i),
+                                          _mm_load_ps(buf_warped_dy_r + i)), fyl);
+
+      acc.updateSSE_tened(
+          _mm_mul_ps(dd_r, _mm_mul_ps(id, dx_r)),
+          _mm_mul_ps(dd_r, _mm_mul_ps(id, dy_r)),
+          _mm_mul_ps(dd_r, _mm_sub_ps(zero, _mm_mul_ps(id, _mm_add_ps(_mm_mul_ps(u, dx_r), _mm_mul_ps(v, dy_r))))),
+          _mm_mul_ps(dd_r, _mm_sub_ps(zero, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dx_r),
+              _mm_mul_ps(dy_r, _mm_add_ps(one, _mm_mul_ps(v, v)))))),
+          _mm_mul_ps(dd_r, _mm_add_ps(
+              _mm_mul_ps(_mm_mul_ps(u, v), dy_r),
+              _mm_mul_ps(dx_r, _mm_add_ps(one, _mm_mul_ps(u, u))))),
+          _mm_mul_ps(dd_r, _mm_sub_ps(_mm_mul_ps(u, dy_r), _mm_mul_ps(v, dx_r))),
+          _mm_mul_ps(dd_r, zero), //- a_l
+          _mm_mul_ps(dd_r, zero), //- b_l
+          _mm_mul_ps(dd_r, _mm_mul_ps(a_r, _mm_sub_ps(b0, _mm_load_ps(buf_warped_refColor + i)))), //- a_r
+          _mm_mul_ps(dd_r, minusOne), //- b_r
+          _mm_load_ps(buf_warped_residual_r + i),
+          _mm_mul_ps(_mm_load_ps(buf_warped_weight_r + i), dd2_i));
+    }
+
+    acc.finish();
+    H_out = acc.H.topLeftCorner<10, 10>().cast<double>() * (1.0f / n);
+    b_out = acc.H.topRightCorner<10, 1>().cast<double>() * (1.0f / n);
+
+    H_out.block<10, 3>(0, 0) *= SCALE_XI_ROT;
+    H_out.block<10, 3>(0, 3) *= SCALE_XI_TRANS;
+    H_out.block<10, 1>(0, 6) *= SCALE_A;
+    H_out.block<10, 1>(0, 7) *= SCALE_B;
+    H_out.block<10, 1>(0, 8) *= SCALE_A;
+    H_out.block<10, 1>(0, 9) *= SCALE_B;
+    H_out.block<3, 10>(0, 0) *= SCALE_XI_ROT;
+    H_out.block<3, 10>(3, 0) *= SCALE_XI_TRANS;
+    H_out.block<1, 10>(6, 0) *= SCALE_A;
+    H_out.block<1, 10>(7, 0) *= SCALE_B;
+    H_out.block<1, 10>(8, 0) *= SCALE_A;
+    H_out.block<1, 10>(9, 0) *= SCALE_B;
+    b_out.segment<3>(0) *= SCALE_XI_ROT;
+    b_out.segment<3>(3) *= SCALE_XI_TRANS;
+    b_out.segment<1>(6) *= SCALE_A;
+    b_out.segment<1>(7) *= SCALE_B;
+    b_out.segment<1>(8) *= SCALE_A;
+    b_out.segment<1>(9) *= SCALE_B;
+  }
+
+#endif
 #if defined(STEREO_MODE)
 
   void CoarseTracker::calcGSSSEStereo(int lvl, Mat1010 &H_out, Vec10 &b_out, const SE3 &refToNew, AffLight aff_g2l,
@@ -514,12 +637,12 @@ namespace dso {
 
       float refColor = lpc_color[i];
       Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
-      if (!std::isfinite((float) hitColor[0])) continue;
+      if (!std::isfinite((float) hitColor[0]) || hitColor[1] == 0 || hitColor[2] == 0) continue;
       float residual = hitColor[0] - (float) (affLL[0] * refColor + affLL[1]);
       float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
       Vec3f hitColor_r = getInterpolatedElement33(dINewl_r, Ku_r, Kv_r, wl);
-      if (!std::isfinite((float) hitColor_r[0])) continue;
+      if (!std::isfinite((float) hitColor_r[0]) || hitColor_r[1] == 0 || hitColor_r[2] == 0) continue;
       float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
       float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
 
@@ -546,12 +669,19 @@ namespace dso {
         buf_warped_weight[numTermsInWarped] = hw;
         buf_warped_refColor[numTermsInWarped] = lpc_color[i];
 
-        buf_warped_idepth_r[numTermsInWarped] = new_idepth_r / new_idepth;
+        float pt_r2 = new_idepth_r / new_idepth;
+        buf_warped_idepth_r[numTermsInWarped] = pt_r2;
         buf_warped_dx_r[numTermsInWarped] = hitColor_r[1];
         buf_warped_dy_r[numTermsInWarped] = hitColor_r[2];
         buf_warped_residual_r[numTermsInWarped] = residual_r;
         buf_warped_weight_r[numTermsInWarped] = hw_r;
-
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+        float pt2 = new_idepth / id;
+        buf_warped_dd[numTermsInWarped] =
+            pt2 * (hitColor[1] * fxl * (t[0] - u * t[2]) + hitColor[2] * fyl * (t[1] - v * t[2]));
+        buf_warped_dd_r[numTermsInWarped] =
+            pt_r2 * pt2 * (hitColor_r[1] * fxl * (t[0] - u * t[2]) + hitColor_r[2] * fyl * (t[1] - v * t[2]));
+#endif
         numTermsInWarped++;
       }
     }
@@ -570,6 +700,9 @@ namespace dso {
       buf_warped_dx_r[numTermsInWarped] = 0;
       buf_warped_dy_r[numTermsInWarped] = 0;
       buf_warped_weight_r[numTermsInWarped] = 0;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+      buf_warped_dd[numTermsInWarped] = 0;
+#endif
       numTermsInWarped++;
     }
     buf_warped_n = numTermsInWarped;
@@ -1198,6 +1331,48 @@ namespace dso {
     if (setting_affineOptModeB < 0) aff_g2l_out.b = 0;
 
     return true;
+  }
+
+#endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+  Vec6 CoarseTracker::calculateRes(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight) {
+
+    assert(newFrame == newFrameHessian);
+    assert(newFrameRight == newFrameHessianRight);
+
+    SE3 refToNew_current = newFrameHessian->PRE_T_CW * newFrameHessian->shell->trackingRef->T_WC;
+    AffLight aff_g2l_current = newFrameHessian->aff_g2l();
+    AffLight aff_g2l_r_current = newFrameHessian->aff_g2l_r();
+
+    Vec6 resNew = calcResStereo(0, refToNew_current, aff_g2l_current, aff_g2l_r_current,
+                                setting_coarseCutoffTH);
+    return resNew;
+  }
+
+  void CoarseTracker::calculateHAndb(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight,
+                                     Mat1010 &H, Vec10 &b) {
+
+    assert(newFrame == newFrameHessian);
+    assert(newFrameRight == newFrameHessianRight);
+
+    SE3 refToNew_current = newFrameHessian->PRE_T_CW * this->lastRef->shell->T_WC;
+    AffLight aff_g2l_current = newFrameHessian->aff_g2l();
+    AffLight aff_g2l_r_current = newFrameHessian->aff_g2l_r();
+
+    calcGSSSEStereo(0, H, b, refToNew_current, aff_g2l_current, aff_g2l_r_current);
+  }
+
+  void CoarseTracker::calculateMscAndbsc(FrameHessian *newFrameHessian, FrameHessian *newFrameHessianRight,
+                                         Mat1010 &Msc, Vec10 &bsc) {
+    assert(newFrame == newFrameHessian);
+    assert(newFrameRight == newFrameHessianRight);
+
+    SE3 refToNew_current = newFrameHessian->PRE_T_CW * this->lastRef->shell->T_WC;
+    AffLight aff_g2l_current = newFrameHessian->aff_g2l();
+    AffLight aff_g2l_r_current = newFrameHessian->aff_g2l_r();
+
+    calcMSCSSEStereo(0, Msc, bsc, refToNew_current, aff_g2l_current, aff_g2l_r_current);
   }
 
 #endif

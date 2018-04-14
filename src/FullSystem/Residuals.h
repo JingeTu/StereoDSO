@@ -45,8 +45,11 @@ namespace dso {
   class EFResidual;
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class EFIMUResidual;
+
   class SpeedAndBiasHessian;
+
 #endif
 
   enum ResLocation {
@@ -118,6 +121,7 @@ namespace dso {
   };
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class IMUResidual {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -128,14 +132,15 @@ namespace dso {
 
     FrameHessian *from_f;
     FrameHessian *to_f;
-    SpeedAndBiasHessian* from_sb;
-    SpeedAndBiasHessian* to_sb;
+    SpeedAndBiasHessian *from_sb;
+    SpeedAndBiasHessian *to_sb;
 
     RawIMUResidualJacobian *J;
 
-    IMUResidual(SpeedAndBiasHessian* from_sb_, SpeedAndBiasHessian* to_sb_,
-                FrameHessian* from_f_, FrameHessian* to_f_,
+    IMUResidual(SpeedAndBiasHessian *from_sb_, SpeedAndBiasHessian *to_sb_,
+                FrameHessian *from_f_, FrameHessian *to_f_,
                 std::vector<IMUMeasurement> &imu_data_);
+
     ~IMUResidual();
 
     double linearize(IMUParameters *imuParameters);
@@ -176,6 +181,7 @@ namespace dso {
     bool redo_;
     bool redoCounter_ = 0;
   };
+
 #endif
 }
 

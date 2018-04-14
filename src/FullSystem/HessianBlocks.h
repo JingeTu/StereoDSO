@@ -36,7 +36,9 @@
 #include "util/ImageAndExposure.h"
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
 #include "util/IMUMeasurement.h"
+
 #endif
 
 
@@ -61,7 +63,9 @@ namespace dso {
   class EFPoint;
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   class EFSpeedAndBias;
+
 #endif
 
 #define SCALE_IDEPTH 1.0f    // scales internal value to idepth.
@@ -85,12 +89,14 @@ namespace dso {
 #define SCALE_B_INVERSE (1.0f / SCALE_B)
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   struct IMUPrecalc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     SE3 T_WS;
     Mat66 Jr_S_i;
   };
+
 #endif
 
   struct FrameFramePrecalc //- Precalculate reporjection(from host to target) parameters.
@@ -146,6 +152,12 @@ namespace dso {
     static int instanceCounter;
     int idx;
 
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+    bool isKF;
+    EFFrame *PRE_efFrame;
+    int PRE_idx;
+#endif
+
     // Photometric Calibration Stuff
     float frameEnergyTH;  // set dynamically depending on tracking residual
     float ab_exposure;
@@ -158,7 +170,8 @@ namespace dso {
     std::vector<ImmaturePoint *> immaturePoints;    // contains all OUTLIER points (= discarded.).
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    SpeedAndBiasHessian* speedAndBiasHessian;
+    SpeedAndBiasHessian *speedAndBiasHessian;
+    bool PRE_flaggedForMarginalization;
 #endif
 
     //- Currently for stereo mode, do not take nullspaces into account.
@@ -355,7 +368,11 @@ namespace dso {
       frameEnergyTH = 8 * 8 * patternNum;
       rightFrame = 0;
       leftFrame = 0;
-
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+      speedAndBiasHessian = 0;
+      isKF = false;
+      PRE_flaggedForMarginalization = false;
+#endif
       debugImage = 0;
     };
 
@@ -643,14 +660,15 @@ namespace dso {
   };
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
   struct SpeedAndBiasHessian {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    EFSpeedAndBias* efSB;
+    EFSpeedAndBias *efSB;
 
-    FrameHessian* host;
+    FrameHessian *host;
 
-    std::vector<IMUResidual*> residuals;
+    std::vector<IMUResidual *> residuals;
 
     enum SpeedAndBiasStatus {
       ACTIVE = 0, OUTLIER, MARGINALIZED
@@ -669,14 +687,17 @@ namespace dso {
     SpeedAndBias step;
     SpeedAndBias step_backup;
 
-    bool flaggedForMarginalization;
+    bool PRE_flaggedForMarginalization;
 
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state_zero() const { return state_zero; }
-    EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const {return state; }
+
+    EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const { return state; }
+
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state_scaled() const { return state_scaled; }
+
     EIGEN_STRONG_INLINE const SpeedAndBias get_state_minus_stateZero() const { return get_state() - get_state_zero(); }
 
-    SpeedAndBiasHessian(FrameHessian* host_);
+    SpeedAndBiasHessian(FrameHessian *host_);
 
     ~SpeedAndBiasHessian();
 
@@ -760,6 +781,7 @@ namespace dso {
     };
  * */
   };
+
 #endif
 
 }
