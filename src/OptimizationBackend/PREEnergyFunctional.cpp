@@ -243,11 +243,11 @@ namespace dso {
         Hssf.block<9, 9>(tIdxRaw * 9, fIdxRaw * 9).noalias() += J->Jrdsb[1].transpose() * J->Jrdsb[0];
 
         Hxsf.block<6, 9>(tIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[1];
-        Hxsf.block<6, 9>(fIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[1];
+        Hxsf.block<6, 9>(tIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[0];
 
         if (!r->from_f->data->isKF) {
           Hxsf.block<6, 9>(fIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[0];
-          Hxsf.block<6, 9>(tIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[0];
+          Hxsf.block<6, 9>(fIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[1];
         }
         Eigen::Matrix<float, 15, 1> resApprox;
 
@@ -308,8 +308,12 @@ namespace dso {
         int tIdx = 10 * r->to_f->idx;
         H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
         H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
-        H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+
+        if (!r->from_f->data->isKF) {
+          H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
+          H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
+        }
+
         b.segment<6>(fIdx).noalias() += (J->Jrdxi[0].transpose() * resApprox).cast<double>();
         b.segment<6>(tIdx).noalias() += (J->Jrdxi[1].transpose() * resApprox).cast<double>();
       }

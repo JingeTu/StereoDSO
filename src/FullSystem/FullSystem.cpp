@@ -1972,15 +1972,11 @@ namespace dso {
       FrameHessian *fh1 = PRE_frameHessians.back();
       if (fh1->isKF && PRE_frameHessians.size() > 1) { //- Changed reference KF
         //- We do not delete former KF here, just delete F here, and pop up former KF
-        assert(PRE_frameHessians.size() == 3);
+        assert(PRE_frameHessians.size() == 2);
         FrameHessian *delfh = PRE_frameHessians[0];
         assert(delfh->isKF);
         popOutOrder<FrameHessian>(PRE_frameHessians, 0);
         popOutOrder<FrameHessian>(PRE_frameHessiansRight, 0);
-        delfh = PRE_frameHessians[0];
-        assert(!delfh->isKF);
-        deleteOutOrder<FrameHessian>(PRE_frameHessians, delfh);
-        deleteOutOrder<FrameHessian>(PRE_frameHessiansRight, delfh->rightFrame);
       }
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
       fh->PRE_idx = PRE_frameHessians.size();
