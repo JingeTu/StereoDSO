@@ -1977,6 +1977,8 @@ namespace dso {
         assert(delfh->isKF);
         popOutOrder<FrameHessian>(PRE_frameHessians, 0);
         popOutOrder<FrameHessian>(PRE_frameHessiansRight, 0);
+        PRE_ef->dropFrame(delfh->PRE_efFrame);
+        PRE_ef->clear();
       }
       fh->setEvalPT_scaled(fh->shell->T_WC.inverse(), fh->shell->aff_g2l, fh->rightFrame->shell->aff_g2l);
       fh->PRE_idx = PRE_frameHessians.size();

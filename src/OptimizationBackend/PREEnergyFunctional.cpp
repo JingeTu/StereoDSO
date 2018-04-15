@@ -149,8 +149,8 @@ namespace dso {
   }
 
   void PREEnergyFunctional::clear() {
-    HM = MatXX::Zero(nFrames * 10 - 10, nFrames * 10 - 10);
-    bM = VecX::Zero(nFrames * 10 - 10);
+    HM = MatXX::Zero(nFrames * 10, nFrames * 10);
+    bM = VecX::Zero(nFrames * 10);
   }
 
   void PREEnergyFunctional::setDeltaF() {
@@ -484,6 +484,16 @@ namespace dso {
     return eff;
   }
 
+  void PREEnergyFunctional::dropFrame(EFFrame *efF) {
+    for (unsigned int i = efF->idx; i + 1 < frames.size(); i++) {
+      frames[i] = frames[i + 1];
+      frames[i]->idx = i;
+    }
+    frames.pop_back();
+    nFrames--;
+    efF->data->PRE_efFrame = 0;
+  }
+
   void PREEnergyFunctional::dropIMUResidual(EFIMUResidual *r) {
     EFSpeedAndBias *s = r->to_sb;
     assert(r == s->residualsAll[r->idxInAll]);
@@ -789,7 +799,6 @@ namespace dso {
       bA_top.segment<10>(h * 10).noalias() += adHost[aidx].transpose() * b_last;
       bA_top.segment<10>(t * 10).noalias() += adTarget[aidx].transpose() * b_last;
     }
-
 
     MatXX HL_top_imu, HA_top_imu, H_sc_imu;
     VecX bL_top_imu, bA_top_imu, b_sc_imu;

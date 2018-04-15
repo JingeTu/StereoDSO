@@ -106,6 +106,8 @@ namespace dso {
     void marginalizePointsF(const Mat1010 &M_last, const Vec10 &Mb_last,
                             const Mat1010 &Msc_last, const Vec10 &Mbsc_last);
 
+    void dropFrame(EFFrame *efF);
+
     void dropIMUResidual(EFIMUResidual *r);
 
     void solveSystemF(int iteration, double lambda, Mat1010 &H_last, Vec10 &b_last);
