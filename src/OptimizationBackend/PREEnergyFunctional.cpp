@@ -189,7 +189,7 @@ namespace dso {
         int tIdx = 10 * r->to_f->idx;
         H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
         H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        if (!r->from_f->data->isKF) {
+        if (!r->from_f->data->isKF || setting_PREnofixKF) {
           H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
           H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
         }
@@ -214,7 +214,7 @@ namespace dso {
         int tIdx = 10 * r->to_f->idx;
         H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
         H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
-        if (!r->from_f->data->isKF) {
+        if (!r->from_f->data->isKF || setting_PREnofixKF) {
           H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
           H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
         }
@@ -245,7 +245,7 @@ namespace dso {
         Hxsf.block<6, 9>(tIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[1];
         Hxsf.block<6, 9>(tIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[1].transpose() * J->Jrdsb[0];
 
-        if (!r->from_f->data->isKF) {
+        if (!r->from_f->data->isKF || setting_PREnofixKF) {
           Hxsf.block<6, 9>(fIdxRaw * 6, fIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[0];
           Hxsf.block<6, 9>(fIdxRaw * 6, tIdxRaw * 9).noalias() += J->Jrdxi[0].transpose() * J->Jrdsb[1];
         }
@@ -309,7 +309,7 @@ namespace dso {
         H.block<6, 6>(fIdx, tIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[1]).cast<double>();
         H.block<6, 6>(tIdx, tIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[1]).cast<double>();
 
-        if (!r->from_f->data->isKF) {
+        if (!r->from_f->data->isKF || setting_PREnofixKF) {
           H.block<6, 6>(tIdx, fIdx).noalias() += (J->Jrdxi[1].transpose() * J->Jrdxi[0]).cast<double>();
           H.block<6, 6>(fIdx, fIdx).noalias() += (J->Jrdxi[0].transpose() * J->Jrdxi[0]).cast<double>();
         }
@@ -628,6 +628,10 @@ namespace dso {
       int aidx = h + nFrames * t;
       H.block<10, 10>(t * 10, t * 10).noalias() += adTarget[aidx] * M * adTarget[aidx].transpose();
       H.block<10, 10>(h * 10, t * 10).noalias() += adHost[aidx] * M * adTarget[aidx].transpose();
+      if (setting_PREnofixKF) {
+        H.block<10, 10>(h * 10, h * 10).noalias() += adHost[aidx] * M * adHost[aidx].transpose();
+        H.block<10, 10>(t * 10, h * 10).noalias() += adTarget[aidx] * M * adHost[aidx].transpose();
+      }
       b.segment<10>(h * 10).noalias() += adHost[aidx].transpose() * Mb;
       b.segment<10>(t * 10).noalias() += adTarget[aidx].transpose() * Mb;
     }
@@ -645,11 +649,16 @@ namespace dso {
     bM += setting_margWeightFac * b;
 
     if (setting_solverMode & SOLVER_ORTHOGONALIZE_FULL) {
-      MatXX HM_temp = HM.block(10, 10, nFrames * 10 - 10, nFrames * 10 - 10);
-      VecX bM_temp = bM.segment(10, nFrames * 10 - 10);
-      orthogonalize(&bM_temp, &HM_temp);
-      HM.block(10, 10, nFrames * 10 - 10, nFrames * 10 - 10) = HM_temp;
-      bM.segment(10, nFrames * 10 - 10) = bM_temp;
+      if (setting_PREnofixKF) {
+        orthogonalize(&bM, &HM);
+      }
+      else {
+        MatXX HM_temp = HM.block(10, 10, nFrames * 10 - 10, nFrames * 10 - 10);
+        VecX bM_temp = bM.segment(10, nFrames * 10 - 10);
+        orthogonalize(&bM_temp, &HM_temp);
+        HM.block(10, 10, nFrames * 10 - 10, nFrames * 10 - 10) = HM_temp;
+        bM.segment(10, nFrames * 10 - 10) = bM_temp;
+      }
     }
 
     PRE_EFIndicesValid = false;
@@ -796,6 +805,10 @@ namespace dso {
       int aidx = h + nFrames * t;
       HA_top.block<10, 10>(t * 10, t * 10).noalias() += adTarget[aidx] * H_last * adTarget[aidx].transpose();
       HA_top.block<10, 10>(h * 10, t * 10).noalias() += adHost[aidx] * H_last * adTarget[aidx].transpose();
+      if (setting_PREnofixKF) {
+        HA_top.block<10, 10>(h * 10, h * 10).noalias() += adHost[aidx] * H_last * adHost[aidx].transpose();
+        HA_top.block<10, 10>(t * 10, h * 10).noalias() += adTarget[aidx] * H_last * adHost[aidx].transpose();
+      }
       bA_top.segment<10>(h * 10).noalias() += adHost[aidx].transpose() * b_last;
       bA_top.segment<10>(t * 10).noalias() += adTarget[aidx].transpose() * b_last;
     }
@@ -860,10 +873,12 @@ namespace dso {
       HFinal_top -= H_sc * (1.0f / (1 + lambda));
     }
 
-    int solveSize = 10 * nFrames - 10;
+    if (!setting_PREnofixKF) {
+      int solveSize = 10 * nFrames - 10;
 
-    HFinal_top = HFinal_top.block(10, 10, solveSize, solveSize);
-    bFinal_top = bFinal_top.segment(10, solveSize);
+      HFinal_top = HFinal_top.block(10, 10, solveSize, solveSize);
+      bFinal_top = bFinal_top.segment(10, solveSize);
+    }
 
     VecX x;
     if (setting_solverMode & SOLVER_SVD) {
@@ -923,9 +938,11 @@ namespace dso {
 
     lastX = x;
 
-    VecX newx = VecX::Zero(nFrames * 10);
-    newx.segment(10, solveSize) = x;
-    x = newx;
+    if (!setting_PREnofixKF) {
+      VecX newx = VecX::Zero(nFrames * 10);
+      newx.segment(10, nFrames * 10 - 10) = x;
+      x = newx;
+    }
 
     currentLambda = lambda;
     //- Modify step.

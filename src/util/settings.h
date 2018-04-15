@@ -52,7 +52,7 @@ namespace dso {
 #define PYR_LEVELS 6
   extern int pyrLevelsUsed;
 
-
+  extern bool setting_PREnofixKF;
   extern float setting_keyframesPerSecond;
   extern bool setting_realTimeMaxKF;
   extern float setting_maxShiftWeightT;

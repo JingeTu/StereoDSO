@@ -43,7 +43,13 @@ namespace dso {
 
     double lambda = 1e-1;
     float stepsize = 1;
-    VecX previousX = VecX::Constant(10 * PRE_frameHessians.size() - 10, NAN);
+    VecX previousX;
+    if (setting_PREnofixKF) {
+      previousX = VecX::Constant(10 * PRE_frameHessians.size(), NAN);
+    }
+    else {
+      previousX = VecX::Constant(10 * PRE_frameHessians.size() - 10, NAN);
+    }
 
     for (int iteration = 0; iteration < mnumOptIts; iteration++) {
       PRE_backupState(iteration != 0);
@@ -381,46 +387,86 @@ namespace dso {
     nullspaces_affB.clear();
 
 
-    int n = PRE_frameHessians.size() * 10 - 10;
     std::vector<VecX> nullspaces_x0_pre;
-    for (int i = 0; i < 6; i++) {
+    if (setting_PREnofixKF) {
+      int n = PRE_frameHessians.size() * 10;
+      for (int i = 0; i < 6; i++) {
+        VecX nullspace_x0(n);
+        nullspace_x0.setZero();
+        for (FrameHessian *fh : PRE_frameHessians) {
+          nullspace_x0.segment<6>(fh->PRE_idx * 10) = fh->nullspaces_pose.col(i);
+          nullspace_x0.segment<3>(fh->PRE_idx * 10) *= SCALE_XI_TRANS_INVERSE;
+          nullspace_x0.segment<3>(fh->PRE_idx * 10 + 3) *= SCALE_XI_ROT_INVERSE;
+        }
+        nullspaces_x0_pre.push_back(nullspace_x0);
+        nullspaces_pose.push_back(nullspace_x0);
+      }
+      for (int i = 0; i < 2; i++) {
+        VecX nullspace_x0(n);
+        nullspace_x0.setZero();
+        for (FrameHessian *fh : PRE_frameHessians) {
+          nullspace_x0.segment<4>(fh->PRE_idx * 10 + 6) = fh->nullspaces_affine.col(i).head<4>();
+          nullspace_x0[fh->PRE_idx * 10 + 6] *= SCALE_A_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 + 7] *= SCALE_B_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 + 8] *= SCALE_A_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 + 9] *= SCALE_B_INVERSE;
+        }
+        nullspaces_x0_pre.push_back(nullspace_x0);
+        if (i == 0) nullspaces_affA.push_back(nullspace_x0);
+        if (i == 1) nullspaces_affB.push_back(nullspace_x0);
+      }
+
+      VecX nullspace_x0(n);
+      nullspace_x0.setZero();
+      for (FrameHessian *fh : PRE_frameHessians) {
+        nullspace_x0.segment<6>(fh->PRE_idx * 10) = fh->nullspaces_scale;
+        nullspace_x0.segment<3>(fh->PRE_idx * 10) *= SCALE_XI_TRANS_INVERSE;
+        nullspace_x0.segment<3>(fh->PRE_idx * 10 + 3) *= SCALE_XI_ROT_INVERSE;
+      }
+      nullspaces_x0_pre.push_back(nullspace_x0);
+      nullspaces_scale.push_back(nullspace_x0);
+    }
+    else {
+      int n = PRE_frameHessians.size() * 10 - 10;
+      for (int i = 0; i < 6; i++) {
+        VecX nullspace_x0(n);
+        nullspace_x0.setZero();
+        for (FrameHessian *fh : PRE_frameHessians) {
+          if (fh->isKF) continue;
+          nullspace_x0.segment<6>(fh->PRE_idx * 10 - 10) = fh->nullspaces_pose.col(i);
+          nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10) *= SCALE_XI_TRANS_INVERSE;
+          nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10 + 3) *= SCALE_XI_ROT_INVERSE;
+        }
+        nullspaces_x0_pre.push_back(nullspace_x0);
+        nullspaces_pose.push_back(nullspace_x0);
+      }
+      for (int i = 0; i < 2; i++) {
+        VecX nullspace_x0(n);
+        nullspace_x0.setZero();
+        for (FrameHessian *fh : PRE_frameHessians) {
+          if (fh->isKF) continue;
+          nullspace_x0.segment<4>(fh->PRE_idx * 10 - 10 + 6) = fh->nullspaces_affine.col(i).head<4>();
+          nullspace_x0[fh->PRE_idx * 10 - 10 + 6] *= SCALE_A_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 - 10 + 7] *= SCALE_B_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 - 10 + 8] *= SCALE_A_INVERSE;
+          nullspace_x0[fh->PRE_idx * 10 - 10 + 9] *= SCALE_B_INVERSE;
+        }
+        nullspaces_x0_pre.push_back(nullspace_x0);
+        if (i == 0) nullspaces_affA.push_back(nullspace_x0);
+        if (i == 1) nullspaces_affB.push_back(nullspace_x0);
+      }
+
       VecX nullspace_x0(n);
       nullspace_x0.setZero();
       for (FrameHessian *fh : PRE_frameHessians) {
         if (fh->isKF) continue;
-        nullspace_x0.segment<6>(fh->PRE_idx * 10 - 10) = fh->nullspaces_pose.col(i);
+        nullspace_x0.segment<6>(fh->PRE_idx * 10 - 10) = fh->nullspaces_scale;
         nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10) *= SCALE_XI_TRANS_INVERSE;
         nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10 + 3) *= SCALE_XI_ROT_INVERSE;
       }
       nullspaces_x0_pre.push_back(nullspace_x0);
-      nullspaces_pose.push_back(nullspace_x0);
+      nullspaces_scale.push_back(nullspace_x0);
     }
-    for (int i = 0; i < 2; i++) {
-      VecX nullspace_x0(n);
-      nullspace_x0.setZero();
-      for (FrameHessian *fh : PRE_frameHessians) {
-        if (fh->isKF) continue;
-        nullspace_x0.segment<4>(fh->PRE_idx * 10 - 10 + 6) = fh->nullspaces_affine.col(i).head<4>();
-        nullspace_x0[fh->PRE_idx * 10 - 10 + 6] *= SCALE_A_INVERSE;
-        nullspace_x0[fh->PRE_idx * 10 - 10 + 7] *= SCALE_B_INVERSE;
-        nullspace_x0[fh->PRE_idx * 10 - 10 + 8] *= SCALE_A_INVERSE;
-        nullspace_x0[fh->PRE_idx * 10 - 10 + 9] *= SCALE_B_INVERSE;
-      }
-      nullspaces_x0_pre.push_back(nullspace_x0);
-      if (i == 0) nullspaces_affA.push_back(nullspace_x0);
-      if (i == 1) nullspaces_affB.push_back(nullspace_x0);
-    }
-
-    VecX nullspace_x0(n);
-    nullspace_x0.setZero();
-    for (FrameHessian *fh : PRE_frameHessians) {
-      if (fh->isKF) continue;
-      nullspace_x0.segment<6>(fh->PRE_idx * 10 - 10) = fh->nullspaces_scale;
-      nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10) *= SCALE_XI_TRANS_INVERSE;
-      nullspace_x0.segment<3>(fh->PRE_idx * 10 - 10 + 3) *= SCALE_XI_ROT_INVERSE;
-    }
-    nullspaces_x0_pre.push_back(nullspace_x0);
-    nullspaces_scale.push_back(nullspace_x0);
 
     return nullspaces_x0_pre;
   }
