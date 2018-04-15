@@ -2259,7 +2259,9 @@ namespace dso {
     // =========================== add New Frame to Hessian Struct. =========================
     fh->idx = frameHessians.size();
     FrameHessian *fh1 = frameHessians.back();
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     fh->isKF = true;
+#endif
     frameHessians.push_back(fh);
     frameHessiansRight.push_back(fhRight);
     fh->frameID = allKeyFramesHistory.size();
