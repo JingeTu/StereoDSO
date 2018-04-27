@@ -582,6 +582,7 @@ namespace dso {
 
 
     for (int i = 0; i < nl; i++) {
+      bool rightValid = false;
       float id = lpc_idepth[i];
       float x = lpc_u[i];
       float y = lpc_v[i];
@@ -633,7 +634,8 @@ namespace dso {
       }
 
       if (!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0)) continue;
-      if (!(Ku_r > 2 && Kv_r > 2 && Ku_r < wl - 3 && Kv_r < hl - 3 && new_idepth_r > 0)) continue;
+      if (!(Ku_r > 2 && Kv_r > 2 && Ku_r < wl - 3 && Kv_r < hl - 3 && new_idepth_r > 0)) rightValid = false;
+      else rightValid = true;
 
       float refColor = lpc_color[i];
       Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
@@ -642,11 +644,12 @@ namespace dso {
       float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
       Vec3f hitColor_r = getInterpolatedElement33(dINewl_r, Ku_r, Kv_r, wl);
-      if (!std::isfinite((float) hitColor_r[0]) || hitColor_r[1] == 0 || hitColor_r[2] == 0) continue;
+      if (!std::isfinite((float) hitColor_r[0]) || hitColor_r[1] == 0 || hitColor_r[2] == 0) rightValid = false;
+      else rightValid = true;
       float residual_r = hitColor_r[0] - (float) (affLL_r[0] * refColor + affLL_r[1]);
       float hw_r = fabs(residual_r) < setting_huberTH ? 1 : setting_huberTH / fabs(residual_r);
 
-      if (fabs(residual) > cutoffTH || fabs(residual_r) > cutoffTH) {
+      if (fabs(residual) > cutoffTH) {
         if (debugPlot) resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
         E += maxEnergy;
         E += maxEnergy;
@@ -668,20 +671,34 @@ namespace dso {
         buf_warped_residual[numTermsInWarped] = residual;
         buf_warped_weight[numTermsInWarped] = hw;
         buf_warped_refColor[numTermsInWarped] = lpc_color[i];
-
-        float pt_r2 = new_idepth_r / new_idepth;
-        buf_warped_idepth_r[numTermsInWarped] = pt_r2;
-        buf_warped_dx_r[numTermsInWarped] = hitColor_r[1];
-        buf_warped_dy_r[numTermsInWarped] = hitColor_r[2];
-        buf_warped_residual_r[numTermsInWarped] = residual_r;
-        buf_warped_weight_r[numTermsInWarped] = hw_r;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
         float pt2 = new_idepth / id;
         buf_warped_dd[numTermsInWarped] =
             pt2 * (hitColor[1] * fxl * (t[0] - u * t[2]) + hitColor[2] * fyl * (t[1] - v * t[2]));
-        buf_warped_dd_r[numTermsInWarped] =
+#endif
+
+        if (rightValid && fabs(residual_r) <= cutoffTH) {
+          float pt_r2 = new_idepth_r / new_idepth;
+          buf_warped_idepth_r[numTermsInWarped] = pt_r2;
+          buf_warped_dx_r[numTermsInWarped] = hitColor_r[1];
+          buf_warped_dy_r[numTermsInWarped] = hitColor_r[2];
+          buf_warped_residual_r[numTermsInWarped] = residual_r;
+          buf_warped_weight_r[numTermsInWarped] = hw_r;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+          buf_warped_dd_r[numTermsInWarped] =
             pt_r2 * pt2 * (hitColor_r[1] * fxl * (t[0] - u * t[2]) + hitColor_r[2] * fyl * (t[1] - v * t[2]));
 #endif
+        }
+        else {
+          buf_warped_idepth_r[numTermsInWarped] = 0;
+          buf_warped_dx_r[numTermsInWarped] = 0;
+          buf_warped_dy_r[numTermsInWarped] = 0;
+          buf_warped_residual_r[numTermsInWarped] = 0;
+          buf_warped_weight_r[numTermsInWarped] = 0;
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+          buf_warped_dd_r[numTermsInWarped] = 0;
+#endif
+        }
         numTermsInWarped++;
       }
     }
