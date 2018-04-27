@@ -59,6 +59,8 @@ std::string gammaCalib = "";
 std::string source = "";
 std::string calib = "";
 std::string calibRight = "";
+std::string resultoutput = "";
+std::string fpsoutput = "";
 double rescale = 1;
 bool reverse = false;
 bool disableROS = false;
@@ -68,6 +70,7 @@ bool prefetch = false;
 float playbackSpeed = 0;  // 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
 bool preload = false;
 bool useSampleOutput = false;
+bool eval = false;
 
 
 int mode = 0;
@@ -153,6 +156,22 @@ void parseArgument(char *arg) {
   float foption;
   char buf[1000];
 
+  if (1 == sscanf(arg, "eval=%d", &option)) {
+    if (option == 1) {
+      eval = true;
+    }
+    return;
+  }
+
+  if (1 == sscanf(arg, "resultoutput=%s", buf)) {
+    resultoutput = buf;
+    return;
+  }
+
+  if (1 == sscanf(arg, "fpsoutput=%s", buf)) {
+    fpsoutput = buf;
+    return;
+  }
 
   if (1 == sscanf(arg, "sampleoutput=%d", &option)) {
     if (option == 1) {
@@ -532,7 +551,10 @@ int main(int argc, char **argv) {
     gettimeofday(&tv_end, NULL);
 
 
-    fullSystem->printResult("result.txt");
+    if (!resultoutput.empty())
+      fullSystem->printResult(resultoutput);
+    else
+      fullSystem->printResult("result.txt");
 
 
     int numFramesProcessed = abs(idsToPlay[0] - idsToPlay.back());
@@ -540,18 +562,27 @@ int main(int argc, char **argv) {
     double MilliSecondsTakenSingle = 1000.0f * (ended - started) / (float) (CLOCKS_PER_SEC);
     double MilliSecondsTakenMT = sInitializerOffset + ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f +
                                                        (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f);
-    printf("\n======================"
-               "\n%d Frames (%.1f fps)"
-               "\n%.2fms per frame (single core); "
-               "\n%.2fms per frame (multi core); "
-               "\n%.3fx (single core); "
-               "\n%.3fx (multi core); "
-               "\n======================\n\n",
-           numFramesProcessed, numFramesProcessed / numSecondsProcessed,
-           MilliSecondsTakenSingle / numFramesProcessed,
-           MilliSecondsTakenMT / (float) numFramesProcessed,
-           1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
-           1000 / (MilliSecondsTakenMT / numSecondsProcessed));
+    char fps[256];
+    sprintf(fps, "\n======================"
+                "\n%d Frames (%.1f fps)"
+                "\n%.2fms per frame (single core); "
+                "\n%.2fms per frame (multi core); "
+                "\n%.3fx (single core); "
+                "\n%.3fx (multi core); "
+                "\n======================\n\n",
+            numFramesProcessed, numFramesProcessed / numSecondsProcessed,
+            MilliSecondsTakenSingle / numFramesProcessed,
+            MilliSecondsTakenMT / (float) numFramesProcessed,
+            1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
+            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
+    LOG(INFO) << fps;
+
+    if (!fpsoutput.empty()) {
+      std::ofstream myfile;
+      myfile.open(fpsoutput.c_str());
+      myfile << fps;
+      myfile.close();
+    }
     //fullSystem->printFrameLifetimes();
     if (setting_logStuff) {
       std::ofstream tmlog;
@@ -562,6 +593,7 @@ int main(int argc, char **argv) {
       tmlog.flush();
       tmlog.close();
     }
+    if (eval) viewer->close();
 
   });
 

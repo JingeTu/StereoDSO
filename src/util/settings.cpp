@@ -30,7 +30,7 @@
 namespace dso {
   int pyrLevelsUsed = PYR_LEVELS;
 
-  bool setting_PREnofixKF = true;
+  bool setting_PREnofixKF = false;
 /* Parameters controlling when KF's are taken */
   float setting_keyframesPerSecond = 0;   // if !=0, takes a fixed number of KF per second.
   bool setting_realTimeMaxKF = false;   // if true, takes as many KF's as possible (will break the system if the camera stays stationary)
@@ -39,7 +39,7 @@ namespace dso {
   float setting_maxShiftWeightRT = 0.02f * (752 + 480);
   float setting_kfGlobalWeight = 1;   // general weight on threshold, the larger the more KF's are taken (e.g., 2 = double the amount of KF's).
   float setting_maxAffineWeight = 2;
-  float setting_imuResidualWeight = 2;
+  float setting_imuResidualWeight = 0.1;
   float setting_imuResidualWeightInv = 1 / setting_imuResidualWeight;
   float setting_imuResidualWeightSquare = setting_imuResidualWeight * setting_imuResidualWeight;
   float setting_imuResidualWeightSquareInv = 1 / setting_imuResidualWeightSquare;
@@ -176,7 +176,7 @@ namespace dso {
 
   bool disableReconfigure = false;
   bool debugSaveImages = false;
-  bool multiThreading = false; //- original true
+  bool multiThreading = true; //- original true
   bool disableAllDisplay = false;
   bool setting_onlyLogKFPoses = false;
   bool setting_logStuff = true;

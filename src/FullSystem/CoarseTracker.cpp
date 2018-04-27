@@ -554,7 +554,7 @@ namespace dso {
     Vec2f affLL_r = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrameRight->ab_exposure, lastRef_aff_g2l,
                                                 aff_g2l_r).cast<float>();
 
-    assert(std::isfinite(affLL[0]));
+//    assert(std::isfinite(affLL[0]));
 
     //- Static stereo reprojection
     Mat33f RKi_s = Mat33f::Identity() * Ki[lvl];
@@ -702,6 +702,7 @@ namespace dso {
       buf_warped_weight_r[numTermsInWarped] = 0;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       buf_warped_dd[numTermsInWarped] = 0;
+      buf_warped_dd_r[numTermsInWarped] = 0;
 #endif
       numTermsInWarped++;
     }

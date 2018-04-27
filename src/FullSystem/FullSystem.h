@@ -180,6 +180,8 @@ namespace dso {
 
     void printResult(std::string file);
 
+    void printResultT(std::string file);
+
     void debugPlot(std::string name);
 
     void printFrameLifetimes();

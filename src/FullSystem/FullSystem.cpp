@@ -165,7 +165,7 @@ namespace dso {
 
     needNewKFAfter = -1;
 
-    linearizeOperation = true;
+    linearizeOperation = false;
     runMapping = true;
     mappingThread = boost::thread(&FullSystem::mappingLoop, this);
     lastRefStopID = 0;
@@ -336,12 +336,29 @@ namespace dso {
 
       if (setting_onlyLogKFPoses && s->marginalizedAt == s->id) continue;
 
-//      myfile << s->timestamp <<
-//             " " << s->T_WC.translation().transpose() <<
-//             " " << s->T_WC.so3().unit_quaternion().x() <<
-//             " " << s->T_WC.so3().unit_quaternion().y() <<
-//             " " << s->T_WC.so3().unit_quaternion().z() <<
-//             " " << s->T_WC.so3().unit_quaternion().w() << "\n";
+      myfile << s->timestamp <<
+             " " << s->T_WC.translation().transpose() <<
+             " " << s->T_WC.so3().unit_quaternion().x() <<
+             " " << s->T_WC.so3().unit_quaternion().y() <<
+             " " << s->T_WC.so3().unit_quaternion().z() <<
+             " " << s->T_WC.so3().unit_quaternion().w() << "\n";
+    }
+    myfile.close();
+  }
+
+  void FullSystem::printResultT(std::string file) {
+    boost::unique_lock<boost::mutex> lock(trackMutex);
+    boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
+
+    std::ofstream myfile;
+    myfile.open(file.c_str());
+    myfile << std::setprecision(15);
+
+    for (FrameShell *s : allFrameHistory) {
+      if (!s->poseValid) continue;
+
+      if (setting_onlyLogKFPoses && s->marginalizedAt == s->id) continue;
+
       auto R = s->T_WC.rotationMatrix();
       auto t = s->T_WC.translation();
       myfile << R(0, 0) << " " << R(0, 1) << " " << R(0, 2) << " " << t(0) << " "
@@ -1743,7 +1760,7 @@ namespace dso {
     float maxPixSearch = (wG[0] + hG[0]) * setting_maxPixSearch;
 
     cv::Mat matMatches;
-    if (false) {
+    if (true) {
       cv::drawMatches(matLeft, keypoints_left, matRight, keypoints_right, matches, matMatches);
     }
     else {
@@ -1776,9 +1793,13 @@ namespace dso {
       }
     }
 
+    char savefile[16];
+    sprintf(savefile, "mathces_%d.png", id);
+//
     cv::imshow("matches", matMatches);
-    cv::imwrite("matches.png", matMatches);
-    cv::waitKey(0);
+    if (id > 180 && id < 200)
+    cv::imwrite(savefile, matMatches);
+//    cv::waitKey(0);
 
     delete fh;
     delete fhRight;
@@ -1867,16 +1888,16 @@ namespace dso {
     //- FrameHessian::makeImages() just calculate some image gradient.
 
     if (!initialized) {
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
         double imuTimeStart = 0.0 - setting_temporal_imu_data_overlap;
         double imuTimeEnd = fh->shell->timestamp + setting_temporal_imu_data_overlap;
         //- Initialize IMU
-        std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
-        Sophus::Quaterniond q_WC0 = dso::IMUPropagation::initializeRollPitchFromMeasurements(vIMUData);
-        coarseInitializer->T_WC_ini = SE3(q_WC0, Vec3(0, 0, 0));
+//        std::vector<IMUMeasurement> vIMUData = getCameraVIMUMeasurements(imuTimeStart, imuTimeEnd);
+//        Sophus::Quaterniond q_WC0 = dso::IMUPropagation::initializeRollPitchFromMeasurements(vIMUData);
+        coarseInitializer->T_WC_ini = SE3(Sophus::Quaterniond(1, 0, 0, 0), Vec3(0, 0, 0));
 
         //- Add the First frame to the corseInitializer.
         coarseInitializer->setFirstStereo(&Hcalib, fh, fhRight);
@@ -1892,7 +1913,7 @@ namespace dso {
       }
       return;
 #endif
-#if defined(STEREO_MODE) && !defined(INERTIAL_MODE)
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       // use initializer!
       if (coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
       {
@@ -1986,16 +2007,16 @@ namespace dso {
       PRE_frameHessiansRight.push_back(fh->rightFrame);
       PRE_ef->insertFrame(fh);
 
-      SpeedAndBiasHessian *speedAndBiasHessian = new SpeedAndBiasHessian(fh);
-      speedAndBiasHessian->setEvalPT(fh->shell->speedAndBias);
-      speedAndBiasHessian->idx = fh->PRE_idx;
-      PRE_speedAndBiasHessians.push_back(speedAndBiasHessian);
-      PRE_ef->insertSpeedAndBias(speedAndBiasHessian);
+//      SpeedAndBiasHessian *speedAndBiasHessian = new SpeedAndBiasHessian(fh);
+//      speedAndBiasHessian->setEvalPT(fh->shell->speedAndBias);
+//      speedAndBiasHessian->idx = fh->PRE_idx;
+//      PRE_speedAndBiasHessians.push_back(speedAndBiasHessian);
+//      PRE_ef->insertSpeedAndBias(speedAndBiasHessian);
 
-      assert(fh1->shell == startF);
-      IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, vIMUData);
-      fh->speedAndBiasHessian->residuals.push_back(r);
-      PRE_ef->insertIMUResidual(r);
+//      assert(fh1->shell == startF);
+//      IMUResidual *r = new IMUResidual(fh1->speedAndBiasHessian, fh->speedAndBiasHessian, fh1, fh, vIMUData);
+//      fh->speedAndBiasHessian->residuals.push_back(r);
+//      PRE_ef->insertIMUResidual(r);
 
       PRE_setPrecalcValues();
 
@@ -2004,8 +2025,8 @@ namespace dso {
 
       //- prepare for marginalization
       PRE_flagFramesForMarginalization();
-      PRE_flagIMUResidualsForRemoval();
-      PRE_makeSpeedAndBiasesMargIDXForMarginalization();
+//      PRE_flagIMUResidualsForRemoval();
+//      PRE_makeSpeedAndBiasesMargIDXForMarginalization();
 
       PRE_getNullspaces(
           PRE_ef->lastNullspaces_pose,
@@ -2014,7 +2035,7 @@ namespace dso {
           PRE_ef->lastNullspaces_affB);
 
       //- marginalization
-      PRE_marginalizeSpeedAndBiases();
+//      PRE_marginalizeSpeedAndBiases();
       PRE_marginalizePoints();
       for (unsigned int i = 0; i < PRE_frameHessians.size(); i++)
         if (PRE_frameHessians[i]->PRE_flaggedForMarginalization) {

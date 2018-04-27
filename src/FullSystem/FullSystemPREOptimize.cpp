@@ -297,12 +297,12 @@ namespace dso {
     assert(PRE_frameHessians.size() <= 3);
 
     if (PRE_frameHessians.size() == 2) {
-      PRE_frameHessians[0]->speedAndBiasHessian->PRE_flaggedForMarginalization = true;
+//      PRE_frameHessians[0]->speedAndBiasHessian->PRE_flaggedForMarginalization = true;
     }
 
     if (PRE_frameHessians.size() == 3) {
       PRE_frameHessians[1]->PRE_flaggedForMarginalization = true;
-      PRE_frameHessians[1]->speedAndBiasHessian->PRE_flaggedForMarginalization = true;
+//      PRE_frameHessians[1]->speedAndBiasHessian->PRE_flaggedForMarginalization = true;
     }
   }
 

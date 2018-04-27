@@ -487,7 +487,7 @@ namespace dso {
       if (!std::isfinite(affLL[0])) {
         LOG(INFO) << "host->aff_g2l() " << host->aff_g2l().a << ", " << host->aff_g2l().b;
         LOG(INFO) << "host->aff_g2l_r() " << host->aff_g2l_r().a << ", " << host->aff_g2l_r().b;
-        assert(std::isfinite(affLL[0]));
+//        assert(std::isfinite(affLL[0]));
       }
 
       float drdA = (color[idx] - b0);
