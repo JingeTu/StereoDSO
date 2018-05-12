@@ -1793,7 +1793,7 @@ namespace dso {
       }
     }
 
-    char savefile[16];
+    char savefile[64];
     sprintf(savefile, "mathces_%d.png", id);
 //
     cv::imshow("matches", matMatches);

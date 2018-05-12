@@ -416,7 +416,6 @@ namespace dso {
 
     Vec3f pr = KRKi * Vec3f(u_stereo, v_stereo, 1);
     Vec3f ptpMin = pr + Kt * idepth_min_stereo;
-
     float uMax = ptpMin[0] / ptpMin[2];
     float vMax = ptpMin[1] / ptpMin[2];
 
@@ -447,8 +446,11 @@ namespace dso {
       // ============== check their distance. everything below 2px is OK (-> skip). ===================
       dist = (uMax - uMin) * (uMax - uMin) + (vMax - vMin) * (vMax - vMin);
       dist = sqrtf(dist);
-      if (dist < setting_trace_slackInterval)
+      if (dist < setting_trace_slackInterval) {
+        lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5;
+        lastTracePixelInterval=dist;
         return lastTraceStatus = ImmaturePointStatus::IPS_SKIPPED;
+      }
       assert(dist > 0);
     }
     else {
@@ -493,12 +495,8 @@ namespace dso {
     float errorInPixel = 0.2f + 0.2f * (a + b) / a;
 
     if (errorInPixel * setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max_stereo)) {
-//			lastTraceUV_Stereo = Vec2f(uMin+uMax, vMin+vMax)*0.5;
-//			lastTracePixelInterval_Stereo=dist;
-//			idepth_stereo = (u_stereo - 0.5*(uMin+uMax))/bf;
-//			return lastTraceStatus_Stereo = ImmaturePointStatus::IPS_BADCONDITION;
-//            lastTraceUV = Vec2f(u, v);
-//            lastTracePixelInterval = dist;
+      lastTraceUV = Vec2f(uMax + uMin, vMax + vMin) * 0.5;
+      lastTracePixelInterval = dist;
       return lastTraceStatus = ImmaturePointStatus::IPS_BADCONDITION;
     }
 
@@ -527,8 +525,8 @@ namespace dso {
       rotatetPattern[idx] = Rplane * Vec2f(patternP[idx][0], patternP[idx][1]);
 
     if (!std::isfinite(dx) || !std::isfinite(dy)) {
-      lastTraceUV = Vec2f(-1, -1);
       lastTracePixelInterval = 0;
+      lastTraceUV = Vec2f(-1, -1);
       return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
     }
 
@@ -552,8 +550,7 @@ namespace dso {
         }
         float residual = hitColor - (float) (aff[0] * color[idx] + aff[1]);
         float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-//        energy += hw *residual*residual*(2-hw);
-        energy += residual * residual;
+        energy += hw *residual*residual*(2-hw);
       }
 
       errors[i] = energy;
@@ -598,12 +595,9 @@ namespace dso {
         float dResdDist = dx * hitColor[1] + dy * hitColor[2];
         float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
-//        H += hw*dResdDist*dResdDist;
-//        b += hw*residual*dResdDist;
-//        energy += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
-        H += dResdDist * dResdDist;
-        b += residual * dResdDist;
-        energy += residual * residual;
+        H += hw*dResdDist*dResdDist;
+        b += hw*residual*dResdDist;
+        energy += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
       }
 
 
@@ -658,15 +652,11 @@ namespace dso {
     }
     if (idepth_min_stereo > idepth_max_stereo) std::swap<float>(idepth_min_stereo, idepth_max_stereo);
 
-//  printf("the idpeth_min is %f, the idepth_max is %f \n", idepth_min, idepth_max);
-
     if (!std::isfinite(idepth_min_stereo) || !std::isfinite(idepth_max_stereo) || (idepth_max_stereo < 0)) {
       lastTracePixelInterval = 0;
       lastTraceUV = Vec2f(-1, -1);
       return lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER;
     }
-
-//    std::cout << "v_stereo: " << v_stereo << "\tu_stereo - bestU : " << u_stereo - bestU << std::endl;
 
     lastTracePixelInterval = 2 * errorInPixel;
     lastTraceUV = Vec2f(bestU, bestV);
@@ -738,7 +728,7 @@ namespace dso {
 
 
 
-      // ============== check their distance. everything below 2px is OK (-> skip). ===================
+      // ============== check their distance. everything below 1.5px is OK (-> skip). ===================
       dist = (uMin - uMax) * (uMin - uMax) + (vMin - vMax) * (vMin - vMax);
       dist = sqrtf(dist);
       if (dist < setting_trace_slackInterval) {

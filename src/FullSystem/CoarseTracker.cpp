@@ -716,6 +716,7 @@ namespace dso {
       buf_warped_idepth_r[numTermsInWarped] = 0;
       buf_warped_dx_r[numTermsInWarped] = 0;
       buf_warped_dy_r[numTermsInWarped] = 0;
+      buf_warped_residual_r[numTermsInWarped] = 0;
       buf_warped_weight_r[numTermsInWarped] = 0;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       buf_warped_dd[numTermsInWarped] = 0;
