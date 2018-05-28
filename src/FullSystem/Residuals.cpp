@@ -1098,22 +1098,37 @@ namespace dso {
       return -1;  // nothing to do...
 
     // increments (initialise with identity)
-    Delta_q_ = Eigen::Quaterniond(1, 0, 0, 0);
-    C_integral_ = Eigen::Matrix3d::Zero();
-    C_doubleintegral_ = Eigen::Matrix3d::Zero();
-    acc_integral_ = Eigen::Vector3d::Zero();
-    acc_doubleintegral_ = Eigen::Vector3d::Zero();
+    Delta_tilde_R_ij_ = Eigen::Matrix3d::Identity();
+    Delta_tilde_v_ij_ = Eigen::Vector3d::Zero();
+    Delta_tilde_p_ij_ = Eigen::Vector3d::Zero();
+    Sigma_eta_(0, 0) = imuParameters->sigma_gw_c * imuParameters->sigma_gw_c;
+    Sigma_eta_(1, 1) = imuParameters->sigma_gw_c * imuParameters->sigma_gw_c;
+    Sigma_eta_(2, 2) = imuParameters->sigma_gw_c * imuParameters->sigma_gw_c;
+    Sigma_eta_(3, 3) = imuParameters->sigma_aw_c * imuParameters->sigma_aw_c;
+    Sigma_eta_(4, 4) = imuParameters->sigma_aw_c * imuParameters->sigma_aw_c;
+    Sigma_eta_(5, 5) = imuParameters->sigma_aw_c * imuParameters->sigma_aw_c;
+//    Delta_q_ = Eigen::Quaterniond(1, 0, 0, 0);
+//    C_integral_ = Eigen::Matrix3d::Zero();
+//    C_doubleintegral_ = Eigen::Matrix3d::Zero();
+//    acc_integral_ = Eigen::Vector3d::Zero();
+//    acc_doubleintegral_ = Eigen::Vector3d::Zero();
 
     // cross matrix accumulatrion
-    cross_ = Eigen::Matrix3d::Zero();
+//    cross_ = Eigen::Matrix3d::Zero();
 
     // sub-Jacobians
-    dalpha_db_g_ = Eigen::Matrix3d::Zero();
-    dv_db_g_ = Eigen::Matrix3d::Zero();
-    dp_db_g_ = Eigen::Matrix3d::Zero();
-
+    d_R_d_bg_ = Eigen::Matrix3d::Zero();
+    d_p_d_bg_ = Eigen::Matrix3d::Zero();
+    d_p_d_ba_ = Eigen::Matrix3d::Zero();
+    d_v_d_bg_ = Eigen::Matrix3d::Zero();
+    d_v_d_ba_ = Eigen::Matrix3d::Zero();
+//    dalpha_db_g_ = Eigen::Matrix3d::Zero();
+//    dv_db_g_ = Eigen::Matrix3d::Zero();
+//    dp_db_g_ = Eigen::Matrix3d::Zero();
+//
     // the Jacobian of the increment (w/o biases)
-    P_delta_ = Eigen::Matrix<double, 15, 15>::Zero();
+    Sigma_ij_ = Eigen::Matrix<double, 15, 15>::Zero();
+//    P_delta_ = Eigen::Matrix<double, 15, 15>::Zero();
 
     //Eigen::Matrix<double, 15, 15> F_tot;
     //F_tot.setIdentity();
@@ -1182,89 +1197,45 @@ namespace dso {
         LOG(WARNING) << "acc saturation";
       }
 
-      // actual propagation
-      // orientation:
-      Eigen::Quaterniond dq;
-      const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1)
-                                            - speedAndBias.segment<3>(3));
-      const double theta_half = omega_S_true.norm() * 0.5 * dt;
-      const double sinc_theta_half = sinc(theta_half);
-      const double cos_theta_half = cos(theta_half);
-      dq.vec() = sinc_theta_half * omega_S_true * 0.5 * dt;
-      dq.w() = cos_theta_half;
-      Eigen::Quaterniond Delta_q_1 = Delta_q_ * dq;
-      // rotation matrix integral:
-      const Eigen::Matrix3d C = Delta_q_.toRotationMatrix();
-      const Eigen::Matrix3d C_1 = Delta_q_1.toRotationMatrix();
-      const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1)
-                                          - speedAndBias.segment<3>(6));
-      const Eigen::Matrix3d C_integral_1 = C_integral_ + 0.5 * (C + C_1) * dt;
-      const Eigen::Vector3d acc_integral_1 = acc_integral_
-                                             + 0.5 * (C + C_1) * acc_S_true * dt;
-      // rotation matrix double integral:
-      C_doubleintegral_ += C_integral_ * dt + 0.25 * (C + C_1) * dt * dt;
-      acc_doubleintegral_ += acc_integral_ * dt
-                             + 0.25 * (C + C_1) * acc_S_true * dt * dt;
+      // actual propagation (A.10)
+      // R:
+      const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1) - speedAndBias.segment<3>(3));
+      Eigen::Matrix3d Delta_R = SO3::exp(
+          omega_S_true * dt).matrix();//SO3::exp(okvis::kinematics::crossMx(omega_S_true * dt));
+      Eigen::Matrix3d Delta_tilde_R_ij = Delta_tilde_R_ij_ * Delta_R;
+      // v:
+      const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1) - speedAndBias.segment<3>(6));
+      Eigen::Vector3d Delta_tilde_v_ij = Delta_tilde_v_ij_ + Delta_tilde_R_ij_ * acc_S_true * dt;
+      // p:
+      Eigen::Vector3d Delta_tilde_p_ij =
+          Delta_tilde_p_ij_ + Delta_tilde_v_ij_ * dt + 0.5 * Delta_tilde_R_ij_ * acc_S_true * dt * dt;
 
-      // Jacobian parts
-      dalpha_db_g_ += C_1 * okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
-      const Eigen::Matrix3d cross_1 = dq.inverse().toRotationMatrix() * cross_
-                                      + okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
-      const Eigen::Matrix3d acc_S_x = okvis::kinematics::crossMx(acc_S_true);
-      Eigen::Matrix3d dv_db_g_1 = dv_db_g_
-                                  + 0.5 * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
-      dp_db_g_ += dt * dv_db_g_
-                  + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
+      // jacobian propagation
+      d_R_d_bg_ += -Delta_tilde_R_ij * okvis::kinematics::rightJacobian(omega_S_true * dt) * dt; //- ?
+      d_v_d_bg_ += -Delta_tilde_R_ij_ * okvis::kinematics::crossMx(omega_S_true) * d_R_d_bg_ * dt;
+      d_v_d_ba_ += -Delta_tilde_R_ij_ * dt;
+      d_p_d_bg_ += -1.5 * Delta_tilde_R_ij_ * okvis::kinematics::crossMx(omega_S_true) * d_R_d_bg_ * dt;
+      d_p_d_ba_ += -1.5 * Delta_tilde_R_ij_ * dt * dt;
 
       // covariance propagation
-      Eigen::Matrix<double, 15, 15> F_delta =
-          Eigen::Matrix<double, 15, 15>::Identity();
-      // transform
-      F_delta.block<3, 3>(0, 3) = -okvis::kinematics::crossMx(
-          acc_integral_ * dt + 0.25 * (C + C_1) * acc_S_true * dt * dt);
-      F_delta.block<3, 3>(0, 6) = Eigen::Matrix3d::Identity() * dt;
-      F_delta.block<3, 3>(0, 9) = dt * dv_db_g_
-                                  + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
-      F_delta.block<3, 3>(0, 12) = -C_integral_ * dt
-                                   + 0.25 * (C + C_1) * dt * dt;
-      F_delta.block<3, 3>(3, 9) = -dt * C_1;
-      F_delta.block<3, 3>(6, 3) = -okvis::kinematics::crossMx(
-          0.5 * (C + C_1) * acc_S_true * dt);
-      F_delta.block<3, 3>(6, 9) = 0.5 * dt
-                                  * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
-      F_delta.block<3, 3>(6, 12) = -0.5 * (C + C_1) * dt;
-      P_delta_ = F_delta * P_delta_ * F_delta.transpose();
-      // add noise. Note that transformations with rotation matrices can be ignored, since the noise is isotropic.
-      //F_tot = F_delta*F_tot;
-      const double sigma2_dalpha = dt * sigma_g_c
-                                   * sigma_g_c;
-      P_delta_(3, 3) += sigma2_dalpha;
-      P_delta_(4, 4) += sigma2_dalpha;
-      P_delta_(5, 5) += sigma2_dalpha;
-      const double sigma2_v = dt * sigma_a_c * sigma_a_c;
-      P_delta_(6, 6) += sigma2_v;
-      P_delta_(7, 7) += sigma2_v;
-      P_delta_(8, 8) += sigma2_v;
-      const double sigma2_p = 0.5 * dt * dt * sigma2_v;
-      P_delta_(0, 0) += sigma2_p;
-      P_delta_(1, 1) += sigma2_p;
-      P_delta_(2, 2) += sigma2_p;
-      const double sigma2_b_g = dt * imuParameters->sigma_gw_c * imuParameters->sigma_gw_c;
-      P_delta_(9, 9) += sigma2_b_g;
-      P_delta_(10, 10) += sigma2_b_g;
-      P_delta_(11, 11) += sigma2_b_g;
-      const double sigma2_b_a = dt * imuParameters->sigma_aw_c * imuParameters->sigma_aw_c;
-      P_delta_(12, 12) += sigma2_b_a;
-      P_delta_(13, 13) += sigma2_b_a;
-      P_delta_(14, 14) += sigma2_b_a;
+      Eigen::Matrix<double, 15, 15> A = Eigen::Matrix<double, 15, 15>::Identity();
+      A.block<3, 3>(0, 0) = Delta_R.transpose();
+      A.block<3, 3>(3, 0) = -Delta_tilde_R_ij_ * okvis::kinematics::crossMx(acc_S_true) * dt;
+      A.block<3, 3>(6, 0) = -1.5 * Delta_tilde_R_ij_ * okvis::kinematics::crossMx(acc_S_true) * dt * dt;
+
+      Eigen::Matrix<double, 15, 6> B = Eigen::Matrix<double, 15, 6>::Zero();
+      B.block<3, 3>(0, 0) = okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
+      B.block<3, 3>(3, 3) = Delta_tilde_R_ij_ * dt;
+      B.block<3, 3>(6, 3) = 1.5 * Delta_tilde_R_ij_ * dt * dt;
+      B.block<3, 3>(9, 0) = Eigen::Matrix3d::Identity() * dt;
+      B.block<3, 3>(12, 3) = Eigen::Matrix3d::Identity() * dt;
+
+      Sigma_ij_ = A * Sigma_ij_ * A.transpose() + B * Sigma_eta_ * B.transpose();
 
       // memory shift
-      Delta_q_ = Delta_q_1;
-      C_integral_ = C_integral_1;
-      acc_integral_ = acc_integral_1;
-      cross_ = cross_1;
-      dv_db_g_ = dv_db_g_1;
-      time = nexttime;
+      Delta_tilde_R_ij_ = Delta_tilde_R_ij;
+      Delta_tilde_v_ij_ = Delta_tilde_v_ij;
+      Delta_tilde_p_ij_ = Delta_tilde_p_ij;
 
       ++i;
 
@@ -1278,10 +1249,10 @@ namespace dso {
 
     // get the weighting:
     // enforce symmetric
-    P_delta_ = 0.5 * P_delta_ + 0.5 * P_delta_.transpose().eval();
+    Sigma_ij_ = 0.5 * Sigma_ij_ + 0.5 * Sigma_ij_.transpose().eval();
 
     // calculate inverse
-    information_ = P_delta_.inverse();
+    information_ = Sigma_ij_.inverse();
     information_ = 0.5 * information_ + 0.5 * information_.transpose().eval();
 
     // square root
@@ -1304,8 +1275,12 @@ namespace dso {
 //    SpeedAndBias speedAndBiases_1 = to_f->speedAndBiasHessian->speedAndBias_evalPT;
 
     // this will NOT be changed:
+    Eigen::Vector3d t_S0 = T_WS_0.translation();
+    Eigen::Vector3d t_S1 = T_WS_1.translation();
     const Eigen::Matrix3d C_WS_0 = T_WS_0.rotationMatrix();
     const Eigen::Matrix3d C_S0_W = C_WS_0.transpose();
+    const Eigen::Matrix3d C_WS_1 = T_WS_1.rotationMatrix();
+    const Eigen::Matrix3d C_S1_W = C_WS_1.transpose();
 
     // call the propagation
     const double Delta_t = (t1_ - t0_);
@@ -1328,45 +1303,47 @@ namespace dso {
       std::lock_guard<std::mutex> lock(preintegrationMutex_);
       const Eigen::Vector3d g_W = imuParameters->g * Eigen::Vector3d(0, 0, 6371009).normalized();
 
+      // the overall error vector
+      Eigen::Matrix<double, 15, 1> error;
+      error.segment<3>(0) =
+          C_S0_W * (t_S1 - t_S0 - speedAndBiases_0.head<3>() * Delta_t - 0.5 * g_W * Delta_t * Delta_t)
+          - (Delta_tilde_p_ij_ + d_p_d_bg_ * Delta_b.head<3>() + d_p_d_ba_ * Delta_b.tail<3>()); // p
+      error.segment<3>(3) = SO3::log(SO3((Delta_tilde_R_ij_ *
+                                          SO3::exp(d_R_d_bg_ * Delta_b.head<3>()).matrix()).transpose() * C_S0_W *
+                                         C_WS_1)); // R
+      error.segment<3>(6) = C_S0_W * (speedAndBiases_1.head<3>() - speedAndBiases_0.head<3>() - g_W * Delta_t)
+                            - (Delta_tilde_v_ij_ + d_v_d_bg_ * Delta_b.head<3>() + d_v_d_ba_ * Delta_b.tail<3>()); // v
+      error.tail<6>() = speedAndBiases_1.tail<6>() - speedAndBiases_0.tail<6>();
+
       // assign Jacobian w.r.t. x0
       Eigen::Matrix<double, 15, 15> F0 =
-          Eigen::Matrix<double, 15, 15>::Identity(); // holds for d/db_g, d/db_a
-      const Eigen::Vector3d delta_p_est_W =
-          T_WS_0.translation() - T_WS_1.translation() + speedAndBiases_0.head<3>() * Delta_t -
-          0.5 * g_W * Delta_t * Delta_t;
-      const Eigen::Vector3d delta_v_est_W =
-          speedAndBiases_0.head<3>() - speedAndBiases_1.head<3>() - g_W * Delta_t;
-      const Eigen::Quaterniond Dq = okvis::kinematics::deltaQ(-dalpha_db_g_ * Delta_b.head<3>()) * Delta_q_;
-      F0.block<3, 3>(0, 0) = C_S0_W;
-      F0.block<3, 3>(0, 3) = C_S0_W * okvis::kinematics::crossMx(delta_p_est_W);
-      F0.block<3, 3>(0, 6) = C_S0_W * Eigen::Matrix3d::Identity() * Delta_t;
-      F0.block<3, 3>(0, 9) = dp_db_g_;
-      F0.block<3, 3>(0, 12) = -C_doubleintegral_;
-      F0.block<3, 3>(3, 3) = (okvis::kinematics::plus(Dq * T_WS_1.unit_quaternion().inverse()) *
-                              okvis::kinematics::oplus(T_WS_0.unit_quaternion())).topLeftCorner<3, 3>();
-      F0.block<3, 3>(3, 9) = (okvis::kinematics::oplus(T_WS_1.unit_quaternion().inverse() * T_WS_0.unit_quaternion()) *
-                              okvis::kinematics::oplus(Dq)).topLeftCorner<3, 3>() * (-dalpha_db_g_);
-      F0.block<3, 3>(6, 3) = C_S0_W * okvis::kinematics::crossMx(delta_v_est_W);
-      F0.block<3, 3>(6, 6) = C_S0_W;
-      F0.block<3, 3>(6, 9) = dv_db_g_;
-      F0.block<3, 3>(6, 12) = -C_integral_;
+          Eigen::Matrix<double, 15, 15>::Zero(); // holds for d/db_g, d/db_a
+      F0.block<3, 3>(0, 0) = -C_S0_W; // p/p
+      F0.block<3, 3>(0, 3) = C_S0_W * okvis::kinematics::crossMx((t_S1 - t_S0 - speedAndBiases_0.head<3>() * Delta_t
+                                                                  - 0.5 * g_W * Delta_t * Delta_t)); // p/R
+      F0.block<3, 3>(0, 6) = -C_S0_W * Delta_t; // p/v
+      F0.block<3, 3>(0, 9) = -d_p_d_bg_; // p/bg
+      F0.block<3, 3>(0, 12) = -d_p_d_ba_; // p/ba
+      F0.block<3, 3>(3, 3) = -okvis::kinematics::rightJacobian(error.segment<3>(3)).inverse() * C_S1_W; // R/R
+      F0.block<3, 3>(3, 9) = -okvis::kinematics::rightJacobian(-error.segment<3>(3)).inverse() // R/v
+                             * okvis::kinematics::rightJacobian(d_R_d_bg_ * Delta_b.head<3>()) *
+                             d_R_d_bg_; // R/bg J_l(\phi) = J_r(-\phi)
+      F0.block<3, 3>(6, 3) = C_S0_W * okvis::kinematics::crossMx(speedAndBiases_1.head<3>() - speedAndBiases_0.head<3>()
+                                                                 - g_W * Delta_t); // v/R
+      F0.block<3, 3>(6, 6) = -C_S0_W; // v/v
+      F0.block<3, 3>(6, 9) = -d_v_d_bg_; // v/bg
+      F0.block<3, 3>(6, 12) = -d_v_d_ba_; // v/ba
+      F0.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity(); // bg/bg
+      F0.block<3, 3>(12, 12) = Eigen::Matrix3d::Identity(); // ba/ba
 
       // assign Jacobian w.r.t. x1
       Eigen::Matrix<double, 15, 15> F1 =
-          -Eigen::Matrix<double, 15, 15>::Identity(); // holds for the biases
-      F1.block<3, 3>(0, 0) = -C_S0_W;
-      F1.block<3, 3>(3, 3) = -(okvis::kinematics::plus(Dq) *
-                               okvis::kinematics::oplus(T_WS_0.unit_quaternion()) *
-                               okvis::kinematics::plus(T_WS_1.unit_quaternion().inverse())).topLeftCorner<3, 3>();
-      F1.block<3, 3>(6, 6) = -C_S0_W;
-
-      // the overall error vector
-      Eigen::Matrix<double, 15, 1> error;
-      error.segment<3>(0) = C_S0_W * delta_p_est_W + acc_doubleintegral_ + F0.block<3, 6>(0, 9) * Delta_b;
-      error.segment<3>(3) = 2 * (Dq * (T_WS_1.unit_quaternion().inverse() *
-                                       T_WS_0.unit_quaternion())).vec(); //2*T_WS_0.q()*Dq*T_WS_1.q().inverse();//
-      error.segment<3>(6) = C_S0_W * delta_v_est_W + acc_integral_ + F0.block<3, 6>(6, 9) * Delta_b;
-      error.tail<6>() = speedAndBiases_0.tail<6>() - speedAndBiases_1.tail<6>();
+          Eigen::Matrix<double, 15, 15>::Zero(); // holds for the biases
+      F1.block<3, 3>(0, 0) = C_S0_W; // p/p
+      F1.block<3, 3>(3, 3) = okvis::kinematics::rightJacobian(error.segment<3>(3)).inverse() * C_S1_W; // R/R
+      F1.block<3, 3>(6, 6) = C_S0_W; // v/v
+      F1.block<3, 3>(9, 9) = -Eigen::Matrix3d::Identity(); // bg/bg
+      F1.block<3, 3>(12, 12) = -Eigen::Matrix3d::Identity(); // ba/ba
 
       // error weighting
       J->resF = setting_imuResidualWeight * (squareRootInformation_ * error).cast<float>();

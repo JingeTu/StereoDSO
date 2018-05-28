@@ -296,7 +296,6 @@ namespace dso {
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
 
   SpeedAndBiasHessian::SpeedAndBiasHessian(FrameHessian *host_) : host(host_) {
-    PRE_flaggedForMarginalization = false;
     margIDX = -1;
     host_->speedAndBiasHessian = this;
     state.setZero();

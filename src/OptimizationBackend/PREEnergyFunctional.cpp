@@ -813,25 +813,25 @@ namespace dso {
       bA_top.segment<10>(t * 10).noalias() += adTarget[aidx].transpose() * b_last;
     }
 
-//    MatXX HL_top_imu, HA_top_imu, H_sc_imu;
-//    VecX bL_top_imu, bA_top_imu, b_sc_imu;
-//    //- For speedAndBiases steps compute
-//    MatXX Hss_inv, Hsx;
-//    VecX bsr;
-//
-//    accumulateIMUAF_MT(HA_top_imu, bA_top_imu, multiThreading);
-//
-//    accumulateIMULF_MT(HL_top_imu, bL_top_imu, multiThreading);
-//
-//    accumulateIMUSCF_MT(H_sc_imu, b_sc_imu, Hss_inv, Hsx, bsr, multiThreading);
-//
-//    HA_top += HA_top_imu;
-//    HL_top += HL_top_imu;
-//    H_sc += H_sc_imu;
-//
-//    bA_top += bA_top_imu;
-//    bL_top += bL_top_imu;
-//    b_sc += b_sc_imu;
+    MatXX HL_top_imu, HA_top_imu, H_sc_imu;
+    VecX bL_top_imu, bA_top_imu, b_sc_imu;
+    //- For speedAndBiases steps compute
+    MatXX Hss_inv, Hsx;
+    VecX bsr;
+
+    accumulateIMUAF_MT(HA_top_imu, bA_top_imu, multiThreading);
+
+    accumulateIMULF_MT(HL_top_imu, bL_top_imu, multiThreading);
+
+    accumulateIMUSCF_MT(H_sc_imu, b_sc_imu, Hss_inv, Hsx, bsr, multiThreading);
+
+    HA_top += HA_top_imu;
+    HL_top += HL_top_imu;
+    H_sc += H_sc_imu;
+
+    bA_top += bA_top_imu;
+    bL_top += bL_top_imu;
+    b_sc += b_sc_imu;
 
     bM_top = (bM + HM * getStitchedDeltaF());
 
@@ -950,16 +950,16 @@ namespace dso {
     currentLambda = 0;
     //- resubstitute speedAndBiases
     //- Prepare \delta_X first
-//    VecX deltaX = VecX::Zero(nFrames * 6);
-//    for (int r = 0; r < nFrames; r++) {
-//      int rIdx = r * 10;
-//      deltaX.segment<6>(r * 6) = x.segment<6>(rIdx);
-//    }
-//    VecX deltaS = -Hss_inv * (bsr + Hsx * deltaX);
-//    for (EFSpeedAndBias *s : speedAndBiases)
-//      s->data->step = deltaS.segment<9>(9 * s->data->idx);
-//    LOG(INFO) << "x: " << x.transpose();
-//    LOG(INFO) << "deltaS: " << deltaS.transpose();
+    VecX deltaX = VecX::Zero(nFrames * 6);
+    for (int r = 0; r < nFrames; r++) {
+      int rIdx = r * 10;
+      deltaX.segment<6>(r * 6) = x.segment<6>(rIdx);
+    }
+    VecX deltaS = -Hss_inv * (bsr + Hsx * deltaX);
+    for (EFSpeedAndBias *s : speedAndBiases)
+      s->data->step = deltaS.segment<9>(9 * s->data->idx);
+    LOG(INFO) << "x: " << x.transpose();
+    LOG(INFO) << "deltaS: " << deltaS.transpose();
   }
 
   void PREEnergyFunctional::makeIDX() {

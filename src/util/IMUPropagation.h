@@ -16,7 +16,9 @@ namespace dso {
 
     ~IMUPropagation();
 
-    static Sophus::Quaterniond initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements);
+//    static Sophus::Quaterniond initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements);
+
+    static Eigen::Matrix3d initializeRollPitchFromMeasurements(const std::vector<IMUMeasurement> &imuMeasurements);
 
     static int propagate(const std::vector<IMUMeasurement> &imuMeasurements, SE3 &T_WS, SpeedAndBias &speedAndBias,
                          const double &t_start, const double &t_end, covariance_t *covariance, jacobian_t *jacobian);

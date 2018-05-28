@@ -7,7 +7,6 @@ SET(BUILD_TYPE Release)
 
 add_library(${PROJECT_NAME}
         EnergyFunctional.cpp
-        PREEnergyFunctional.cpp
         AccumulatedTopHessian.cpp
         AccumulatedSCHessian.cpp
         EnergyFunctionalStructs.cpp)

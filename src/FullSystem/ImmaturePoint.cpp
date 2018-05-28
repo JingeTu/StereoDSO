@@ -447,8 +447,8 @@ namespace dso {
       dist = (uMax - uMin) * (uMax - uMin) + (vMax - vMin) * (vMax - vMin);
       dist = sqrtf(dist);
       if (dist < setting_trace_slackInterval) {
-        lastTraceUV = Vec2f(uMax+uMin, vMax+vMin)*0.5;
-        lastTracePixelInterval=dist;
+        lastTraceUV = Vec2f(uMax + uMin, vMax + vMin) * 0.5;
+        lastTracePixelInterval = dist;
         return lastTraceStatus = ImmaturePointStatus::IPS_SKIPPED;
       }
       assert(dist > 0);
@@ -550,7 +550,7 @@ namespace dso {
         }
         float residual = hitColor - (float) (aff[0] * color[idx] + aff[1]);
         float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-        energy += hw *residual*residual*(2-hw);
+        energy += hw * residual * residual * (2 - hw);
       }
 
       errors[i] = energy;
@@ -595,9 +595,9 @@ namespace dso {
         float dResdDist = dx * hitColor[1] + dy * hitColor[2];
         float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
-        H += hw*dResdDist*dResdDist;
-        b += hw*residual*dResdDist;
-        energy += weights[idx]*weights[idx]*hw *residual*residual*(2-hw);
+        H += hw * dResdDist * dResdDist;
+        b += hw * residual * dResdDist;
+        energy += weights[idx] * weights[idx] * hw * residual * residual * (2 - hw);
       }
 
 

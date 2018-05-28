@@ -60,11 +60,16 @@ namespace dso {
 
 
   typedef Eigen::Matrix<double, CPARS, 10> MatC10;
+  typedef Eigen::Matrix<double, 9, 9> Mat99;
   typedef Eigen::Matrix<double, 10, 10> Mat1010;
   typedef Eigen::Matrix<double, 13, 13> Mat1313;
+  typedef Eigen::Matrix<double, 28, 28> Mat2828;
+  typedef Eigen::Matrix<double, 38, 38> Mat3838;
 
+  typedef Eigen::Matrix<double, 9, 6> Mat96;
   typedef Eigen::Matrix<double, 8, 10> Mat810;
   typedef Eigen::Matrix<double, 8, 3> Mat83;
+  typedef Eigen::Matrix<double, 6, 9> Mat69;
   typedef Eigen::Matrix<double, 6, 6> Mat66;
   typedef Eigen::Matrix<double, 5, 3> Mat53;
   typedef Eigen::Matrix<double, 4, 3> Mat43;
@@ -87,6 +92,8 @@ namespace dso {
   typedef Eigen::Matrix<double, CPARS, 1> VecC;
   typedef Eigen::Matrix<float, CPARS, 1> VecCf;
   typedef Eigen::Matrix<float, 9, 1> SpeedAndBiasf;
+  typedef Eigen::Matrix<double, 38, 1> Vec38;
+  typedef Eigen::Matrix<double, 28, 1> Vec28;
   typedef Eigen::Matrix<double, 15, 1> Vec15;
   typedef Eigen::Matrix<double, 13, 1> Vec13;
   typedef Eigen::Matrix<double, 10, 1> Vec10;
@@ -110,7 +117,7 @@ namespace dso {
   typedef Eigen::Matrix<float, 6, 1> Vec6f;
 
   typedef Eigen::AngleAxisd AngleAxis;
-  typedef Eigen::Matrix<double, 9, 1> SpeedAndBias;
+  typedef Eigen::Matrix<double, 9, 1> SpeedAndBias; //- v, bg, ba
   typedef Eigen::Matrix<double, 15, 15> covariance_t;
   typedef Eigen::Matrix<double, 15, 15> jacobian_t;
 

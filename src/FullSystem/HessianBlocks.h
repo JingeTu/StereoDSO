@@ -152,12 +152,6 @@ namespace dso {
     static int instanceCounter;
     int idx;
 
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    bool isKF;
-    EFFrame *PRE_efFrame;
-    int PRE_idx;
-#endif
-
     // Photometric Calibration Stuff
     float frameEnergyTH;  // set dynamically depending on tracking residual
     float ab_exposure;
@@ -171,7 +165,6 @@ namespace dso {
 
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
     SpeedAndBiasHessian *speedAndBiasHessian;
-    bool PRE_flaggedForMarginalization;
 #endif
 
     //- Currently for stereo mode, do not take nullspaces into account.
@@ -370,8 +363,6 @@ namespace dso {
       leftFrame = 0;
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)
       speedAndBiasHessian = 0;
-      isKF = false;
-      PRE_flaggedForMarginalization = false;
 #endif
       debugImage = 0;
     };
@@ -687,8 +678,6 @@ namespace dso {
     SpeedAndBias step;
     SpeedAndBias step_backup;
 
-    bool PRE_flaggedForMarginalization;
-
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state_zero() const { return state_zero; }
 
     EIGEN_STRONG_INLINE const SpeedAndBias &get_state() const { return state; }
@@ -728,58 +717,6 @@ namespace dso {
       setStateScaled(speedAndBias_evalPT);
       setStateZero(this->get_state());
     }
-/*
- *
-    void setStateZero(const Vec10 &state_zero);
-
-    inline void setState(const Vec10 &state) {
-
-      this->state = state;
-      state_scaled.segment<3>(0) = SCALE_XI_TRANS * state.segment<3>(0);
-      state_scaled.segment<3>(3) = SCALE_XI_ROT * state.segment<3>(3);
-      state_scaled[6] = SCALE_A * state[6];
-      state_scaled[7] = SCALE_B * state[7];
-      state_scaled[8] = SCALE_A * state[8];
-      state_scaled[9] = SCALE_B * state[9];
-
-      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
-      PRE_T_WC = PRE_T_CW.inverse();
-      //setCurrentNullspace();
-    };
-
-    inline void setStateScaled(const Vec10 &state_scaled) {
-
-      this->state_scaled = state_scaled;
-      state.segment<3>(0) = SCALE_XI_TRANS_INVERSE * state_scaled.segment<3>(0);
-      state.segment<3>(3) = SCALE_XI_ROT_INVERSE * state_scaled.segment<3>(3);
-      state[6] = SCALE_A_INVERSE * state_scaled[6];
-      state[7] = SCALE_B_INVERSE * state_scaled[7];
-      state[8] = SCALE_A_INVERSE * state_scaled[8];
-      state[9] = SCALE_B_INVERSE * state_scaled[9];
-
-      PRE_T_CW = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
-      PRE_T_WC = PRE_T_CW.inverse();
-      //setCurrentNullspace();
-    };
-
-    inline void setEvalPT(const SE3 &worldToCam_evalPT, const Vec10 &state) {
-
-      this->worldToCam_evalPT = worldToCam_evalPT;
-      setState(state);
-      setStateZero(state);
-    };
-
-    inline void setEvalPT_scaled(const SE3 &worldToCam_evalPT, const AffLight &aff_g2l, const AffLight &aff_g2l_r) {
-      Vec10 initial_state = Vec10::Zero();
-      initial_state[6] = aff_g2l.a;
-      initial_state[7] = aff_g2l.b;
-      initial_state[8] = aff_g2l_r.a;
-      initial_state[9] = aff_g2l_r.b;
-      this->worldToCam_evalPT = worldToCam_evalPT;
-      setStateScaled(initial_state);
-      setStateZero(this->get_state());
-    };
- * */
   };
 
 #endif

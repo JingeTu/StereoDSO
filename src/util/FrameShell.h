@@ -53,10 +53,12 @@ namespace dso {
     int statistics_outlierResOnThis;
     int statistics_goodResOnThis;
     int marginalizedAt;
+    int trackIterations;
     double movedByOpt;
 
 
     inline FrameShell() {
+      trackIterations = 0;
       id = 0;
       poseValid = true;
       T_WC = SE3();

@@ -31,6 +31,7 @@
 #include "util/settings.h"
 #include "OptimizationBackend/MatrixAccumulators.h"
 #include "IOWrapper/Output3DWrapper.h"
+#include "util/IMUMeasurement.h"
 
 
 namespace dso {
@@ -55,6 +56,61 @@ namespace dso {
         AffLight &aff_g2l_out, AffLight &aff_g2l_r_out,
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper *wrap = 0);
+
+#endif
+#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
+
+    bool trackNewestCoarseStereo(
+        FrameHessian *newFrameHessian,
+        FrameHessian *newFrameHessianRight,
+        SE3 &lastToNew_out,
+        const std::vector<IMUMeasurement> &vIMUData,
+        AffLight &aff_g2l_out, AffLight &aff_g2l_r_out,
+        int coarsestLvl, Vec5 minResForAbort,
+        IOWrap::Output3DWrapper *wrap = 0);
+
+    void getIMUHessian(const std::vector<IMUMeasurement> &vIMUData,
+                       const SE3 &T_SW_0, const SE3 &T_SW_1,
+                       const SpeedAndBias &speedAndBias_0, const SpeedAndBias &speedAndBias_1,
+                       Eigen::Matrix<double, 15, 1> &res,
+                       Eigen::Matrix<double, 15, 6> &Jrdxi_0, Eigen::Matrix<double, 15, 9> &Jrdsb_0,
+                       Eigen::Matrix<double, 15, 6> &Jrdxi_1, Eigen::Matrix<double, 15, 9> &Jrdsb_1);
+
+    int redoPreintegration(const std::vector<IMUMeasurement> &imuData, const SE3 &T_WS_0, const SE3 &T_WS_1,
+                           const SpeedAndBias &speedAndBias, IMUParameters *imuParameters);
+
+    //- for IMU & Direct optimization
+    enum OptMode {
+      OPT_MODE_2, OPT_MODE_3
+    };
+    OptMode optMode;
+    FrameShell *lastFrameShell;
+    MatXX HM;
+    VecX bM;
+
+    bool redoPropagation_;
+    double t0_;
+    double t1_;
+    mutable Eigen::Matrix3d d_R_d_bg_ = Eigen::Matrix3d::Zero(); //- Actually, `d_phi_d_bg` is more reasonable for this variable.
+    mutable Eigen::Matrix3d d_p_d_bg_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_p_d_ba_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_v_d_bg_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_v_d_ba_ = Eigen::Matrix3d::Zero();
+
+    mutable SpeedAndBias speedAndBias_ref_ = SpeedAndBias::Zero();
+
+    mutable Eigen::Matrix3d Delta_tilde_R_ij_ = Eigen::Matrix3d::Identity();
+    mutable Eigen::Vector3d Delta_tilde_v_ij_ = Eigen::Vector3d::Zero();
+    mutable Eigen::Vector3d Delta_tilde_p_ij_ = Eigen::Vector3d::Zero();
+
+    mutable Eigen::Matrix<double, 15, 15> Sigma_ij_ = Eigen::Matrix<double, 15, 15>::Zero();
+    mutable Eigen::Matrix<double, 6, 6> Sigma_eta_ = Eigen::Matrix<double, 6, 6>::Zero();
+
+    typedef Eigen::Matrix<double, 15, 15> covariance_t;
+    typedef covariance_t information_t;
+
+    mutable information_t information_;
+    mutable information_t squareRootInformation_;
 
 #endif
 #if defined(STEREO_MODE) && defined(INERTIAL_MODE)

@@ -39,7 +39,6 @@
 #include "util/FrameShell.h"
 #include "util/IndexThreadReduce.h"
 #include "OptimizationBackend/EnergyFunctional.h"
-#include "OptimizationBackend/PREEnergyFunctional.h"
 #include "FullSystem/PixelSelector2.h"
 
 #include <opencv2/opencv.hpp>
@@ -224,7 +223,7 @@ namespace dso {
 
     Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight);
 
-    Vec4 trackNewCoarseStereo(FrameHessian *fh, FrameHessian *fhRight, SE3 T_WC0);
+    Vec4 trackNewCoarseStereoIMU(FrameHessian *fh, FrameHessian *fhRight);
 
     void traceNewCoarseKey(FrameHessian *fh);
 
@@ -239,50 +238,6 @@ namespace dso {
     void activatePointsOldFirst();
 
     void flagPointsForRemoval();
-
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-
-    void PRE_flagFramesForMarginalization();
-
-    void PRE_flagIMUResidualsForRemoval();
-
-    void PRE_makeSpeedAndBiasesMargIDXForMarginalization();
-
-    void PRE_marginalizeSpeedAndBiases();
-
-    void PRE_marginalizePoints();
-
-    void PRE_marginalizeFrame(FrameHessian *frame);
-
-    void PRE_optimize(int mnumOptIts);
-
-    void PRE_setPrecalcValues();
-
-    Vec3 PRE_linearizeAll(bool fixLinearization);
-
-    void PRE_linearizeAllIMU_Reductor(bool fixLinearization, int min, int max, Vec10 *stats, int tid);
-
-    void PRE_applyIMURes_Reductor(bool copyJacobians, int min, int max, Vec10 *stats, int tid);
-
-    void PRE_backupState(bool backupLastStep);
-
-    void PRE_loadSateBackup();
-
-    void PRE_solveSystem(int iteration, double lambda);
-
-    bool PRE_doStepFromBackup(float stepfacC, float stepfacT, float stepfacR, float stepfacA, float stepfacD);
-
-    double PRE_calcLEnergy();
-
-    double PRE_calcMEnergy();
-
-    std::vector<VecX> PRE_getNullspaces(
-        std::vector<VecX> &nullspaces_pose,
-        std::vector<VecX> &nullspaces_scale,
-        std::vector<VecX> &nullspaces_affA,
-        std::vector<VecX> &nullspaces_affB);
-
-#endif
 
     void makeNewTraces(FrameHessian *newFrame, float *gtDepth);
 
@@ -381,9 +336,6 @@ namespace dso {
     std::vector<FrameShell *> allKeyFramesHistory;
 
     EnergyFunctional *ef;
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    PREEnergyFunctional *PRE_ef;
-#endif
     IndexThreadReduce<Vec10> treadReduce;
 
     float *selectionMap;
@@ -392,12 +344,6 @@ namespace dso {
 
     std::vector<FrameHessian *> frameHessians;  // ONLY changed in marginalizeFrame and addFrame.
     std::vector<FrameHessian *> frameHessiansRight;
-#if defined(STEREO_MODE) && defined(INERTIAL_MODE)
-    std::vector<FrameHessian *> PRE_frameHessians;
-    std::vector<FrameHessian *> PRE_frameHessiansRight;
-    std::vector<SpeedAndBiasHessian *> PRE_speedAndBiasHessians;
-    std::vector<IMUResidual *> PRE_activeIMUResiduals;
-#endif
     std::vector<PointFrameResidual *> activeResiduals;
     float currentMinActDist;
 

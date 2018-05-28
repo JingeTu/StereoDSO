@@ -163,21 +163,21 @@ namespace dso {
     mutable information_t information_;
     mutable information_t squareRootInformation_;
 
-    mutable Eigen::Quaterniond Delta_q_ = Eigen::Quaterniond(1, 0, 0, 0);
-    mutable Eigen::Matrix3d C_integral_ = Eigen::Matrix3d::Zero();
-    mutable Eigen::Matrix3d C_doubleintegral_ = Eigen::Matrix3d::Zero();
-    mutable Eigen::Vector3d acc_integral_ = Eigen::Vector3d::Zero();
-    mutable Eigen::Vector3d acc_doubleintegral_ = Eigen::Vector3d::Zero();
-
-    mutable Eigen::Matrix3d cross_ = Eigen::Matrix3d::Zero();
-
-    mutable Eigen::Matrix3d dalpha_db_g_ = Eigen::Matrix3d::Zero();
-    mutable Eigen::Matrix3d dv_db_g_ = Eigen::Matrix3d::Zero();
-    mutable Eigen::Matrix3d dp_db_g_ = Eigen::Matrix3d::Zero();
-
-    mutable Eigen::Matrix<double, 15, 15> P_delta_ = Eigen::Matrix<double, 15, 15>::Zero();
-
     mutable SpeedAndBias speedAndBiases_ref_ = SpeedAndBias::Zero();
+
+    mutable Eigen::Matrix3d Delta_tilde_R_ij_ = Eigen::Matrix3d::Identity();
+    mutable Eigen::Vector3d Delta_tilde_v_ij_ = Eigen::Vector3d::Zero();
+    mutable Eigen::Vector3d Delta_tilde_p_ij_ = Eigen::Vector3d::Zero();
+
+    mutable Eigen::Matrix<double, 15, 15> Sigma_ij_ = Eigen::Matrix<double, 15, 15>::Zero();
+    mutable Eigen::Matrix<double, 6, 6> Sigma_eta_ = Eigen::Matrix<double, 6, 6>::Zero();
+
+    mutable Eigen::Matrix3d d_R_d_bg_ = Eigen::Matrix3d::Zero(); //- Actually, `d_phi_d_bg` is more reasonable for this variable.
+    mutable Eigen::Matrix3d d_p_d_bg_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_p_d_ba_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_v_d_bg_ = Eigen::Matrix3d::Zero();
+    mutable Eigen::Matrix3d d_v_d_ba_ = Eigen::Matrix3d::Zero();
+
     bool redo_;
     bool redoCounter_ = 0;
   };

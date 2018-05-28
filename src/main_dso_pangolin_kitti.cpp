@@ -165,7 +165,7 @@ void parseArgument(char *arg) {
   }
 
   if (1 == sscanf(arg, "resultoutput=%s", buf)) {
-      resultoutput = buf;
+    resultoutput = buf;
     return;
   }
 
@@ -175,7 +175,7 @@ void parseArgument(char *arg) {
   }
 
   if (1 == sscanf(arg, "fpsoutput=%s", buf)) {
-      fpsoutput = buf;
+    fpsoutput = buf;
     return;
   }
 
@@ -566,17 +566,17 @@ int main(int argc, char **argv) {
                                                        (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f);
     char fps[256];
     sprintf(fps, "\n======================"
-               "\n%d Frames (%.1f fps)"
-               "\n%.2fms per frame (single core); "
-               "\n%.2fms per frame (multi core); "
-               "\n%.3fx (single core); "
-               "\n%.3fx (multi core); "
-               "\n======================\n\n",
-           numFramesProcessed, numFramesProcessed / numSecondsProcessed,
-           MilliSecondsTakenSingle / numFramesProcessed,
-           MilliSecondsTakenMT / (float) numFramesProcessed,
-           1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
-           1000 / (MilliSecondsTakenMT / numSecondsProcessed));
+                "\n%d Frames (%.1f fps)"
+                "\n%.2fms per frame (single core); "
+                "\n%.2fms per frame (multi core); "
+                "\n%.3fx (single core); "
+                "\n%.3fx (multi core); "
+                "\n======================\n\n",
+            numFramesProcessed, numFramesProcessed / numSecondsProcessed,
+            MilliSecondsTakenSingle / numFramesProcessed,
+            MilliSecondsTakenMT / (float) numFramesProcessed,
+            1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
+            1000 / (MilliSecondsTakenMT / numSecondsProcessed));
     LOG(INFO) << fps;
 
     if (!fpsoutput.empty()) {

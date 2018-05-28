@@ -9,7 +9,8 @@
 #include <Eigen/Geometry>
 #include <iostream>
 
-bool readPosesQ(const std::string &file, std::vector<Eigen::Quaterniond> &vec_q, std::vector<Eigen::Matrix<double, 3, 1> > &vec_t) {
+bool readPosesQ(const std::string &file, std::vector<Eigen::Quaterniond> &vec_q,
+                std::vector<Eigen::Matrix<double, 3, 1> > &vec_t) {
   size_t poseNum = 0;
   Eigen::Matrix<double, 3, 1> t;
   Eigen::Quaterniond q;
@@ -55,9 +56,9 @@ bool outputPosesT(const std::string &file,
     P.topLeftCorner<3, 3>() = (*it).toRotationMatrix();
     P.topRightCorner<3, 1>() = (*it_t);
     std::sprintf(l, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                P(0, 0), P(0, 1), P(0, 2), P(0, 3),
-                P(1, 0), P(1, 1), P(1, 2), P(1, 3),
-                P(2, 0), P(2, 1), P(2, 2), P(2, 3));
+                 P(0, 0), P(0, 1), P(0, 2), P(0, 3),
+                 P(1, 0), P(1, 1), P(1, 2), P(1, 3),
+                 P(2, 0), P(2, 1), P(2, 2), P(2, 3));
     of << l << std::endl;
     count++;
   }
@@ -93,7 +94,7 @@ bool readPosesT(const std::string &file, std::vector<Eigen::Matrix<double, 3, 4>
 }
 
 bool outputPosesQ(const std::string &file,
-                      const std::vector<Eigen::Matrix<double, 3, 4>> &vec_P) {
+                  const std::vector<Eigen::Matrix<double, 3, 4>> &vec_P) {
   std::ofstream of(file);
   auto it = vec_P.begin();
   for (; it != vec_P.end(); it++) {
