@@ -1,6 +1,12 @@
 Implementation for Stereo DSO from TUM.
 
-Now add static stereo residuals to the optimization.
+Stereo completed. Now adding IMU, the main IMU code is in CoarseTracker.
+
+The results of mine compared to ORB_SLAM2 in the 11 KITTI sequences are in the folder `results`.
+
+I removed loop closure and relocalization in the ORB_SLAM2, so that the ORB_SLAM2 is much like Stereo DSO for it's an visual odometry and only 2d-2d tracking.
+
+Some results are in this readme file, section 6.
 
 # DSO: Direct Sparse Odometry
 
@@ -283,3 +289,19 @@ Version 3 (GPLv3).
 For commercial purposes, we also offer a professional version, see
 [http://vision.in.tum.de/dso](http://vision.in.tum.de/dso) for
 details.
+
+### 6 Compare to ORB_SLAM2
+
+KITTI 00 trajectory:
+
+![00.png](http://7xqfkw.com1.z0.glb.clouddn.com/image/github.com/JingeTu/StereoDSO/00.png)
+
+Statistical results (my rotation is better): 
+
+![avg_rl.png](http://7xqfkw.com1.z0.glb.clouddn.com/image/github.com/JingeTu/StereoDSO/avg_rl.png)
+
+![avg_rs.png](http://7xqfkw.com1.z0.glb.clouddn.com/image/github.com/JingeTu/StereoDSO/avg_rs.png)
+
+![avg_tl.png](http://7xqfkw.com1.z0.glb.clouddn.com/image/github.com/JingeTu/StereoDSO/avg_tl.png)
+
+![avg_ts.png](http://7xqfkw.com1.z0.glb.clouddn.com/image/github.com/JingeTu/StereoDSO/avg_ts.png)
