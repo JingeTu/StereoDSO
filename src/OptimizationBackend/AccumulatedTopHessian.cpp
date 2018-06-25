@@ -70,6 +70,8 @@ namespace dso {
         assert(r->isLinearized);
       }
 
+      assert(mode != 1);
+
       RawResidualJacobian *rJ = r->J;
       int htIDX = r->hostIDX + r->targetIDX * nframes[tid];
 
@@ -133,6 +135,9 @@ namespace dso {
       }
 
       if (htIDX > 0) { //- temporal stereo residual
+        if (mode == 1) {
+          std::cout << "**************************\n";
+        }
         acc[tid][htIDX].update(
             rJ->Jpdc[0].data(), rJ->Jpdxi[0].data(),
             rJ->Jpdc[1].data(), rJ->Jpdxi[1].data(),
@@ -153,6 +158,9 @@ namespace dso {
             JI_r[0], JI_r[1]);
       }
       else { //- static stereo residual
+        if (mode == 1) {
+          std::cout << "**************************\n";
+        }
         acc[tid][r->hostIDX + r->hostIDX * nframes[tid]].update(
             rJ->Jpdc[0].data(), rJ->Jpdxi[0].data(),
             rJ->Jpdc[1].data(), rJ->Jpdxi[1].data(),

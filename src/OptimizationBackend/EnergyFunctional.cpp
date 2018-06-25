@@ -1203,6 +1203,9 @@ namespace dso {
     // linearized
     accumulateLF_MT(HL_top, bL_top, multiThreading);
 
+//    LOG(INFO) << "HL_top: " << HL_top;
+//    LOG(INFO) << "bL_top: " << bL_top;
+
     // schur complement
     accumulateSCF_MT(H_sc, b_sc, multiThreading);
 
