@@ -4,9 +4,7 @@ PROJECT(${PROJECT_NAME})
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-
 set(BUILD_TYPE Release)
-#set(BUILD_TYPE RelWithDebInfo)
 
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
@@ -20,7 +18,7 @@ find_package(Boost COMPONENTS system thread)
 # optional libraries
 find_package(LibZip QUIET)
 find_package(Pangolin 0.2 QUIET)
-find_package(OpenCV QUIET)
+find_package(OpenCV REQUIRED)
 find_package(Glog REQUIRED)
 
 # flags
@@ -40,10 +38,12 @@ include_directories(
 		${PROJECT_SOURCE_DIR}/thirdparty/Sophus
 		${PROJECT_SOURCE_DIR}/thirdparty/sse2neon
 		${EIGEN3_INCLUDE_DIR}
-    ${PROJECT_SOURCE_DIR}/src/okvis_kinematics/include
-    ${PROJECT_SOURCE_DIR}/src/okvis_util/include
+        ${PROJECT_SOURCE_DIR}/src/okvis_kinematics/include
+        ${PROJECT_SOURCE_DIR}/src/okvis_util/include
 		${GLOG_INCLUDE_DIRS}
 )
+
+
 
 include_directories( ${CSPARSE_INCLUDE_DIR} ${CHOLMOD_INCLUDE_DIR})
 
@@ -80,23 +80,22 @@ endif()
 if (OpenCV_FOUND AND Pangolin_FOUND)
 	message("--- compiling dso_dataset.")
 	add_executable(convert_groundtruth_euroc ${PROJECT_SOURCE_DIR}/src/main_convert_groundtruth_euroc_dataset.cpp)
-	target_link_libraries(convert_groundtruth_euroc)
+	# target_link_libraries(convert_groundtruth_euroc)
 
 	add_executable(convert_groundtruth_kitti ${PROJECT_SOURCE_DIR}/src/main_convert_groundtruth_kitti_dataset.cpp)
-	target_link_libraries(convert_groundtruth_kitti)
+	# target_link_libraries(convert_groundtruth_kitti)
 
 	add_executable(convert_result ${PROJECT_SOURCE_DIR}/src/main_convert_result.cpp)
-	target_link_libraries(convert_result)
+	# target_link_libraries(convert_result)
 
 	add_executable(dso_dataset_kitti ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin_kitti.cpp)
-    target_link_libraries(dso_dataset_kitti dso_util dso_FullSystem dso_IOWrapper dso_OptimizationBackend boost_system cxsparse ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
+    target_link_libraries(dso_dataset_kitti dso_util dso_FullSystem dso_IOWrapper dso_OptimizationBackend boost_system cxsparse glog::glog ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
 
 	add_executable(dso_dataset_euroc ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin_euroc.cpp )
-	target_link_libraries(dso_dataset_euroc dso_util dso_FullSystem dso_IOWrapper dso_OptimizationBackend boost_system cxsparse ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
+	target_link_libraries(dso_dataset_euroc dso_util dso_FullSystem dso_IOWrapper dso_OptimizationBackend boost_system cxsparse glog::glog ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
 
 	add_executable(euroc_rectify ${PROJECT_SOURCE_DIR}/src/main_rectify_euroc_dataset.cpp)
 	target_link_libraries(euroc_rectify ${OpenCV_LIBS})
 else()
 	message("--- not building dso_dataset, since either don't have openCV or Pangolin.")
 endif()
-

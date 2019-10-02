@@ -8,6 +8,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <iostream>
+#include <vector>
 
 bool readPosesQ(const std::string &file, std::vector<Eigen::Quaterniond> &vec_q,
                 std::vector<Eigen::Matrix<double, 3, 1> > &vec_t) {

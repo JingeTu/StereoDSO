@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <vector>
 
 bool readPoses(const std::string &file, std::vector<Eigen::Matrix<double, 3, 4>> &vec_P) {
   size_t poseNum = 0;

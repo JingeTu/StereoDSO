@@ -1,0 +1,655 @@
+    1  ls
+    2  exit
+    3  ls
+    4  exit
+    5  sudo apt-get install python3.7
+    6  sudo apt install python3.7
+    7  sudo apt update
+    8  exit
+    9  sudo apt-get update
+   10  exit
+   11  pip3 install tensorflow-gpu
+   12  pip --version
+   13  pip3 install --upgrade pip3
+   14  pip3 install --upgrade pip
+   15  pip --version
+   16  which pip
+   17  which pip3
+   18  cd /home/jingetu/.local
+   19  cd bin
+   20  ls
+   21  ls -lh pip*
+   22  sudo pip install keras
+   23  sudo pip3 install keras
+   24  pip3 install keras
+   25  sudo pip3 install keras
+   26  exit
+   27  ./cifar10.py
+   28  vim cifar10.py
+   29  sudo apt-get install vim
+   30  ls
+   31  vim cifar10.py
+   32  chmod +x cifar10.py
+   33  ./cifar10.py
+   34  ls
+   35  s
+   36  vim cifar10.py
+   37  ls
+   38  exit
+   39  ls
+   40  cd Desktop
+   41  ls
+   42  cd work
+   43  ls
+   44  cd ..
+   45  ls
+   46  cd Downloads
+   47  ls
+   48  cd keras-resnet
+   49  ls
+   50  code .
+   51  ls -lh
+   52  ls
+   53  mkdir first_round
+   54  ls
+   55  mv *.hdf5 first_round
+   56  ls
+   57  cd ..
+   58  ls
+   59  cd keras-resnet
+   60  ls
+   61  python3 cifar10.py
+   62  sl
+   63  ls
+   64  cd /media
+   65  ls
+   66  cd jingetu
+   67  ls
+   68  cd ..
+   69  ls
+   70  cd xin
+   71  ls
+   72  cd jingetu
+   73  ls
+   74  cd ..
+   75  cd jingetu
+   76  ls
+   77  cd ..
+   78  cd jingetu
+   79  ls
+   80  cd UBUNTU\ 16_0
+   81  ls
+   82  cd UBUNTU\ 16_0
+   83  ls
+   84  ls -lh
+   85  ln -s xinjiajuan 新加卷
+   86  sudo ln -s xinjiajuan 新加卷
+   87  cd 新加卷
+   88  ls
+   89  cd youtube
+   90  ls
+   91  cd cs231n
+   92  ls
+   93  ./test_download_v1.1.py
+   94  pip --version
+   95  pip install youtube-dl
+   96  exit
+   97  bash
+   98  sudo pip install youtube-dl
+   99  pip install youtube-dl --user
+  100  ls
+  101  exit
+  102  sudo apt install jq
+  103  ls
+  104  cd Desktop
+  105  ls
+  106  cd work
+  107  ls
+  108  cd ..
+  109  ls
+  110  cd /media
+  111  ls
+  112  cd jige
+  113  cd jingetu
+  114  ls
+  115  cd 新加卷
+  116  ls
+  117  cd youtube
+  118  ls
+  119  cd cs231n
+  120  lks
+  121  ls
+  122  ./test_download_v1.1.py
+  123  sudo apt-get install vlc
+  124  nvidia-smi
+  125  ls
+  126  cd Desktop
+  127  ks
+  128  ls
+  129  mkdir work
+  130  ls
+  131  rm -rf work
+  132  ls
+  133  mkdir workspace
+  134  cd workspace
+  135  ls
+  136  mkdir test
+  137  ls
+  138  cd test
+  139  ls
+  140  vim main.cpp
+  141  g++ main.cpp
+  142  vim main.cpp
+  143  g++ main.cpp
+  144  ./a.out
+  145  g++ main.cpp
+  146  vim main.cpp
+  147  cat /etc/issue
+  148  sudo apt-get install fcitx-googlepinyin
+  149  sudo apt-get update
+  150  sudo apt-get install fcitx-googlepinyin
+  151  sudo rm /var/lib/dpkg/lock-frontend
+  152  sudo apt-get install fcitx-googlepinyin
+  153  sudo rm /var/lib/dpkg/lock
+  154  sudo apt-get install fcitx-googlepinyin
+  155  sudo dpkg --configure -a
+  156  ps -ef | grep dpkg
+  157  kill -9 27284
+  158  sudo kill -9 27284
+  159  sudo dpkg --configure -a
+  160  sudo apt-get install fcitx-googlepinyin
+  161  sudo apt install -y fcitx-bin
+  162  sudo apt autoremove
+  163  ls
+  164  sudo apt-get install ./sogoupinyin_2.2.0.0108_amd64.deb
+  165  sudo apt-get remove ./sogoupinyin_2.2.0.0108_amd64.deb
+  166  sudo apt-get remove sogoupinyin
+  167  sudo apt-get remove ./sogoupinyin_2.2.0.0108_amd64.deb
+  168  sudo apt-get install ./sogoupinyin_2.2.0.0108_amd64.deb
+  169  sudo apt-get remove sogoupinyin
+  170  sudo apt-get install ./sogoupinyin_2.2.0.0108_amd64.deb
+  171  sudo apt-get remove fcitx
+  172  sudo apt-get remove fcitx-bin
+  173  sudo apt install -y fcitx-bin
+  174  sudo apt install -y fcitx-googlepinyin
+  175  wget "http://cdn2.ime.sogou.com/dl/index/1524572264/sogoupinyin_2.2.0.0108_amd64.deb?st=qC_O2p5443g1a2TJR_rSdA&e=1533163019&fn=sogoupinyin_2.2.0.0108_amd64.deb" -O sogoupinyin.deb && \\n    yes | sudo gdebi sogoupinyin.deb && \\n    rm sogoupinyin.deb
+  176  sudo apt-get install gdebi
+  177  wget "http://cdn2.ime.sogou.com/dl/index/1524572264/sogoupinyin_2.2.0.0108_amd64.deb?st=qC_O2p5443g1a2TJR_rSdA&e=1533163019&fn=sogoupinyin_2.2.0.0108_amd64.deb" -O sogoupinyin.deb && \\n    yes | sudo gdebi sogoupinyin.deb && \\n    rm sogoupinyin.deb
+  178  sudo apt-get remove sogoupinyin
+  179  sudo dpkg
+  180  sudo dpkg -i ./sogoupinyin_2.2.0.0108_amd64.deb
+  181  sudo apt-get remove sogoupinyin
+  182  sudo apt-get autoremove
+  183  cd Downloads
+  184  ls
+  185  sudo dpkg -i ./sogoupinyin_2.2.0.0108_amd64.deb
+  186  sudo apt-get install fcitx
+  187  sudo apt-get -f install
+  188  cat /usr/share/glib-2.0/schemas/50_sogoupinyin.gschema.override
+  189  vim cat /usr/share/glib-2.0/schemas/50_sogoupinyin.gschema.override
+  190  sudo apt-get install fcitx
+  191  sudo nvidia-smi
+  192  sudo add-apt-repository ppa:gnome3-team/gnome3
+  193  sudo apt-get update && sudo apt-get upgrade
+  194  sudo add-apt-repository ppa:gnome3-team/gnome3
+  195  sudo apt-get update && sudo apt-get upgrade
+  196  sudo apt-get install gnome-shell ubuntu-gnome-desktop
+  197  gnome-shell
+  198  ubuntu-gnome-desktop
+  199  gnome-shell --help
+  200  gnome-shell --replace gdm3
+  201  gnome-shell --replace
+  202  exit
+  203  sudo apt-get remove sogoupinyin
+  204  sudo apt-get remove unity lightdm ubuntu-desktop
+  205  ls
+  206  sudo dpkg -i sogoupinyin_2.2.0.0108_amd64.deb
+  207  cat /usr/share/glib-2.0/schemas/50_sogoupinyin.gschema.override
+  208  sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
+  209  sudo apt install fcitx fcitx-googlepinyin fcitx-table-wbpy fcitx-pinyin fcitx-sunpinyin
+  210  sudo remove ibus
+  211  sudo apt remove ibus
+  212  sudo dpkg -i ~/Downloads/sogoupinyin*.deb; sudo apt -f install
+  213  sudo apt-get remove sogoupinyin
+  214  sudo apt remove fcitx* && sudo apt autoremove
+  215  sudo apt remove fcitx*
+  216  sudo apt remove fcitx
+  217  sudo apt remove fcitx-*
+  218  bash
+  219  git clone git@github.com:JakobEngel/dso.git
+  220  ls
+  221  cd Work
+  222  ls
+  223  cd Desktop
+  224  ls
+  225  cd workspace
+  226  ls
+  227  cd test
+  228  ls
+  229  cd ..
+  230  ls
+  231  mkdir original
+  232  ls
+  233  cd original
+  234  ls
+  235  git clone git@github.com:JakobEngel/dso.git
+  236  git clone https://github.com/JakobEngel/dso.git
+  237  sudo apt-get install libsuitesparse-dev libeigen3-dev libboost-all-dev
+  238  sudo apt-get install libopencv-dev
+  239  https://github.com/stevenlovegrove/Pangolin.git
+  240  git clone https://github.com/stevenlovegrove/Pangolin.git
+  241  cd Pangolin
+  242  sudo apt install libgl1-mesa-dev
+  243  sudo apt install libglew-dev
+  244  sudo apt install cmake
+  245  sudo apt install ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev
+  246  mkdir build
+  247  cd build
+  248  ls
+  249  cmake ..
+  250  cmake --build .
+  251  make -j14
+  252  sudo make install
+  253  cd ..
+  254  ls
+  255  cd ..
+  256  lcd
+  257  cd Pangolin
+  258  ls
+  259  cd ..
+  260  ls
+  261  sudo apt-get install zlib1g-dev
+  262  cd dsi
+  263  ks
+  264  cd dso
+  265  ls
+  266  cd thirdparty
+  267  lks
+  268  ls
+  269  lks
+  270  ls
+  271  tar -xvf libzip-1.1.1.tar.gz
+  272  cd libzip-1.1.1
+  273  lks
+  274  ls
+  275  ./config
+  276  ./configure
+  277  make -j14
+  278  sudo make install
+  279  sudo cp lib/zipconf.h /usr/local/include/zipconf.h
+  280  cd ..
+  281  ls
+  282  cd ..
+  283  ls
+  284  mkdir build
+  285  cd build
+  286  ls
+  287  cmake ..
+  288  make -j10
+  289  make -j14
+  290  ls
+  291  cd ..
+  292  ls
+  293  code .
+  294  cd Desktop
+  295  lks
+  296  ls
+  297  cd workspace
+  298  ls
+  299  cd original
+  300  ls
+  301  cd dso
+  302  ls
+  303  pwd
+  304  ./build/bin/dso_dataset files=/home/jingetu/Documents/sequence_01/images.zip calib=/home/jingetu/Documents/sequence_01/camera.txt gamma=/home/jingetu/Documents/sequence_01/pcalib.txt vignette=/home/jingetu/Documents/sequence_01/vignette.png preset=0 mode-0
+  305  ./build/bin/dso_dataset files=/home/jingetu/Documents/sequence_01/images.zip calib=/home/jingetu/Documents/sequence_01/camera.txt gamma=/home/jingetu/Documents/sequence_01/pcalib.txt vignette=/home/jingetu/Documents/sequence_01/vignette.png preset=0 mode=0
+  306  ls
+  307  cd ..
+  308  ls
+  309  cd ..
+  310  ls
+  311  mkdir mine
+  312  ls
+  313  cd mine
+  314  ls
+  315  git clone https://github.com/JingeTu/StereoDSO.git
+  316  cd StereoDSO
+  317  ls
+  318  code .
+  319  ls
+  320  git status
+  321  git branch
+  322  git branch dev
+  323  git branch
+  324  git checkout dev
+  325  ls
+  326  git status
+  327  git branch
+  328  nautilus .
+  329  pwd
+  330  ls
+  331  mkdir build
+  332  cd build
+  333  ls
+  334  cmake ..
+  335  sudo apt-get install libglog-dev
+  336  sudo apt-get install libglog
+  337  sudo apt-get install glog
+  338  ls
+  339  cd ..
+  340  ls
+  341  cd ..
+  342  ls
+  343  cd ..
+  344  ls
+  345  cd original
+  346  ls
+  347  git clone https://github.com/google/glog.git
+  348  cd glog
+  349  ls
+  350  ./autogen.sh && ./configure && make -j14 && make install
+  351  code autogen.sh
+  352  sudo apt-get install autoreconf
+  353  ./autogen.sh && ./configure && make -j14 && make install
+  354  mkdir build && cd build && cmake .. && make -j14 && sudo make install
+  355  ls
+  356  cmake ..
+  357  make -j13
+  358  make -j13 > ../make_log
+  359  cd ..
+  360  ls
+  361  code make_log
+  362  code CMakeLists.txt
+  363  ls
+  364  cd build
+  365  ls
+  366  cmake ..
+  367  make -j13
+  368  cmake ..
+  369  make -j13
+  370  lc
+  371  ls
+  372  celar
+  373  exit
+  374  clear
+  375  exit
+  376  ls
+  377  cd build
+  378  ls
+  379  make -j
+  380  make -j13
+  381  cd build
+  382  ka
+  383  make 
+  384  la
+  385  claer
+  386  clear
+  387  make
+  388  exit
+  389  cd build
+  390  ls
+  391  make
+  392  ls
+  393  rm -rf *
+  394  ls
+  395  cmake ..
+  396  ls
+  397  cd /
+  398  ls
+  399  cd usr
+  400  ls
+  401  cd local
+  402  ls
+  403  cd bin
+  404  ls
+  405  cd ..
+  406  ls
+  407  cd lib
+  408  ls
+  409  cd ..
+  410  ls
+  411  cd share
+  412  ls
+  413  cd op
+  414  cd ..
+  415  ls
+  416  cd ..
+  417  ls
+  418  mkdir build
+  419  cd build
+  420  ls
+  421  cmake ..
+  422  make -j13
+  423  ls
+  424  cmake ..
+  425  ls
+  426  cd ..
+  427  ls
+  428  cd ..
+  429  ls
+  430  rm opencv-2.4.13.6
+  431  ls
+  432  rm -rf opencv-2.4.13.6
+  433  ls
+  434  rm opencv-2.4.13.6.zip
+  435  ls
+  436  exit
+  437  ls
+  438  cd ..
+  439  ls
+  440  cd ..
+  441  ls
+  442  cd original
+  443  ls
+  444  cd opencv-2.4.13.6
+  445  ls
+  446  mkdir build
+  447  ls
+  448  cd build
+  449  ls
+  450  cmake ..
+  451  lsa
+  452  ls
+  453  cd ..
+  454  ls
+  455  code README.md
+  456  sudo apt-get remove libopencv-dev
+  457  sudo autoremove
+  458  sudo aptautoremove
+  459  sudo apt autoremove
+  460  ls
+  461  pwd
+  462  cd ..
+  463  ls
+  464  cd ..
+  465  ls
+  466  cd ..
+  467  ls
+  468  cd original
+  469  ls
+  470  cd opencv-2.4.13.6
+  471  ls
+  472  cd build
+  473  cmake ..
+  474  code ../CMakeLists.txt
+  475  cmake -DBUILD_opencv_python=0 ..
+  476  exit
+  477  cmake -DBUILD_opencv_python=0 ..
+  478  cd ..
+  479  ls
+  480  cd ..
+  481  ls
+  482  cd original
+  483  ls
+  484  cd opencv-2.4.13.6
+  485  ls
+  486  cd build
+  487  ls
+  488  cmake -DBUILD_opencv_python=0 ..
+  489  cmake -DBUILD_opencv_python=false ..
+  490  exit
+  491  ls
+  492  cd ../../original
+  493  ls
+  494  cd opencv-2.4.13.6
+  495  ls
+  496  cd build
+  497  cmake -DBUILD_opencv_python=OFF ..
+  498  cd opencv2
+  499  ls
+  500  cd ..
+  501  ls
+  502  rm -rf *
+  503  ls
+  504  cmake ..
+  505  sudo apt autoremove
+  506  sudo apt-get install libpng-dev
+  507  sudo apt-get install jasper
+  508  pwd
+  509  cmake ..
+  510  cd CMakeFiles
+  511  ls
+  512  vim CMakeError.log
+  513  ls
+  514  cd ..
+  515  ls
+  516  rm -rf *
+  517  cmake ..
+  518  ls
+  519  cd CMakeFiles
+  520  vim CMakeError.log
+  521  cd ..
+  522  ks
+  523  ls
+  524  cd ..
+  525  ls
+  526  cd -
+  527  ls
+  528  cd CMakeFiles
+  529  ls
+  530  vim CMakeError.log
+  531  ls
+  532  which G++
+  533  which g++
+  534  cd /usr/bin
+  535  ls
+  536  g++ version
+  537  ls
+  538  ls g++*
+  539  ls gcc*
+  540  sudo apt-get install gcc-5
+  541  sudo apt-get remove gcc-5
+  542  sudo apt-get install gcc-5
+  543  ls
+  544  ls gcc)
+  545  ls gcc*
+  546  ls g++*
+  547  sudo apt-get install g++-5
+  548  g++
+  549  which g++
+  550  ln -s g++-5 g++
+  551  sudo ln -s g++-5 g++
+  552  gcc --version
+  553  sudo ln -s gcc-5 gcc
+  554  ls
+  555  g++ --version
+  556  gcc --version
+  557  ls
+  558  cd .
+  559  ls
+  560  cd ..
+  561  ls
+  562  cd ..
+  563  ls
+  564  exit
+  565  cd ..
+  566  ls
+  567  cd ..
+  568  ls
+  569  cd original
+  570  ls
+  571  cd opencv-2.4.13.6
+  572  ls
+  573  cd build
+  574  ls
+  575  rm -rf *
+  576  ls
+  577  cmake ..
+  578  make -j10
+  579  make -j14
+  580  sudo make install
+  581  ls
+  582  cd ..
+  583  ls
+  584  cd ..
+  585  ls
+  586  cd ..
+  587  ls
+  588  cd mine
+  589  ls
+  590  cd StereoDSO
+  591  ls
+  592  cd build
+  593  ls
+  594  cmake ..
+  595  /usr/bin/cc
+  596  cd /usr/bin
+  597  ls
+  598  ln -s gcc-5 cc
+  599  sudo ln -s gcc-5 cc
+  600  sudo ln -s g++-5 c++
+  601  ls
+  602  cd -
+  603  ls
+  604  cmake ..
+  605  make -j13
+  606* cd /usr/local/include/opencv/
+  607* ls
+  608* vim cv.hpp
+  609* vim cv.h
+  610* vim cv.hpp
+  611* sudo vim cv.hpp
+  612  make -j13
+  613  code /home/jingetu/Desktop/workspace/mine/StereoDSO/src/FullSystem/FullSystem.cpp:58:16:
+  614  code /home/jingetu/Desktop/workspace/mine/StereoDSO/src/FullSystem/FullSystem.cpp
+  615  make -j13
+  616  sudo apt-get install ^[[200~cxsparse~
+  617  sudo apt-get install cxsparse
+  618  cmake ..
+  619  make
+  620* exit
+  621  sudo apt-get install libdc1394-22-dev
+  622  cmake ..
+  623  make -j13
+  624  make
+  625  sudo apt-get install libjpeg
+  626  sudo apt-get install libjpeg-dev
+  627  make -j13
+  628  make
+  629  sudo apt-get install libtiff
+  630  sudo apt-get install libtiff-dev
+  631  make 
+  632  sudo apt-get install libIlmImf-dev
+  633  sudo apt-get install libIlmImf
+  634  sudo apt-get update
+  635  sudo apt-get install openexr
+  636  make 
+  637  make
+  638  sudo apt-get install openexr
+  639  ls
+  640  make
+  641  which libIlmImf.so
+  642  rm -rf *
+  643  ls
+  644  cmake ..
+  645  makerm -rf *
+  646  rm -rf *
+  647  cmake ..
+  648  sudo apt-get install cxsparse
+  649  cmake ..
+  650  sudo apt-get install suitesparse
+  651  sudo apt-get install libsuitesparse
+  652  sudo apt-get install libsuitesparse-dev
+  653  cmake ..
+  654  cd ..
+  655  ls
